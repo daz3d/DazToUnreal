@@ -1,0 +1,55 @@
+{
+	"UnitTest Results Version" : 1,
+	"Class Name" : "DzUnrealDialog",
+	"Number of UnitTests" : 8,
+	"Detailed Test Results" : [
+		{
+			"UnitTest ID" : 0,
+			"Method Name" : "_DzUnrealDialog",
+			"Test Result" : true,
+			"Test Log" : ""
+		},
+		{
+			"UnitTest ID" : 1,
+			"Method Name" : "getIntermediateFolderEdit",
+			"Test Result" : true,
+			"Test Log" : ""
+		},
+		{
+			"UnitTest ID" : 2,
+			"Method Name" : "getPortEdit",
+			"Test Result" : true,
+			"Test Log" : ""
+		},
+		{
+			"UnitTest ID" : 3,
+			"Method Name" : "getExportMaterialPropertyCSVCheckBox",
+			"Test Result" : true,
+			"Test Log" : ""
+		},
+		{
+			"UnitTest ID" : 4,
+			"Method Name" : "resetToDefaults",
+			"Test Result" : true,
+			"Test Log" : ""
+		},
+		{
+			"UnitTest ID" : 5,
+			"Method Name" : "HandleSelectIntermediateFolderButton",
+			"Test Result" : true,
+			"Test Log" : ""
+		},
+		{
+			"UnitTest ID" : 6,
+			"Method Name" : "HandlePortChanged",
+			"Test Result" : true,
+			"Test Log" : ""
+		},
+		{
+			"UnitTest ID" : 7,
+			"Method Name" : "loadSavedSettings",
+			"Test Result" : true,
+			"Test Log" : ""
+		}
+	]
+}

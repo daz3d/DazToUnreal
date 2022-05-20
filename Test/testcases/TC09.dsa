@@ -1,0 +1,58 @@
+// DAZ Studio version 4.16.0.3 filetype DAZ Script
+
+function Run_TestCase_09(sTestAsset)
+{
+	sExportFilename = "";
+	sAssetType = "SkeletalMesh";
+	sRootFolder = "";
+	sExportFolder = "TC09";
+	sProductName = "";
+	sComponentName = "";
+	arrayMorphList = [];
+
+	printToLog("Running Test Case 9:")
+
+	// start with clean Daz Studio scene (TC9.1)
+	Scene.clear();
+	var oContentMgr = App.getContentMgr();
+
+	// load Victoria 8.1 (TC9.5)
+	var sFullPath = oContentMgr.findFile(sTestAsset);
+	oContentMgr.openFile(sFullPath);
+
+	// Send to Unreal with default settings (TC9.6)
+	var sReturnString = Run_Exporter(sExportFilename, sAssetType, sRootFolder, sExportFolder, sProductName, sComponentName, arrayMorphList);
+	var sDtuFilename = sReturnString;
+
+	// check for expected root folder, export folder and export filename (TC9.10)
+	if (sDtuFilename.lower().find("/documents/daztounreal/tc09/victoria81.dtu") == -1)
+	{
+		print ("Test Case 9 FAILED: Incorrect output DTU filename");
+		return false;
+	}
+
+	printToLog("Exported DTU = " + sDtuFilename);
+	if (Validate_DTU_file(sDtuFilename) == false)
+	{
+		return false;
+	}
+
+	var sFbxFilename = sDtuFilename;
+	sFbxFilename = sFbxFilename.replace(".dtu",".fbx");
+	printToLog("Exported FBX = " + sFbxFilename);
+
+	if (Validate_FBX_file(sFbxFilename) == false)
+	{
+		return false;
+	}
+
+	// Confirm ExportTextures folder was not generated
+	sExportTexturePath = DzFileInfo(sDtuFilename).path() + "/" + "ExportTextures";
+	if (DzFileInfo(sExportTexturePath).exists())
+	{
+		printToLog("Test Case 9 FAILED: ExportTexture subfolder was unexpectedly generated.");
+		return false;
+	}
+
+	return true;
+}

@@ -1,0 +1,63 @@
+// DAZ Studio version 4.16.0.3 filetype DAZ Script
+
+// Test Case TC18
+function Run_TestCase_18()
+{
+	sExportFilename = "";
+	sAssetType = "SkeletalMesh";
+	sRootFolder = "";
+	sExportFolder = "TC18";
+	sProductName = "";
+	sComponentName = "";
+	arrayMorphList = [];
+
+	printToLog("Running Test Case 18:");
+
+	// start with clean Daz Studio scene (TC18.1)
+	Scene.clear();
+	var oContentMgr = App.getContentMgr();
+
+	// load Genesis 8 Basic Female (TC18.5)
+	var sTestFigure = "/people/genesis 8 female/genesis 8 basic female.duf"
+	var sFullPath = oContentMgr.findFile(sTestFigure);
+	oContentMgr.openFile(sFullPath);
+
+	// Send to Unreal (TC18.6)
+	var sReturnString = Run_Exporter(sExportFilename, sAssetType, sRootFolder, sExportFolder, sProductName, sComponentName, arrayMorphList);
+	var sDtuFilename = sReturnString;
+
+	// apply "Basic Pose Standing A" (18.10)
+	sExportFilename = "BasicPoseStandingA";
+	sAssetType = "Pose";	
+	sPoseAsset = "/people/genesis 8 female/poses/base poses/base pose standing a.duf";
+	sFullPath = oContentMgr.findFile(sPoseAsset);
+	oContentMgr.openFile(sFullPath);
+
+	// Send to Unreal (TC18.14)
+	var sReturnString = Run_Exporter(sExportFilename, sAssetType, sRootFolder, sExportFolder, sProductName, sComponentName, arrayMorphList);
+	var sDtuFilename = sReturnString;
+
+	// check for expected root folder, export folder and export filename
+	if (sDtuFilename.lower().find("/documents/daztounreal/tc18/basicposestandinga.dtu") == -1)
+	{
+		printToLog("Test Case 18 FAILED: Incorrect output DTU filename");
+		return false;
+	}
+
+	printToLog("Exported DTU = " + sDtuFilename);
+	if (Validate_DTU_file(sDtuFilename) == false)
+	{
+		return false;
+	}
+
+	var sFbxFilename = sDtuFilename;
+	sFbxFilename = sFbxFilename.replace(".dtu",".fbx");
+	printToLog("Exported FBX = " + sFbxFilename);
+
+	if (Validate_FBX_file(sFbxFilename) == false)
+	{
+		return false;
+	}
+
+	return true;
+}

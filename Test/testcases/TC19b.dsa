@@ -1,0 +1,72 @@
+// DAZ Studio version 4.16.0.3 filetype DAZ Script
+
+// Test Case TC19
+function Run_TestCase_19()
+{
+	sExportFilename = "";
+	sAssetType = "SkeletalMesh";
+	sRootFolder = "";
+	sExportFolder = "TC19";
+	sProductName = "";
+	sComponentName = "";
+	arrayMorphList = [];
+
+	printToLog("Running Test Case 19:");
+
+	// start with clean Daz Studio scene (TC19.1)
+	Scene.clear();
+	var oContentMgr = App.getContentMgr();
+
+	// load Genesis 8 Basic Female (TC19.5)
+	var sTestFigure = "/people/genesis 8 female/genesis 8 basic female.duf"
+	var sFullPath = oContentMgr.findFile(sTestFigure);
+	oContentMgr.openFile(sFullPath);
+
+	// Send to Unreal (TC19.8)
+	var sReturnString = Run_Exporter(sExportFilename, sAssetType, sRootFolder, sExportFolder, sProductName, sComponentName, arrayMorphList);
+	var sDtuFilename = sReturnString;
+
+	// apply "bow-g8f" (19.10)
+	// bake to studio keyframes (19.11)
+	var nExpandRange = 30000;
+	Scene.setAnimRange( new DzTimeRange( 0 , nExpandRange ));
+	Scene.setPlayRange( new DzTimeRange( 0 , nExpandRange ));
+
+	sExportFilename = "GsaPickupAnim";
+	sAssetType = "Animation";	
+	sAnimationAsset = "/people/genesis 8 female/animations/super hero animations/gsa genesis 8 female pickup.duf";
+	sFullPath = oContentMgr.findFile(sAnimationAsset);
+	oContentMgr.openFile(sFullPath);
+
+//	nExpandRange = Scene.getAnimRange();
+//	Scene.setAnimRange( new DzTimeRange( 0 , nExpandRange ));
+//	Scene.setPlayRange( new DzTimeRange( 0 , nExpandRange ));
+
+	// Send to Unreal (TC19.17)
+	var sReturnString = Run_Exporter(sExportFilename, sAssetType, sRootFolder, sExportFolder, sProductName, sComponentName, arrayMorphList);
+	var sDtuFilename = sReturnString;
+
+	// check for expected root folder, export folder and export filename
+	if (sDtuFilename.lower().find("/documents/daztounreal/tc19/gsapickupanim.dtu") == -1)
+	{
+		printToLog("Test Case 19 FAILED: Incorrect output DTU filename");
+		return false;
+	}
+
+	printToLog("Exported DTU = " + sDtuFilename);
+	if (Validate_DTU_file(sDtuFilename) == false)
+	{
+		return false;
+	}
+
+	var sFbxFilename = sDtuFilename;
+	sFbxFilename = sFbxFilename.replace(".dtu",".fbx");
+	printToLog("Exported FBX = " + sFbxFilename);
+
+	if (Validate_FBX_file(sFbxFilename) == false)
+	{
+		return false;
+	}
+
+	return true;
+}

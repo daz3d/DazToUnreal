@@ -1,0 +1,68 @@
+// DAZ Studio version 4.16.0.3 filetype DAZ Script
+
+// Test Case TC20
+function Run_TestCase_20()
+{
+	sExportFilename = "";
+	sAssetType = "SkeletalMesh";
+	sRootFolder = "";
+	sExportFolder = "TC20";
+	sProductName = "";
+	sComponentName = "";
+	arrayMorphList = [];
+
+	printToLog("Running Test Case 20:");
+
+	// start with clean Daz Studio scene
+	Scene.clear();
+	var oContentMgr = App.getContentMgr();
+
+	// load Genesis 8 Basic Female 
+	var sTestFigure = "/people/genesis 8 female/genesis 8 basic female.duf"
+	var sFullPath = oContentMgr.findFile(sTestFigure);
+	oContentMgr.openFile(sFullPath);
+
+	var sHairAsset = "/people/genesis 8 female/hair/toulouse hair/toulouse hair.duf";
+	sFullPath = oContentMgr.findFile(sHairAsset);
+	oContentMgr.openFile(sFullPath);
+
+	var sOutfitAsset = "/people/genesis 8 female/clothing/shadow thief/shadow thief !!outfit.duf";
+	sFullPath = oContentMgr.findFile(sOutfitAsset);
+	oContentMgr.openFile(sFullPath);
+
+	var sPropAsset = "/people/genesis 8 female/props/dark fantasy weapons/dark fantasy long blade hand left.duf";
+	sFullPath = oContentMgr.findFile(sPropAsset);
+	oContentMgr.openFile(sFullPath);
+
+	sPropAsset = "/people/genesis 8 female/props/dark fantasy weapons/dark fantasy long blade hand right.duf";
+	sFullPath = oContentMgr.findFile(sPropAsset);
+	oContentMgr.openFile(sFullPath);
+
+	// Send to Unreal 
+	var sReturnString = Run_Exporter(sExportFilename, sAssetType, sRootFolder, sExportFolder, sProductName, sComponentName, arrayMorphList);
+	var sDtuFilename = sReturnString;
+
+	// check for expected root folder, export folder and export filename
+	if (sDtuFilename.lower().find("/documents/daztounreal/tc20/genesis8female.dtu") == -1)
+	{
+		printToLog("Test Case 20 FAILED: Incorrect output DTU filename");
+		return false;
+	}
+
+	printToLog("Exported DTU = " + sDtuFilename);
+	if (Validate_DTU_file(sDtuFilename) == false)
+	{
+		return false;
+	}
+
+	var sFbxFilename = sDtuFilename;
+	sFbxFilename = sFbxFilename.replace(".dtu",".fbx");
+	printToLog("Exported FBX = " + sFbxFilename);
+
+	if (Validate_FBX_file(sFbxFilename) == false)
+	{
+		return false;
+	}
+
+	return true;
+}

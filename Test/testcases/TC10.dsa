@@ -1,0 +1,65 @@
+// DAZ Studio version 4.16.0.3 filetype DAZ Script
+
+function Run_TestCase_10(sTestAsset)
+{
+	sExportFilename = "";
+	sAssetType = "SkeletalMesh";
+	sRootFolder = "";
+	sExportFolder = "TC10";
+	sProductName = "";
+	sComponentName = "";
+	arrayMorphList = [];
+
+	printToLog("Running Test Case 10:");
+
+	// start with clean Daz Studio scene (TC10.1)
+	Scene.clear();
+	var oContentMgr = App.getContentMgr();
+
+	// load Victoria 8.1 (TC10.5)
+	var sFullPath = oContentMgr.findFile(sTestAsset);
+	oContentMgr.openFile(sFullPath);
+
+	// load LIE textures (TC10.6)
+	var sTattooAsset = "/people/genesis 8 female/characters/victoria 8.1/materials/iray/tattoos/victoria 8.1 tattoo all - add.duf";
+	var sTatooPath = oContentMgr.findFile(sTattooAsset);
+	oContentMgr.openFile(sTatooPath);
+
+	// Send to Unreal (TC10.10)
+	var sReturnString = Run_Exporter(sExportFilename, sAssetType, sRootFolder, sExportFolder, sProductName, sComponentName, arrayMorphList);
+	var sDtuFilename = sReturnString;
+
+	// check for expected root folder, export folder and export filename (TC10.14)
+	if (sDtuFilename.lower().find("/documents/daztounreal/tc10/victoria81.dtu") == -1)
+	{
+		print ("Test Case 10 FAILED: Incorrect output DTU filename");
+		return false;
+	}
+
+	printToLog("Exported DTU = " + sDtuFilename);
+	if (Validate_DTU_file(sDtuFilename) == false)
+	{
+		return false;
+	}
+
+	var sFbxFilename = sDtuFilename;
+	sFbxFilename = sFbxFilename.replace(".dtu",".fbx");
+	printToLog("Exported FBX = " + sFbxFilename);
+
+	if (Validate_FBX_file(sFbxFilename) == false)
+	{
+		return false;
+	}
+
+	// Confirm ExportTextures folder was generated (TC10.14)
+	var sDTUpath = DzFileInfo(sDtuFilename).path();
+	var aLIETextureList = ["d10.png", "d11.png", "d12.png", "d13.png", "d14.png", "d15.png", "d16.png", "d17.png"];
+	var nNumTexturesToFind = aLIETextureList.length;
+	var sNameFilters = ["d*.png"];
+	if (Validate_LIE_Textures(nNumTexturesToFind, sNameFilters, sDTUpath) == false)
+	{
+		return false;
+	}
+
+	return true;
+}

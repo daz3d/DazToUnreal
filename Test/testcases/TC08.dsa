@@ -1,0 +1,59 @@
+// DAZ Studio version 4.16.0.3 filetype DAZ Script
+
+// Test Case TC8
+function Run_TestCase_08(sTestAsset)
+{
+    sExportFilename = "";
+    sAssetType = "SkeletalMesh";
+    sRootFolder = "";
+    sExportFolder = "TC08";
+    sProductName = "";
+    sComponentName = "";
+    arrayMorphList = [];
+
+    printToLog("Running Test Case 8:");
+
+    // start with clean Daz Studio scene (TC8.2)
+    Scene.clear();
+    var oContentMgr = App.getContentMgr();
+
+    // load "QA-Test-Scene-01.duf" (TC8.6)
+    Scene.loadScene(sTestAsset, DzScene.OpenNew);
+
+    // Send to Unreal (TC8.9)
+    var sReturnString = Run_Exporter(sExportFilename, sAssetType, sRootFolder, sExportFolder, sProductName, sComponentName, arrayMorphList);
+    var sDtuFilename = sReturnString;
+
+    // check for expected root folder, export folder and export filename
+    if (sDtuFilename.lower().find("/documents/daztounreal/tc08/qatestscene01.dtu") == -1)
+    {
+        print ("Test Case 8 FAILED: Incorrect output DTU filename");
+        return false;
+    }
+
+    printToLog("Exported DTU = " + sDtuFilename);
+    if (Validate_DTU_file(sDtuFilename) == false)
+    {
+        return false;
+    }
+
+    var sFbxFilename = sDtuFilename;
+    sFbxFilename = sFbxFilename.replace(".dtu",".fbx");
+    printToLog("Exported FBX = " + sFbxFilename);
+
+    if (Validate_FBX_file(sFbxFilename) == false)
+    {
+        return false;
+    }
+
+	  // check for normal maps
+	  var arrNormalMapList = ["G8_1FBaseBodyMapB_1003_nm.png", "G8_1FBaseFaceMapB_1001_nm.png",
+              "G8_1FBaseHeadMapB_1002_nm.png", "G8FBaseArmsMapB_1004_nm.png", "G8FBaseLegsMapB_1003_nm.png"];
+    var sDTUpath = DzFileInfo(sDtuFilename).path();
+    if (Validate_NormalMaps(arrNormalMapList, sDTUpath) == false)
+    {
+        return false;
+    }
+
+    return true;
+}

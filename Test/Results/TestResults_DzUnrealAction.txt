@@ -1,0 +1,17 @@
+======= UnitTest Details =======
+
+
+======= UnitTest Summary =======
+
+Class Name: DzUnrealAction
+Number of UnitTests: 7
+
+[ 0] _DzUnrealAction:....[ PASSED ]
+[ 1] setBridgeDialog:....[ PASSED ]
+[ 2] resetToDefaults:....[ PASSED ]
+[ 3] readGuiRootFolder:..[ PASSED ]
+[ 4] executeAction:......[ PASSED ]
+[ 5] writeConfiguration:.[ PASSED ]
+[ 6] setExportOptions:...[ PASSED ]
+
+End of Report.

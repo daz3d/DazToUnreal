@@ -1,0 +1,58 @@
+// DAZ Studio version 4.16.0.3 filetype DAZ Script
+
+function Run_TestCase_15(sTestAsset)
+{
+    sExportFilename = "";
+    sAssetType = "SkeletalMesh";
+    sRootFolder = "";
+    sExportFolder = "TC15";
+    sProductName = "";
+    sComponentName = "";
+    arrayMorphList = [];
+
+    printToLog("Running Test Case 15:");
+
+    // start with clean Daz Studio scene (TC15.1)
+     Scene.clear();
+	 var oContentMgr = App.getContentMgr();
+
+    // load Genesis 2 Basic Female (TC15.5)
+    var sFullPath = oContentMgr.findFile(sTestAsset);
+    oContentMgr.openFile(sFullPath);
+
+    // Send to Unreal (TC15.8)
+    var sReturnString = Run_Exporter(sExportFilename, sAssetType, sRootFolder, sExportFolder, sProductName, sComponentName, arrayMorphList);
+    var sDtuFilename = sReturnString;
+
+    // check for expected root folder, export folder and export filename (TC15.10)
+    if (sDtuFilename.lower().find("/documents/daztounreal/tc15/genesis2female.dtu") == -1)
+    {
+        print ("Test Case 15 FAILED: Incorrect output DTU filename");
+        return false;
+    }
+
+    printToLog("Exported DTU = " + sDtuFilename);
+    if (Validate_DTU_file(sDtuFilename) == false)
+    {
+        return false;
+    }
+
+    var sFbxFilename = sDtuFilename;
+    sFbxFilename = sFbxFilename.replace(".dtu",".fbx");
+    printToLog("Exported FBX = " + sFbxFilename);
+
+    if (Validate_FBX_file(sFbxFilename) == false)
+    {
+        return false;
+    }
+
+    //normal maps
+    var arrNormalMapList = ["V5BreeEyesB_nm.png", "V5BreeHeadB_nm.png", "V5BreeInMouthB_nm.png",
+                            "V5BreeInMouthB_nm.png", "V5BreeTorsoB_nm.png"];
+    var sDTUpath = DzFileInfo(sDtuFilename).path();
+    if (Validate_NormalMaps(arrNormalMapList, sDTUpath) == false)
+    {
+        return false;
+    }
+    return true;
+}
