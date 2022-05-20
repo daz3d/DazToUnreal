@@ -3,10 +3,27 @@
 var sOutputPath = Global_sOutputPath;
 var sLogFile = sOutputPath + "/" + "temp_log.txt";
 var sJsonFile = sOutputPath + "/" + "TestCase_Results.json"
+var sReportFile = sOutputPath + "/" + "TestCase_Results.txt"
+
+function writeLogToReport()
+{
+	var oFile = new DzFile(sReportFile);
+	oFile.open( DzFile.WriteOnly );
+	oFile.write(readLogText());
+	oFile.close();	
+}
 
 function clearLog()
 {
 	var oFile = new DzFile(sLogFile);
+	oFile.open( DzFile.WriteOnly );
+	oFile.write("");
+	oFile.close();
+}
+
+function clearJson()
+{
+	var oFile = new DzFile(sJsonFile);
 	oFile.open( DzFile.WriteOnly );
 	oFile.write("");
 	oFile.close();

@@ -33,6 +33,7 @@ function main()
 	var aTCResults = new Array(20);
 
 	clearLog();
+	clearJson();
 	var i=0;
 	aTCResults[i] = logToJson("TC01", Run_TestCase_01("/people/genesis 8 female/genesis 8 basic female.duf"));
 	i++;
@@ -75,6 +76,7 @@ function main()
 	i++;
 	aTCResults[i] = logToJson("TC20", Run_TestCase_20());
 
+	clearLog();
 	printToLog("\n");
 	printToLog("=======================");
 	printToLog("Automated Test Results:");
@@ -91,6 +93,7 @@ function main()
 			printToLog("Test Case " + (i+1) + ": **FAILED**");
 		}
 	}
+	writeLogToReport();
 
 }
 

@@ -13,11 +13,17 @@ DZ_PLUGIN_AUTHOR("Daz 3D, Inc");
 
 DZ_PLUGIN_VERSION(PLUGIN_MAJOR, PLUGIN_MINOR, PLUGIN_REV, PLUGIN_BUILD);
 
+#ifdef _DEBUG
 DZ_PLUGIN_DESCRIPTION(QString(
 "<b>Pre-Release DazToUnreal Bridge v%1.%2.%3.%4 </b><br>\
-Bridge Collaboration Project<br><br>\
-<a href = \"https://github.com/danielbui78-bridge-collab/DazToRuntime/tree/unreal-main\">Github</a><br><br>"
+<a href = \"https://github.com/daz3d/DazToUnreal\">Github</a><br><br>"
 ).arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(PLUGIN_REV).arg(PLUGIN_BUILD));
+#else
+DZ_PLUGIN_DESCRIPTION(QString(
+"This plugin provides the ability to send assets to Unreal Engine. \
+Documentation and source code are available on <a href = \"https://github.com/daz3d/DazToUnreal\">Github</a>.<br>"
+));
+#endif
 
 DZ_PLUGIN_CLASS_GUID(DzUnrealAction, 99F42CAE-CD02-49BC-A7CE-C0CF4EDD7609);
 NEW_PLUGIN_CUSTOM_CLASS_GUID(DzUnrealDialog, b7c0b573-bd61-452c-92c1-9560459b4e89);
