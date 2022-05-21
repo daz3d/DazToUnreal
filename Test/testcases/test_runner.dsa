@@ -94,6 +94,7 @@ function main()
 		}
 	}
 	writeLogToReport();
+	clearLog();
 
 }
 
