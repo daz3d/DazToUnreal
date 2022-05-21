@@ -10,7 +10,7 @@ function writeLogToReport()
 	var oFile = new DzFile(sReportFile);
 	oFile.open( DzFile.WriteOnly );
 	oFile.write(readLogText());
-	oFile.close();	
+	oFile.close();
 }
 
 function clearLog()
@@ -57,13 +57,20 @@ function logToJson(testCase, result)
 {
 		var TestCase = testCase;
         var file = new DzFile(sJsonFile);
+		var sDateString = "";
+		var sLogString = "";
+		if (result == false)
+		{
+			sDateString = Date();
+			sLogString = readLogText()
+		}
         file.open( DzFile.Append);
         file.write(
         	JSON.stringify({
         	"TestCase ID": TestCase,
         	"Test Result": result,
-        	"Time": Date(),
-        	"Test Log":readLogText()
+        	"Time": sDateString,
+        	"Test Log": sLogString
         	}, null, "\t"));
         file.write("\n");
         file.close();
@@ -282,7 +289,7 @@ function Validate_LIE_Textures(nNumLIETextures, sNameFilters, sDTUpath)
 function Run_Exporter(sExportFilename, sAssetType, sRootFolder, sExportFolder, sProductName, sComponentName, arrayMorphList)
 {
 	var oBridge = new DzUnrealAction();
-//	var oBridge = new DzBridgeUnityAction();
+//	var oBridge = new DzUnityAction();
 //	var oBridge = new DzBridgeScriptableAction();
 	oBridge.resetToDefaults();
 
@@ -352,6 +359,11 @@ function Run_Exporter2(oBridge, sExportFilename, sAssetType, sRootFolder, sExpor
 	{
 		obj.setMorphList(arrayMorphList);
 	}
+
+	//// Work-around for changed NormalMap On behavior and missing script exposure
+	dlg = DzUnrealDialog();
+	dlg.wEnableNormalMapGenerationCheckBox.setChecked(true);
+	obj.setBridgeDialog(dlg);
 
 	obj.executeAction()
 
