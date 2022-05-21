@@ -1,0 +1,98 @@
+// DAZ Studio version 4.16.0.3 filetype DAZ Script
+var includeDir_oFILE = new DzFile( getScriptFileName() );
+//var sIncludePath = includeDir_oFILE.path();
+var sIncludePath = "C:/GitHub/DazToUnreal-daz3d/Test/TestCases/"
+
+Global_sOutputPath = "C:/GitHub/DazToUnreal-daz3d/Test/Results/";
+
+include(sIncludePath + "TC01.dsa")
+include(sIncludePath + "TC02.dsa")
+include(sIncludePath + "TC03.dsa")
+include(sIncludePath + "TC04.dsa")
+include(sIncludePath + "TC05.dsa")
+include(sIncludePath + "TC06.dsa")
+include(sIncludePath + "TC07.dsa")
+include(sIncludePath + "TC08.dsa")
+include(sIncludePath + "TC09.dsa")
+include(sIncludePath + "TC10.dsa")
+include(sIncludePath + "TC11.dsa")
+include(sIncludePath + "TC12.dsa")
+include(sIncludePath + "TC13.dsa")
+include(sIncludePath + "TC14.dsa")
+include(sIncludePath + "TC15.dsa")
+include(sIncludePath + "TC16.dsa")
+include(sIncludePath + "TC17.dsa")
+include(sIncludePath + "TC18.dsa")
+include(sIncludePath + "TC19b.dsa")
+include(sIncludePath + "TC20.dsa")
+
+include(sIncludePath + "QA_Utility_Functions.dsa")
+
+function main()
+{
+	var aTCResults = new Array(20);
+
+	clearLog();
+	var i=0;
+/*
+	aTCResults[i] = logToJson("TC01", Run_TestCase_01("/people/genesis 8 female/genesis 8 basic female.duf"));
+	i++;
+	aTCResults[i] = logToJson("TC02", Run_TestCase_02("/people/genesis 8 female/genesis 8.1 basic female.duf"));
+	i++;
+	aTCResults[i] = logToJson("TC03", Run_TestCase_03("/people/genesis 8 female/genesis 8.1 basic female.duf"));
+	i++;
+	aTCResults[i] = logToJson("TC04", Run_TestCase_04("/people/genesis 8 female/genesis 8.1 basic female.duf"));
+	i++;
+	aTCResults[i] = logToJson("TC05", Run_TestCase_05("/people/genesis 8 female/genesis 8.1 basic female.duf"));
+	i++;
+	aTCResults[i] = logToJson("TC06", Run_TestCase_06("/people/genesis 8 female/genesis 8.1 basic female.duf"));
+	i++;
+	aTCResults[i] = logToJson("TC07", Run_TestCase_07("/people/genesis 8 female/genesis 8.1 basic female.duf"));
+	i++;
+	var sTestScene = DzFileInfo(DzFileInfo(sIncludePath).path()).path() + "/" + "QA-Test-Scene-01.duf" ;
+	aTCResults[i] = logToJson("TC08", Run_TestCase_08(sTestScene));
+	i++;
+	aTCResults[i] = logToJson("TC09", Run_TestCase_09("/people/genesis 8 female/characters/victoria 8.1.duf"));
+	i++;
+	aTCResults[i] = logToJson("TC10", Run_TestCase_10("/people/genesis 8 female/characters/victoria 8.1.duf"));
+	i++;
+	aTCResults[i] = logToJson("TC11", Run_TestCase_11("/people/genesis 8 male/genesis 8 basic male.duf"));
+	i++;
+	aTCResults[i] = logToJson("TC12", Run_TestCase_12("people/genesis 8 male/genesis 8.1 basic male.duf"));
+	i++;
+	aTCResults[i] = logToJson("TC13", Run_TestCase_13("people/genesis 3 female/genesis 3 female.duf"));
+	i++;
+	aTCResults[i] = logToJson("TC14", Run_TestCase_14("people/genesis 3 male/genesis 3 male.duf"));
+	i++;
+	aTCResults[i] = logToJson("TC15", Run_TestCase_15("people/genesis 2 female/genesis 2 base female.duf"));
+	i++;
+	aTCResults[i] = logToJson("TC16", Run_TestCase_16("people/genesis 2 male/genesis 2 base male.duf"));
+*/
+
+	aTCResults[0] = Run_TestCase_01("/people/genesis 8 female/genesis 8 basic female.duf");
+//	aTCResults[6] = Run_TestCase_07("/people/genesis 8 female/genesis 8.1 basic female.duf");
+//	aTCResults[16] = Run_TestCase_17("/Environments/Architecture/MS_DriveIn/Scenes/!Pre_DriveIn.duf");
+//	aTCResults[17] = Run_TestCase_18();
+//	aTCResults[18] = Run_TestCase_19();
+//	aTCResults[19] = Run_TestCase_20();
+
+	printToLog("\n");
+	printToLog("=======================");
+	printToLog("Automated Test Results:");
+	printToLog("=======================");
+	printToLog("\n");
+	for (var i=0; i < aTCResults.length; i++)
+	{
+		if (aTCResults[i])
+		{
+			printToLog("Test Case " + (i+1) + ": PASSED");
+		}
+		else
+		{
+			printToLog("Test Case " + (i+1) + ": **FAILED**");
+		}
+	}
+
+}
+
+main();

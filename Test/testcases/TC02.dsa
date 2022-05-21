@@ -1,0 +1,60 @@
+// DAZ Studio version 4.16.0.3 filetype DAZ Script
+
+// Test Case TC2
+function Run_TestCase_02(sTestAsset)
+{
+    sExportFilename = "";
+    sAssetType = "SkeletalMesh";
+    sRootFolder = "";
+    sExportFolder = "TC02";
+    sProductName = "";
+    sComponentName = "";
+    arrayMorphList = [];
+
+    printToLog("Running Test Case 2:");
+
+    // start with clean Daz Studio scene (TC2.1)
+    Scene.getPrimarySelection().select(false);
+    var oContentMgr = App.getContentMgr();
+
+    // load Genesis 8.1 Basic Female (TC2.2)
+    var sFullPath = oContentMgr.findFile(sTestAsset);
+    oContentMgr.openFile(sFullPath);
+
+    // Send to Unreal (TC2.4)
+    var sReturnString = Run_Exporter(sExportFilename, sAssetType, sRootFolder, sExportFolder, sProductName, sComponentName, arrayMorphList);
+    var sDtuFilename = sReturnString;
+
+    // check for expected root folder, export folder and export filename (TC2.7)
+    if (sDtuFilename.lower().find("/documents/daztounreal/tc02/genesis81female.dtu") == -1)
+    {
+        print ("Test Case 2 FAILED: Incorrect output DTU filename");
+        return false;
+    }
+
+    printToLog("Exported DTU = " + sDtuFilename);
+    if (Validate_DTU_file(sDtuFilename) == false)
+    {
+        return false;
+    }
+
+    var sFbxFilename = sDtuFilename;
+    sFbxFilename = sFbxFilename.replace(".dtu",".fbx");
+    printToLog("Exported FBX = " + sFbxFilename);
+
+    if (Validate_FBX_file(sFbxFilename) == false)
+    {
+        return false;
+    }
+
+	  // check for normal maps
+	  var arrNormalMapList = ["G8_1FBaseBodyMapB_1003_nm.png", "G8_1FBaseFaceMapB_1001_nm.png",
+              "G8_1FBaseHeadMapB_1002_nm.png", "G8FBaseArmsMapB_1004_nm.png", "G8FBaseLegsMapB_1003_nm.png"];
+    var sDTUpath = DzFileInfo(sDtuFilename).path();
+    if (Validate_NormalMaps(arrNormalMapList, sDTUpath) == false)
+    {
+        return false;
+    }
+
+    return true;
+}

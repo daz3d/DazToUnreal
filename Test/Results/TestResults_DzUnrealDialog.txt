@@ -1,0 +1,18 @@
+======= UnitTest Details =======
+
+
+======= UnitTest Summary =======
+
+Class Name: DzUnrealDialog
+Number of UnitTests: 8
+
+[ 0] _DzUnrealDialog:......................[ PASSED ]
+[ 1] getIntermediateFolderEdit:............[ PASSED ]
+[ 2] getPortEdit:..........................[ PASSED ]
+[ 3] getExportMaterialPropertyCSVCheckBox:.[ PASSED ]
+[ 4] resetToDefaults:......................[ PASSED ]
+[ 5] HandleSelectIntermediateFolderButton:.[ PASSED ]
+[ 6] HandlePortChanged:....................[ PASSED ]
+[ 7] loadSavedSettings:....................[ PASSED ]
+
+End of Report.

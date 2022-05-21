@@ -1,0 +1,43 @@
+// DAZ Studio version 4.16.0.3 filetype DAZ Script
+
+// Test Case TC17
+function Run_TestCase_17(sTestAsset)
+{
+	sExportFilename = "";
+	sAssetType = "Environment";
+	sRootFolder = "";
+	sExportFolder = "TC17";
+	sProductName = "";
+	sComponentName = "";
+	arrayMorphList = [];
+
+	printToLog("Running Test Case 17:");
+
+	// start with clean Daz Studio scene (TC17.1)
+	Scene.clear();
+	var oContentMgr = App.getContentMgr();
+
+	var sFullPath = oContentMgr.findFile(sTestAsset);
+	oContentMgr.openFile(sFullPath);
+
+	// Send to Unreal (TC17.6)
+	var sReturnString = Run_Exporter(sExportFilename, sAssetType, sRootFolder, sExportFolder, sProductName, sComponentName, arrayMorphList);
+//	printToLog("DEBUG: sReturnString=[" + sReturnString + "]");
+	var sDtuFilename = sReturnString;
+
+	// check for expected root folder, export folder and export filename 
+	var sExpectedFilename = "/documents/daztounreal/tc17/msd_ground.dtu";
+	if (sDtuFilename.lower().find(sExpectedFilename) == -1)
+	{
+		printToLog("Test Case 17 FAILED: Output does not match expected filename: expected=[" + sExpectedFilename + "]");
+		return false;
+	}
+
+	printToLog("Exported DTU = " + sDtuFilename);
+	if (Validate_DTU_file(sDtuFilename) == false)
+	{
+		return false;
+	}
+
+	return true;
+}

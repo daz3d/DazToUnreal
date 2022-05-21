@@ -1,0 +1,4 @@
+Running Test Case 1:
+Exported DTU = C:/Users/dbui/Documents/DazToUnreal/TC01/Genesis8Female.dtu
+DTU: Valid JSON format [OK].
+Exported FBX = C:/Users/dbui/Documents/DazToUnreal/TC01/Genesis8Female.fbx

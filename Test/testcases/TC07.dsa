@@ -1,0 +1,117 @@
+// DAZ Studio version 4.16.0.3 filetype DAZ Script
+
+function Run_TestCase_07(sTestAsset)
+{
+    var sExportFilename = "";
+    var sAssetType = "SkeletalMesh";
+    var sRootFolder = "";
+    var sExportFolder = "TC07";
+    var sProductName = "";
+    var sComponentName = "";
+    var arrayMorphList = [];
+
+	var SubdivisionTestLevel = 3;
+
+    printToLog("Running Test Case 7:");
+
+    // start with clean Daz Studio scene (TC7.1)
+    Scene.clear();
+    var oContentMgr = App.getContentMgr();
+
+    // load Genesis 8.1 Basic Female (TC7.5)
+    var sFullPath = oContentMgr.findFile(sTestAsset);
+    oContentMgr.openFile(sFullPath);
+
+    // Create DzUnrealAction and DzUnrealDialog
+    var oBridge = new DzUnrealAction();
+	if (oBridge == undefined)
+	{
+		print ("ERROR: could not instantiate DzUnrealAction object.");
+		return false;
+	}
+
+    var wBridgeDialog = new DzUnrealDialog();
+//    var wBridgeDialog = oBridge.getBridgeDialog();
+	if (wBridgeDialog == undefined)
+	{
+		print ("ERROR: could not instantiate DzUnrealDialog object.");
+		return false;
+	}
+	var wSubdivDialog = new DzBridgeSubdivisionDialog(wBridgeDialog);
+//	var wSubdivDialog = oBridge.getSubdivisionDialog();
+	if (wSubdivDialog == undefined)
+	{
+		print ("ERROR: could not instantiate DzBridgeSubdivisionDialog object.");
+		return false;
+	}
+
+	oBridge.setBridgeDialog(wBridgeDialog);
+	oBridge.setSubdivisionDialog(wSubdivDialog);
+
+    wBridgeDialog.wSubdivisionEnabledCheckBox.setChecked(true);
+
+    // Set Subdivision Level 2 (TC7.8)
+    var nodeSelection = Scene.getPrimarySelection();
+
+    if (wSubdivDialog != undefined)
+    {
+	    wSubdivDialog.setSubdivisionLevelByNode(nodeSelection, SubdivisionTestLevel);
+	}
+
+    // Send to Unreal (TC7.10)
+    var sReturnString = Run_Exporter2(oBridge, sExportFilename, sAssetType, sRootFolder, sExportFolder, sProductName, sComponentName, arrayMorphList);
+    var sDtuFilename = sReturnString;
+
+    wBridgeDialog.wSubdivisionEnabledCheckBox.setChecked(false);
+
+    // check for expected root folder, export folder and export filename
+    if (sDtuFilename.lower().find("/documents/daztounreal/tc07/genesis81female.dtu") == -1)
+    {
+        print ("Test Case 7 FAILED: Incorrect output DTU filename");
+        return false;
+    }
+
+    printToLog("Exported DTU = " + sDtuFilename);
+    if (Validate_DTU_file(sDtuFilename) == false)
+    {
+        return false;
+    }
+    var oDTU = Load_DTU_file(sDtuFilename);
+    printToLog("DTU Subdivision Settings: " + oDTU.Subdivisions[0]["Asset Name"] + ": Subdivision Level=" + oDTU.Subdivisions[0]["Value"]);
+	if (oDTU.Subdivisions[0]["Value"] != SubdivisionTestLevel)
+	{
+		printToLog("Test Case 7 FAILED: Incorrect Subdivision Level set in DTU.");
+		return false;
+	}
+
+    var sFbxFilename = sDtuFilename;
+    sFbxFilename = sFbxFilename.replace(".dtu",".fbx");
+    // Check for Fbx HD
+    var sFbxFilenameHD = sFbxFilename;
+    printToLog("Exported FBX HD = " + sFbxFilenameHD);
+    if (Validate_FBX_file(sFbxFilenameHD) == false)
+    {
+        return false;
+    }
+    // Check for Fbx_base
+    var sFbxFilenameHD = sFbxFilename;
+    sFbxFilenameHD = sFbxFilenameHD.replace(".fbx","_base.fbx");
+    printToLog("Exported FBX base = " + sFbxFilenameHD);
+    if (Validate_FBX_file(sFbxFilenameHD) == false)
+    {
+        return false;
+    }
+
+	// check for normal maps
+	var arrNormalMapList = ["G8_1FBaseBodyMapB_1003_nm.png", "G8_1FBaseFaceMapB_1001_nm.png",
+                "G8_1FBaseHeadMapB_1002_nm.png", "G8FBaseArmsMapB_1004_nm.png", "G8FBaseLegsMapB_1003_nm.png"];
+	var sDTUpath = DzFileInfo(sDtuFilename).path();
+	if (Validate_NormalMaps(arrNormalMapList, sDTUpath) == false)
+	{
+		return false;
+	}
+
+    return true;
+}
+
+//Run_TestCase_07("/people/genesis 8 female/genesis 8.1 basic female.duf");

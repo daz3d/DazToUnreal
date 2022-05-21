@@ -1,0 +1,49 @@
+{
+	"UnitTest Results Version" : 1,
+	"Class Name" : "DzUnrealAction",
+	"Number of UnitTests" : 7,
+	"Detailed Test Results" : [
+		{
+			"UnitTest ID" : 0,
+			"Method Name" : "_DzUnrealAction",
+			"Test Result" : true,
+			"Test Log" : ""
+		},
+		{
+			"UnitTest ID" : 1,
+			"Method Name" : "setBridgeDialog",
+			"Test Result" : true,
+			"Test Log" : ""
+		},
+		{
+			"UnitTest ID" : 2,
+			"Method Name" : "resetToDefaults",
+			"Test Result" : true,
+			"Test Log" : ""
+		},
+		{
+			"UnitTest ID" : 3,
+			"Method Name" : "readGuiRootFolder",
+			"Test Result" : true,
+			"Test Log" : ""
+		},
+		{
+			"UnitTest ID" : 4,
+			"Method Name" : "executeAction",
+			"Test Result" : true,
+			"Test Log" : ""
+		},
+		{
+			"UnitTest ID" : 5,
+			"Method Name" : "writeConfiguration",
+			"Test Result" : true,
+			"Test Log" : ""
+		},
+		{
+			"UnitTest ID" : 6,
+			"Method Name" : "setExportOptions",
+			"Test Result" : true,
+			"Test Log" : ""
+		}
+	]
+}

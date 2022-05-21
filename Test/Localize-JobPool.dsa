@@ -1,0 +1,149 @@
+// DAZ Studio version 4.16.0.3 filetype DAZ Script
+
+/////////////////////////////
+// Localize-JobPool
+/////////////////////////////
+//
+// Converts all DTU files in a jobpool to Aboslute Paths.
+//
+function RelativeToAbsolute( sDtuPath ) {
+
+	var oContentMgr = App.getContentMgr();
+	print("Reading DTU file: [" + sDtuPath + "]");
+	var oFile = new DzFile( sDtuPath );
+	if ( !oFile.exists() ) {
+		print("DTU file does not exist: " + sDtuPath);
+		return false;
+	}
+	if ( !oFile.open(DzFile.ReadOnly) ) {
+		print("Unable to open DTU file for reading: " + sDtuPath);
+		return false;
+	}
+	var sDtuContents = oFile.read();
+	oFile.close();
+	if (!sDtuContents) {
+		print("Error reading DTU file: " + sDtuPath);
+		return false;
+	}
+	var oDTU = {}
+	try {
+		oDTU = JSON.parse(sDtuContents);
+	}
+	catch (e) {
+		oDTU = false;
+	}
+	if (!oDTU) {
+		print("Error parsing DTU file. May be invalid JSON format: " + sDtuPath);
+		return false;
+	}
+
+	var arrKeys = Object.keys(oDTU);
+//	for (i = 0; i < arrKeys.length; i++)
+//	{
+//		print("Key[" + i + "]: " + arrKeys[i]);
+//	}
+
+	var MaterialList = oDTU["Materials"];
+	// pre def for memory handling
+	var matObj;
+	var propList;
+	var property;
+	var sTextureName;
+	var sFullPath;
+
+	if (MaterialList == undefined) {
+		print("Empty materials list");
+		return false;
+	}
+
+//	print ("Material Keys: " + Object.keys(MaterialList[0]))
+	for (var i = 0; i < MaterialList.length; i += 1) {
+		matObj = MaterialList[i];
+		if (matObj == undefined) {
+			print("Matobj @ index="+i+" undefined");
+			continue;
+		}
+
+		print("Material[" + i + "]: " + matObj["Material Name"])
+		propList = matObj["Properties"];
+		if (propList == undefined) {
+			print("propList @ index="+i+" undefined");
+			continue;
+		}
+		for (var j = 0; j < propList.length; j += 1) {
+			property = propList[j];
+			if (property == undefined) {
+				print("property @ index="+j+" undefined");
+				continue;
+			}
+			if (property["Texture"].length > 0) {
+				//print ("Name: " + property["Name"]);
+				//print ("Texture: " + property["Texture"]);
+				sTextureName = property["Texture"];
+				sFullPath = oContentMgr.findFile(sTextureName);
+				//print ("sFullPath: " + sFullPath);
+				if (sTextureName != sFullPath && sFullPath.length > 0) {
+					print("Texture renamed: " + sFullPath);
+					property["Texture"] = sFullPath;
+				}
+			}
+		}
+	}
+
+	var newContents = JSON.stringify(oDTU,  null, "\t");
+	oFile.open(DzFile.WriteOnly);
+	oFile.write(newContents);
+	oFile.close();
+	return true;
+}
+
+function ProcessJobFile ( sJobFile ) {
+	print("Reading jobfile: " + sJobFile);
+	var oFile = new DzFile( sJobFile );
+	if ( !oFile.exists() ) {
+		print("Jobpool file does not exist.");
+		return false;
+	}
+	if ( !oFile.open(DzFile.ReadOnly) ) {
+		print("Unable to open jobpool file for reading.");
+		return false;
+	}
+
+	var aLines = oFile.readLines();
+	var sJobLine;
+	for (var index=0; index<aLines.length; index += 1) {
+		sJobLine=aLines[index].trim();
+		if (sJobLine.length == 0) {
+			continue;
+		}
+		print ("Localizing: " + sJobLine);
+		if (RelativeToAbsolute(sJobLine) == false) {
+			print("Failed to localize DTU: " + sJobLine);
+		}
+	}
+	oFile.close();
+	return true;
+}
+
+function main() {
+//	var aArgList = ["C:/CustomRoot/autoexec-jobpool.txt"]
+	var aArgList = App.scriptArgs;
+//	var aArgList = getArguments()
+	var nArgCount = aArgList.length;
+
+	if (nArgCount == 0) {
+		print("\nUsage: Localize-JobPool.dsa <jobpool-file>\n");
+		return;
+	}
+
+	print("DEBUG: num args:" + nArgCount + ", arglist is: " + aArgList);
+
+	for (var i = 0; i < nArgCount; i += 1) {
+		sJobfile = aArgList[i];
+		if (ProcessJobFile(sJobfile) == false) {
+			print("Convert jobpool failed: " + sJobfile);
+		}
+	}
+}
+
+main();

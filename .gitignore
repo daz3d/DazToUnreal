@@ -2,3 +2,4 @@
 out
 CMakeSettings.json
 .DS_Store
+Test/Results/temp_log.txt
