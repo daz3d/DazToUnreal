@@ -364,6 +364,14 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 					{
 						ImportFromDaz(JsonObject);
 					}
+					else
+					{
+						UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: Unable to parse DTU File: %s"), *FileName);
+					}
+				}
+				else
+				{
+					UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: Unable to find DTU file: %s"), *FileName);
 				}
 			}
 		}
@@ -449,11 +457,19 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportDirectory)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportCharacterFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportCharacterTexturesFolder)) return nullptr;
+#if __APPLE__
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZImportFolder)) return nullptr;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZAnimationImportFolder)) return nullptr;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterFolder)) return nullptr;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterTexturesFolder)) return nullptr;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterMaterialFolder)) return nullptr;
+#else
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DAZImportFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DAZAnimationImportFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterTexturesFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterMaterialFolder)) return nullptr;
+#endif
 
 	 if (AssetType == DazAssetType::Environment)
 	 {
@@ -474,6 +490,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 // If there isn't an FBX file, stop
 	 if (!FPaths::FileExists(FBXFile))
 	 {
+		 	UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: Unable to load FBXFile: %s"), *FBXFile);
 		  return nullptr;
 	 }
 
@@ -839,6 +856,10 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 
 	 // If there are any subdivisions, load the base FBX
 	 FbxScene* BaseScene = nullptr;
+#if __APPLE__
+// Subdivision support in DazStudioPlugin
+#else
+	 // NOTE: This is for backward-compatibility, all subdivision support already in DazStudioPlugin
 	 for (auto SubdivisionInfo : SubdivisionLevels)
 	 {
 		 if (SubdivisionInfo.Value > 0)
@@ -850,7 +871,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 			 break;
 		 }
 	 }
-
+#endif
 
 
 	 // Detach geometry from the skeleton
@@ -873,6 +894,10 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 				}
 		  }
 
+#if __APPLE__
+// Subdivision support in DazStudioPlugin
+#else
+			// NOTE: This is for backward-compatibility, all subdivision support already in DazStudioPlugin
 		  // Fix Subdivision Weights
 		  FString GeometryName = UTF8_TO_TCHAR(SceneNode->GetName());
 		  if (BaseScene && SubdivisionLevels.Contains(GeometryName) && SubdivisionLevels[GeometryName] > 0 && SceneNode->GetMesh())
@@ -890,6 +915,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 			  }
 
 		  }
+#endif
+
 	 }
 
 	 // Add IK bones
