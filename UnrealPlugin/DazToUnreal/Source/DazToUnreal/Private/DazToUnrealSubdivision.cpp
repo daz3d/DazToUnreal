@@ -1,4 +1,4 @@
-#if __APPLE__
+#if PLATFORM_MAC
 // Subdivision support in DazStudioPlugin
 #else
 // NOTE: This is for backward-compatibility, all subdivision support already in DazStudioPlugin
@@ -219,4 +219,4 @@ void FDazToUnrealSubdivision::SubdivideMesh(FbxNode* BaseNode, FbxNode* TranferW
 	}
 }
 
-#endif // __APPLE__
+#endif // PLATFORM_MAC

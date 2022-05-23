@@ -457,7 +457,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportDirectory)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportCharacterFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportCharacterTexturesFolder)) return nullptr;
-#if __APPLE__
+#if PLATFORM_MAC
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZImportFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZAnimationImportFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterFolder)) return nullptr;
@@ -856,7 +856,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 
 	 // If there are any subdivisions, load the base FBX
 	 FbxScene* BaseScene = nullptr;
-#if __APPLE__
+#if PLATFORM_MAC
 // Subdivision support in DazStudioPlugin
 #else
 	 // NOTE: This is for backward-compatibility, all subdivision support already in DazStudioPlugin
@@ -894,7 +894,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 				}
 		  }
 
-#if __APPLE__
+#if PLATFORM_MAC
 // Subdivision support in DazStudioPlugin
 #else
 			// NOTE: This is for backward-compatibility, all subdivision support already in DazStudioPlugin
