@@ -17,8 +17,17 @@ The DazToUnreal Bridge consists of two parts: a Daz Studio plugin which exports 
 
 
 # 2. How to Install
-After it's built you can copy the dzunrealbridge.dll into the plugins folder of Daz Studio (example: "\Daz 3D\Applications\64-bit\DAZ 3D\DAZStudio4\plugins"). Daz Studio can then be started, and the bridge can be accessed from the main menu: File->Send To->Daz To Unreal.  Please refer to installation instructions found in the UnrealPlugin folder's ReadMe file for how to build and install the UnrealEngine plugin.
+### Windows ###
+On the [Release page](https://github.com/daz3d/DazToUnreal/releases), the **dzunrealbridge.dll** can be downloaded, unzipped and copied into the Daz Studio plugins folder (example: "\Daz 3D\Applications\64-bit\DAZ 3D\DAZStudio4\plugins").
+Then select one of the `UE***.zip` files and unzip the contents into a folder named plugins in your Unreal Project folder. If the plugins folder does not exist, create one. You should then have a folder named DazToUnreal inside the plugins folder,
+> example: \MyUnrealProject\plugins\DazToUnreal\
 
+### Mac ###
+On the [Release page](https://github.com/daz3d/DazToUnreal/releases), download, unzip and copy the **libdzunrealbridge.dylib** into the Daz Studio plugins folder.
+Then select one of the `UE***-mac.zip` files and unzip the contents into a folder named plugins in your Unreal Project folder. If the plugins folder does not exist, create one. You should then have a folder named DazToUnreal inside the plugins folder,
+> example: \myMacUnrealProject\plugins\DazToUnreal\
+
+Daz Studio can then be started, and the bridge can be accessed from the main menu: File-> Send To-> Daz To Unreal.
 
 # 3. How to Build
 Requirements: Daz Studio 4.5+ SDK, Qt 4.8.1, Autodesk Fbx SDK, Pixar OpenSubdiv Library, CMake, C++ development environment
