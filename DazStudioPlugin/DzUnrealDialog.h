@@ -31,6 +31,7 @@ public:
 protected slots:
 	void HandleSelectIntermediateFolderButton();
 	void HandlePortChanged(const QString& port);
+	void HandleTargetPluginInstallerButton();
 
 protected:
 	Q_INVOKABLE bool loadSavedSettings();
