@@ -198,6 +198,7 @@ void DzUnrealDialog::HandleTargetPluginInstallerButton()
 
 	if (directoryName == NULL)
 	{
+		// User hit cancel: return without addition popups
 		return;
 	}
 
@@ -275,76 +276,34 @@ or Ignore this error and install the plugin anyway."),
 		QDir().mkdir(sPluginsPath);
 	}
 
-	////////////////////////////////
-	// TODO:
-	// 1. Copy zip to Daz temp folder
-	// 2. Validate selected Folder to sPluginsPath
-	// 3. Validate software version to resource zip file(s)
-	// 4. Extract to sPluginsPath
-	// 5. Migrate to DazBridge all of the above
-	//////////////////////////////////
-
-//	// Copy to temp
-//	bool replace = true;
-//	QFile srcFileBase(sBaseFile);
-//	QString destPathBase = dzApp->getTempPath() + "/UEpluginbase.zip";
-//	DZ_BRIDGE_NAMESPACE::DzBridgeAction::copyFile(&srcFileBase, &destPathBase, replace);
-//	srcFileBase.close();
-//
-//	QFile srcFileBinaries(sBinariesFile);
-//	QString destPathBinaries = dzApp->getTempPath() + "/UEbinaries.zip";
-//	DZ_BRIDGE_NAMESPACE::DzBridgeAction::copyFile(&srcFileBinaries, &destPathBinaries, replace);
-//	srcFileBinaries.close();
-//
-//	// Extract Files to Destination
-//	::zip_extract(destPathBase.toAscii().data(), sPluginsPath.toAscii().data(), nullptr, nullptr);
-//	::zip_extract(destPathBinaries.toAscii().data(), sPluginsPath.toAscii().data(), nullptr, nullptr);
-//
-//	// Check to make sure files were properly unzipped
-//	QString sCheckPathBinaries = sPluginsPath + "/DazToUnreal/Binaries";
-//	QString sCheckPathContent = sPluginsPath + "/DazToUnreal/Content";
-//	if (QDir(sCheckPathBinaries).exists() &&
-//		QDir(sCheckPathContent).exists())
-//	{
-//		bool bInstallSuccessful = false;
-//		// Check if files present in Binaries folder
-//#if __APPLE__
-//		QStringList fileList = QDir(sCheckPathBinaries + "/Mac").entryList(QDir::Files);
-//#else
-//		QStringList fileList = QDir(sCheckPathBinaries + "/Win64").entryList(QDir::Files);
-//#endif
-//		for (QString filename : fileList)
-//		{
-//			if (filename.toLower().contains("daztounreal.dll") ||
-//				filename.toLower().contains("daztounreal.dylib"))
-//			{
-//				bInstallSuccessful = true;
-//				break;
-//			}
-//		}
-//
-//		if (bInstallSuccessful)
-//		{
-//			QMessageBox::information(0, "Daz To Unreal",
-//				tr("Unreal Plugin successfully installed to: ") + sPluginsPath +
-//tr("\n\nIf the Unreal Editor is open, please quit and restart Unreal to continue \
-//Bridge Export process."));
-//		}
-//		else
-//		{
-//			QMessageBox::warning(0, "Daz To Unreal",
-//				tr("Sorry, an unknown error occured. Unable to install \
-//Unreal Plugin to: ") + sPluginsPath);
-//			return;
-//		}
-//	}
-//	// Remove zip files
-//	QFile(destPathBase).remove();
-//	QFile(destPathBinaries).remove();
-
 	bool bInstallSuccessful = false;
 	bInstallSuccessful = installEmbeddedArchive(sBaseFile, sPluginsPath);
 	bInstallSuccessful = installEmbeddedArchive(sBinariesFile, sPluginsPath);
+
+	// UnrealPlugin-specific validation for Installation Success
+	// Check for Binaries and Content folders
+	QString sCheckPathBinaries = sPluginsPath + "/DazToUnreal/Binaries";
+	QString sCheckPathContent = sPluginsPath + "/DazToUnreal/Content";
+	if (QDir(sCheckPathBinaries).exists() &&
+		QDir(sCheckPathContent).exists())
+	{
+		bInstallSuccessful = false;
+		// Check for DLL/DYLIB present in Binaries folder
+#if __APPLE__
+		QStringList fileList = QDir(sCheckPathBinaries + "/Mac").entryList(QDir::Files);
+#else
+		QStringList fileList = QDir(sCheckPathBinaries + "/Win64").entryList(QDir::Files);
+#endif
+		for (QString filename : fileList)
+		{
+			if (filename.toLower().contains("daztounreal.dll") ||
+				filename.toLower().contains("daztounreal.dylib"))
+			{
+				bInstallSuccessful = true;
+				break;
+			}
+		}
+	}
 
 	if (bInstallSuccessful)
 	{
@@ -360,7 +319,6 @@ Bridge Export process."));
 Unreal Plugin to: ") + sPluginsPath);
 		return;
 	}
-
 
 	return;
 }
