@@ -108,12 +108,14 @@ bool DzUnrealDialog::loadSavedSettings()
 
 void DzUnrealDialog::resetToDefaults()
 {
+	m_DontSaveSettings = true;
 	DzBridgeDialog::resetToDefaults();
 
 	QString DefaultPath = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation) + QDir::separator() + "DazToUnreal";
 	intermediateFolderEdit->setText(DefaultPath);
 
 	portEdit->setText("32345");
+	m_DontSaveSettings = false;
 }
 
 void DzUnrealDialog::HandleSelectIntermediateFolderButton()
