@@ -141,12 +141,25 @@ void DzUnrealAction::executeAction()
 
 		exportProgress->finish();
 
+		// DB, 2022-June-4: Hotfix for Corrupted Imports due to UDP Packet before UpgradeToHD
+		if (m_EnableSubdivisions)
+		{
+			QString DTUfilename = m_sDestinationPath + m_sAssetName + ".dtu";
+			// Send a message to Unreal telling it to start an import
+			QUdpSocket* sendSocket = new QUdpSocket(this);
+			QHostAddress* sendAddress = new QHostAddress("127.0.0.1");
+
+			sendSocket->connectToHost(*sendAddress, m_nPort);
+			sendSocket->write(DTUfilename.toUtf8());
+		}
+
 		// DB 2021-09-02: messagebox "Export Complete"
 		if (m_nNonInteractiveMode == 0)
 		{
 			QMessageBox::information(0, "DazToUnreal Bridge",
 				tr("Export phase from Daz Studio complete. Please switch to Unreal to continue with Import phase."), QMessageBox::Ok);
 		}
+
     }
 }
 
@@ -193,12 +206,16 @@ void DzUnrealAction::writeConfiguration()
 	 writer.finishObject();
 	 DTUfile.close();
 
-	 // Send a message to Unreal telling it to start an import
-	 QUdpSocket* sendSocket = new QUdpSocket(this);
-	 QHostAddress* sendAddress = new QHostAddress("127.0.0.1");
+	 // DB, 2022-June-4: Hotfix for Corrupted Imports due to UDP Packet before UpgradeToHD
+	 if (m_EnableSubdivisions == false)
+	 {
+		 // Send a message to Unreal telling it to start an import
+		 QUdpSocket* sendSocket = new QUdpSocket(this);
+		 QHostAddress* sendAddress = new QHostAddress("127.0.0.1");
 
-	 sendSocket->connectToHost(*sendAddress, m_nPort);
-	 sendSocket->write(DTUfilename.toUtf8());
+		 sendSocket->connectToHost(*sendAddress, m_nPort);
+		 sendSocket->write(DTUfilename.toUtf8());
+	 }
 }
 
 // Setup custom FBX export options
