@@ -33,7 +33,6 @@ public:
 protected slots:
 	void HandleSelectIntermediateFolderButton();
 	void HandlePortChanged(const QString& port);
-	void HandleAssetTypeComboChange(int state);
 
 protected:
 	Q_INVOKABLE bool loadSavedSettings();
