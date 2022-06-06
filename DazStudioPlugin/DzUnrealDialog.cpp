@@ -53,6 +53,9 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 
 	settings = new QSettings("Daz 3D", "DazToUnreal");
 
+	// Connect new asset type handler
+	connect(assetTypeCombo, SIGNAL(activated(int)), this, SLOT(HandleAssetTypeComboChange(int)));
+
 	// Intermediate Folder
 	QHBoxLayout* intermediateFolderLayout = new QHBoxLayout();
 	intermediateFolderEdit = new QLineEdit(this);
@@ -149,6 +152,30 @@ void DzUnrealDialog::HandlePortChanged(const QString& port)
 {
 	if (settings == nullptr) return;
 	settings->setValue("Port", port);
+}
+
+void DzUnrealDialog::HandleAssetTypeComboChange(int state)
+{
+	QString assetNameString = assetNameEdit->text();
+
+	// enable/disable Subdivision if Environment selected
+	if (assetTypeCombo->currentText() == "Environment")
+	{
+		morphsEnabledCheckBox->setChecked(false);
+		morphsEnabledCheckBox->setDisabled(true);
+		morphsButton->setDisabled(true);
+		subdivisionEnabledCheckBox->setChecked(false);
+		subdivisionEnabledCheckBox->setDisabled(true);
+		subdivisionButton->setDisabled(true);
+	}
+	else
+	{
+		morphsEnabledCheckBox->setDisabled(false);
+		morphsButton->setDisabled(false);
+		subdivisionEnabledCheckBox->setDisabled(false);
+		subdivisionButton->setDisabled(false);
+	}
+
 }
 
 #include "moc_DzUnrealDialog.cpp"
