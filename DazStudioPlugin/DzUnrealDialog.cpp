@@ -52,6 +52,24 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 #else
 	setWindowTitle(tr("Daz To Unreal v%1.%2").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR));
 #endif
+
+	// Welcome String for Setup/Welcome Mode
+	QString sSetupModeString = tr("<h4>\
+If this is your first time using the Daz To Unreal Bridge, please be sure to read or watch \
+the tutorials or videos below to install and enable the Unreal Engine Plugin for the bridge:</h4>\
+<ul>\
+<li><a href=\"https://github.com/daz3d/DazToUnreal/releases\">Download latest updates and bugfixes (Github)</a></li>\
+<li><a href=\"https://github.com/daz3d/DazToUnreal#2-how-to-install\">How To Install and Configure the Bridge (Github)</a></li>\
+<li><a href=\"https://www.daz3d.com/unreal-bridge#faq\">Daz To Unreal FAQ (Daz 3D)</a></li>\
+<li><a href=\"https://www.daz3d.com/forums/discussion/574891/official-daztounreal-bridge-what-s-new-and-how-to-use-it\">What's New and How To Use It (Daz 3D Forums)</a></li>\
+</ul>\
+Once the maya plugin is enabled, please add a Character or Prop to the Scene to transfer assets using the Daz To Unreal Bridge.<br><br>\
+To find out more about Daz Bridges, go to <a href=\"https://www.daz3d.com/daz-bridges\">https://www.daz3d.com/daz-bridges</a><br>\
+");
+	m_WelcomeLabel->setText(sSetupModeString);
+	QString sBridgeVersionString = tr("Daz To Unreal Bridge %1.%2  revision %3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD);
+	setBridgeVersionStringAndLabel(sBridgeVersionString);
+
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 
 	settings = new QSettings("Daz 3D", "DazToUnreal");
@@ -76,6 +94,8 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	{
 		advancedLayout->addRow("Port", portEdit);
 		advancedLayout->addRow("Intermediate Folder", intermediateFolderLayout);
+		advancedLayout->removeWidget(m_OpenIntermediateFolderButton);
+		advancedLayout->addRow("", m_OpenIntermediateFolderButton);
 	}
 
 	// Configure Target Plugin Installer
@@ -125,14 +145,14 @@ bool DzUnrealDialog::loadSavedSettings()
 
 void DzUnrealDialog::resetToDefaults()
 {
-	m_DontSaveSettings = true;
+	m_bDontSaveSettings = true;
 	DzBridgeDialog::resetToDefaults();
 
 	QString DefaultPath = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation) + QDir::separator() + "DazToUnreal";
 	intermediateFolderEdit->setText(DefaultPath);
 
 	portEdit->setText("32345");
-	m_DontSaveSettings = false;
+	m_bDontSaveSettings = false;
 }
 
 void DzUnrealDialog::HandleSelectIntermediateFolderButton()
@@ -348,6 +368,17 @@ void DzUnrealDialog::HandleAssetTypeComboChange(int state)
 		subdivisionButton->setDisabled(false);
 	}
 
+}
+
+void DzUnrealDialog::HandleOpenIntermediateFolderButton(QString sFolderPath)
+{
+	QString sIntermediateFolder = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation) + QDir::separator() + "DazToUnreal";
+	if (intermediateFolderEdit != nullptr)
+	{
+		sIntermediateFolder = intermediateFolderEdit->text();
+	}
+	sIntermediateFolder = sIntermediateFolder.replace("\\", "/");
+	DzBridgeDialog::HandleOpenIntermediateFolderButton(sIntermediateFolder);
 }
 
 #include "moc_DzUnrealDialog.cpp"

@@ -656,7 +656,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  }
 
 		  // Version 3 "Version, ObjectName, Material, [Type, Color, Opacity, File]"
-		  if (Version == 3)
+		  if (Version == 3 || Version == 4)
 		  {
 				// DB 2022-Jan-14: Removed older BaseMat naming scheme to use unified "AssetName"
 //				FString ObjectName = material->GetStringField(TEXT("Asset Name"));

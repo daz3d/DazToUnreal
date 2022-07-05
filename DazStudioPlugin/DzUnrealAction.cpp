@@ -65,12 +65,19 @@ void DzUnrealAction::executeAction()
 	 // input from the user.
     if (dzScene->getNumSelectedNodes() != 1)
     {
-        if (m_nNonInteractiveMode == 0) 
+		DzNodeList rootNodes = buildRootNodeList();
+		if (rootNodes.length() == 1)
 		{
-            QMessageBox::warning(0, tr("Error"),
-                tr("Please select one Character or Prop to send."), QMessageBox::Ok);
-        }
-        return;
+			dzScene->setPrimarySelection(rootNodes[0]);
+		}
+		else if (rootNodes.length() > 1)
+		{
+			if (m_nNonInteractiveMode == 0)
+			{
+				QMessageBox::warning(0, tr("Error"),
+					tr("Please select one Character or Prop to send."), QMessageBox::Ok);
+			}
+		}
     }
 
     // Create the dialog

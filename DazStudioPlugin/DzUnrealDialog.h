@@ -33,6 +33,7 @@ protected slots:
 	void HandlePortChanged(const QString& port);
 	void HandleTargetPluginInstallerButton();
 	void HandleAssetTypeComboChange(int state);
+	virtual void HandleOpenIntermediateFolderButton(QString sFolderPath = "");
 
 protected:
 	Q_INVOKABLE bool loadSavedSettings();
