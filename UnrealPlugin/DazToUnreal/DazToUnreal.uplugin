@@ -5,7 +5,7 @@
 	"FriendlyName": "DazToUnreal",
 	"Description": "",
 	"Category": "Other",
-	"CreatedBy": "Daz 3D, Inc",
+	"CreatedBy": "David Vodhanel",
 	"CreatedByURL": "",
 	"DocsURL": "",
 	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/070a312bc04c48bcb1a4d193aaddf73e",
@@ -20,7 +20,7 @@
 			"Type": "Editor",
 			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
-				"Win64","Mac"
+				"Win64"
 			]
 		},
 		{
@@ -28,7 +28,7 @@
 			"Type": "UncookedOnly",
 			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
-				"Win64","Mac"
+				"Win64"
 			]
 		},
 		{
@@ -36,7 +36,7 @@
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
-				"Win64","Mac"
+				"Win64"
 			]
 		}
 	],
@@ -46,6 +46,11 @@
 		{
 			"Name": "EditorScriptingUtilities",
 			"Enabled": true
+		},
+		{
+			"Name": "IKRig",
+			"Enabled": true,
+			"Optional":  true
 		}
 	]
 }
