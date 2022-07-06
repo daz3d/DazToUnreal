@@ -52,7 +52,7 @@ void DzUnrealAction::executeAction()
 	 DzMainWindow* mw = dzApp->getInterface();
 	 if (!mw)
 	 {
-         if (m_nNonInteractiveMode == 0) 
+         if (m_nNonInteractiveMode == 0)
 		 {
              QMessageBox::warning(0, tr("Error"),
                  tr("The main window has not been created yet."), QMessageBox::Ok);
@@ -92,6 +92,16 @@ void DzUnrealAction::executeAction()
 			m_bridgeDialog->resetToDefaults();
 			m_bridgeDialog->loadSavedSettings();
 		}
+	}
+
+	// Enable autoJCM option in morph selection dialog
+	if (dzScene->getPrimarySelection() != nullptr)
+	{
+		if (m_morphSelectionDialog == nullptr)
+		{
+			m_morphSelectionDialog = DZ_BRIDGE_NAMESPACE::DzBridgeMorphSelectionDialog::Get(m_bridgeDialog);
+		}
+		m_morphSelectionDialog->SetAutoJCMVisible(true);
 	}
 
 	// Prepare member variables when not using GUI
@@ -270,9 +280,9 @@ void DzUnrealAction::resetToDefaults()
 
 }
 
-bool DzUnrealAction::setBridgeDialog(DzBasicDialog* arg_dlg) 
+bool DzUnrealAction::setBridgeDialog(DzBasicDialog* arg_dlg)
 {
-	m_bridgeDialog = qobject_cast<DzUnrealDialog*>(arg_dlg); 
+	m_bridgeDialog = qobject_cast<DzUnrealDialog*>(arg_dlg);
 
 	if (m_bridgeDialog == nullptr && arg_dlg != nullptr)
 	{
