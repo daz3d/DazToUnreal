@@ -8,7 +8,7 @@ Automated Test Results:
 Test Case 1: PASSED
 Test Case 2: PASSED
 Test Case 3: PASSED
-Test Case 4: PASSED
+Test Case 4: **FAILED**
 Test Case 5: PASSED
 Test Case 6: PASSED
 Test Case 7: PASSED
@@ -22,6 +22,6 @@ Test Case 14: PASSED
 Test Case 15: PASSED
 Test Case 16: PASSED
 Test Case 17: PASSED
-Test Case 18: PASSED
-Test Case 19: PASSED
+Test Case 18: **FAILED**
+Test Case 19: **FAILED**
 Test Case 20: PASSED

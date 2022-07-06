@@ -67,7 +67,7 @@ Once the maya plugin is enabled, please add a Character or Prop to the Scene to 
 To find out more about Daz Bridges, go to <a href=\"https://www.daz3d.com/daz-bridges\">https://www.daz3d.com/daz-bridges</a><br>\
 ");
 	m_WelcomeLabel->setText(sSetupModeString);
-	QString sBridgeVersionString = tr("Daz To Unreal Bridge %1.%2  revision %3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD);
+	QString sBridgeVersionString = tr("Daz To Unreal Bridge %1.%2 revision %3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD);
 	setBridgeVersionStringAndLabel(sBridgeVersionString);
 
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
