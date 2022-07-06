@@ -18,9 +18,9 @@
 }
 {
 	"TestCase ID": "TC04",
-	"Test Result": false,
-	"Time": "Tue Jul 05 2022 18:24:02 GMT-0700 (Pacific Daylight Time)",
-	"Test Log": "Running Test Case 4:\n"
+	"Test Result": true,
+	"Time": "",
+	"Test Log": ""
 }
 {
 	"TestCase ID": "TC05",
@@ -102,15 +102,15 @@
 }
 {
 	"TestCase ID": "TC18",
-	"Test Result": false,
-	"Time": "Tue Jul 05 2022 18:31:57 GMT-0700 (Pacific Daylight Time)",
-	"Test Log": "Running Test Case 18:\nTest Case 18 FAILED: Incorrect output DTU filename\n"
+	"Test Result": true,
+	"Time": "",
+	"Test Log": ""
 }
 {
 	"TestCase ID": "TC19",
-	"Test Result": false,
-	"Time": "Tue Jul 05 2022 18:32:17 GMT-0700 (Pacific Daylight Time)",
-	"Test Log": "Running Test Case 19:\nTest Case 19 FAILED: Incorrect output DTU filename\n"
+	"Test Result": true,
+	"Time": "",
+	"Test Log": ""
 }
 {
 	"TestCase ID": "TC20",
