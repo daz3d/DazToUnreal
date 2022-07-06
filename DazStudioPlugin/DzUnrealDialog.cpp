@@ -29,6 +29,9 @@
 #include "DzBridgeSubdivisionDialog.h"
 #include "version.h"
 
+#include "qmessagebox.h"
+#include "zip.h"
+
 /*****************************
 Local definitions
 *****************************/
@@ -49,9 +52,30 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 #else
 	setWindowTitle(tr("Daz To Unreal v%1.%2").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR));
 #endif
+
+	// Welcome String for Setup/Welcome Mode
+	QString sSetupModeString = tr("<h4>\
+If this is your first time using the Daz To Unreal Bridge, please be sure to read or watch \
+the tutorials or videos below to install and enable the Unreal Engine Plugin for the bridge:</h4>\
+<ul>\
+<li><a href=\"https://github.com/daz3d/DazToUnreal/releases\">Download latest updates and bugfixes (Github)</a></li>\
+<li><a href=\"https://github.com/daz3d/DazToUnreal#2-how-to-install\">How To Install and Configure the Bridge (Github)</a></li>\
+<li><a href=\"https://www.daz3d.com/unreal-bridge#faq\">Daz To Unreal FAQ (Daz 3D)</a></li>\
+<li><a href=\"https://www.daz3d.com/forums/discussion/574891/official-daztounreal-bridge-what-s-new-and-how-to-use-it\">What's New and How To Use It (Daz 3D Forums)</a></li>\
+</ul>\
+Once the maya plugin is enabled, please add a Character or Prop to the Scene to transfer assets using the Daz To Unreal Bridge.<br><br>\
+To find out more about Daz Bridges, go to <a href=\"https://www.daz3d.com/daz-bridges\">https://www.daz3d.com/daz-bridges</a><br>\
+");
+	m_WelcomeLabel->setText(sSetupModeString);
+	QString sBridgeVersionString = tr("Daz To Unreal Bridge %1.%2 revision %3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD);
+	setBridgeVersionStringAndLabel(sBridgeVersionString);
+
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 
 	settings = new QSettings("Daz 3D", "DazToUnreal");
+
+	// Connect new asset type handler
+	connect(assetTypeCombo, SIGNAL(activated(int)), this, SLOT(HandleAssetTypeComboChange(int)));
 
 	// Intermediate Folder
 	QHBoxLayout* intermediateFolderLayout = new QHBoxLayout();
@@ -65,23 +89,30 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	portEdit = new QLineEdit("32345");
 	connect(portEdit, SIGNAL(textChanged(const QString &)), this, SLOT(HandlePortChanged(const QString &)));
 
-	// Export Material Property CSV option
-	exportMaterialPropertyCSVCheckBox = new QCheckBox("", this);
-	connect(exportMaterialPropertyCSVCheckBox, SIGNAL(stateChanged(int)), this, SLOT(HandleExportMaterialPropertyCSVCheckBoxChange(int)));
-
 	QFormLayout* advancedLayout = qobject_cast<QFormLayout*>(advancedWidget->layout());
 	if (advancedLayout)
 	{
 		advancedLayout->addRow("Port", portEdit);
 		advancedLayout->addRow("Intermediate Folder", intermediateFolderLayout);
-		advancedLayout->addRow("Export Material CSV", exportMaterialPropertyCSVCheckBox);
+		advancedLayout->removeWidget(m_OpenIntermediateFolderButton);
+		advancedLayout->addRow("", m_OpenIntermediateFolderButton);
 	}
+
+	// Configure Target Plugin Installer
+	renameTargetPluginInstaller("Unreal Plugin Installer");
+	m_TargetSoftwareVersionCombo->clear();
+	m_TargetSoftwareVersionCombo->addItem("Select Unreal Version");
+	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.25");
+	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.26");
+	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.27");
+	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.0");
+	showTargetPluginInstaller(true);
 
 	// Help pop-ups
 	intermediateFolderEdit->setWhatsThis("DazToUnreal will collect the assets in a subfolder under this folder.  Unreal will import them from here.");
 	intermediateFolderButton->setWhatsThis("DazToUnreal will collect the assets in a subfolder under this folder.  Unreal will import them from here.");
 	portEdit->setWhatsThis("The UDP port used to talk to the DazToUnreal Unreal plugin.\nThis needs to match the port set in the Project Settings in Unreal.\nDefault is 32345.");
-	exportMaterialPropertyCSVCheckBox->setWhatsThis("Checking this will write out a CSV of all the material properties.  Useful for reference when changing materials.");
+	m_wTargetPluginInstaller->setWhatsThis("You can install the Unreal Plugin by selecting the desired Unreal Engine version and the selecting either the Unreal Engine folder or an Unreal Project folder.");
 
 	// Set Defaults
 	resetToDefaults();
@@ -108,24 +139,20 @@ bool DzUnrealDialog::loadSavedSettings()
 	{
 		portEdit->setText(settings->value("Port").toString());
 	}
-	if (!settings->value("ExportMaterialPropertyCSV").isNull())
-	{
-		exportMaterialPropertyCSVCheckBox->setChecked(settings->value("ExportMaterialPropertyCSV").toBool());
-	}
 
 	return true;
 }
 
 void DzUnrealDialog::resetToDefaults()
 {
+	m_bDontSaveSettings = true;
 	DzBridgeDialog::resetToDefaults();
 
 	QString DefaultPath = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation) + QDir::separator() + "DazToUnreal";
 	intermediateFolderEdit->setText(DefaultPath);
 
 	portEdit->setText("32345");
-	exportMaterialPropertyCSVCheckBox->setChecked(false);
-
+	m_bDontSaveSettings = false;
 }
 
 void DzUnrealDialog::HandleSelectIntermediateFolderButton()
@@ -149,6 +176,209 @@ void DzUnrealDialog::HandlePortChanged(const QString& port)
 {
 	if (settings == nullptr) return;
 	settings->setValue("Port", port);
+}
+
+void DzUnrealDialog::HandleTargetPluginInstallerButton()
+{
+	// Get Software Versio
+	DzBridgeDialog::m_sEmbeddedFilesPath = ":/DazBridgeUnreal";
+	QString sBaseFile = "/UEpluginbase.zip";
+	QString sBinariesFile = "";
+	QString softwareVersion = m_TargetSoftwareVersionCombo->currentText();
+	if (softwareVersion.contains("4.25"))
+	{
+		sBinariesFile = "/UE4.25.zip";
+	}
+	else if (softwareVersion.contains("4.26"))
+	{
+		sBinariesFile = "/UE4.26.zip";
+	}
+	else if (softwareVersion.contains("4.27"))
+	{
+		sBinariesFile = "/UE4.27.zip";
+	}
+	else if (softwareVersion.contains("5.0"))
+	{
+		sBinariesFile = "/UE5.0.zip";
+	}
+	else
+	{
+		// Warning, not a valid plugins folder path
+		QMessageBox::information(0, "DazToUnreal Bridge",
+			tr("Please select an Unreal Engine version."));
+		return;
+	}
+
+	// For the first run, Display help / explanation popup dialog...
+	// TODO
+
+	// Get Destination Folder
+	QString directoryName = QFileDialog::getExistingDirectory(this,
+		tr("Choose the Unreal Engine Folder or an Unreal Project Folder"),
+		"/home",
+		QFileDialog::ShowDirsOnly
+		| QFileDialog::DontResolveSymlinks);
+
+	if (directoryName == NULL)
+	{
+		// User hit cancel: return without addition popups
+		return;
+	}
+
+	// fix path separators
+	directoryName = directoryName.replace("\\", "/");
+	// load with default values
+	QString sRootPath = directoryName;
+	QString sPluginsPath = sRootPath + "/plugins";
+	// Check for plugins name
+	if (QRegExp(".*/plugins$").exactMatch(directoryName.toLower()) == true)
+	{
+		sPluginsPath = directoryName;
+		sRootPath = QFileInfo(sPluginsPath).dir().path();
+	}
+	else if (QRegExp(".*/engine$").exactMatch(directoryName.toLower()) == true)
+	{
+		sRootPath = directoryName;
+		sPluginsPath = sRootPath + "/plugins";
+	}
+	else
+	{
+		// check to see if this is an unreal engine root folder
+		QStringList childFolders = QDir(directoryName).entryList(QDir::AllDirs);
+		for (QString foldername : childFolders)
+		{
+			if (foldername.toLower() == "engine")
+			{
+				sRootPath = directoryName + "/engine";
+				sPluginsPath = sRootPath + "/plugins";
+				break;
+			}
+		}
+	}
+
+	bool bIsEnginePath = false;
+	// Check for Engine in sRootPath
+	if (sRootPath.toLower().contains("engine"))
+	{
+		bIsEnginePath = true;
+	}
+
+	bool bIsProjectPath = false;
+	// Check for uproject file
+	if (bIsEnginePath == false)
+	{
+		// get files in root folder
+		QStringList fileList = QDir(sRootPath).entryList(QDir::Files);
+		for (QString filename : fileList)
+		{
+			if (filename.toLower().contains(".uproject"))
+			{
+				bIsProjectPath = true;
+			}
+		}
+		// if file has .uproject, then isProjectFolder = true
+	}
+
+	if (bIsEnginePath == false && bIsProjectPath == false)
+	{
+		// Warning, not a valid plugins folder path
+		auto userChoice = QMessageBox::warning(0, "DazToUnreal Bridge",
+			tr("The selected folder is not a valid plugins folder.  Please select an \
+Unreal Engine Plugins folder, ex: \"UE_5.0\\Engine\\Plugins\", or an Unreal Project \
+folder to install the Unreal Plugin.\n\nYou can choose to Abort and select a new folder, \
+or Ignore this error and install the plugin anyway."),
+			QMessageBox::Ignore | QMessageBox::Abort,
+			QMessageBox::Abort);
+		if (userChoice == QMessageBox::StandardButton::Abort)
+			return;
+	}
+
+	// create plugins folder if does not exist
+	if (QDir(sPluginsPath).exists() == false)
+	{
+		QDir().mkdir(sPluginsPath);
+	}
+
+	bool bInstallSuccessful = false;
+	bInstallSuccessful = installEmbeddedArchive(sBaseFile, sPluginsPath);
+	bInstallSuccessful = installEmbeddedArchive(sBinariesFile, sPluginsPath);
+
+	// UnrealPlugin-specific validation for Installation Success
+	// Check for Binaries and Content folders
+	QString sCheckPathBinaries = sPluginsPath + "/DazToUnreal/Binaries";
+	QString sCheckPathContent = sPluginsPath + "/DazToUnreal/Content";
+	if (QDir(sCheckPathBinaries).exists() &&
+		QDir(sCheckPathContent).exists())
+	{
+		bInstallSuccessful = false;
+		// Check for DLL/DYLIB present in Binaries folder
+#if __APPLE__
+		QStringList fileList = QDir(sCheckPathBinaries + "/Mac").entryList(QDir::Files);
+#else
+		QStringList fileList = QDir(sCheckPathBinaries + "/Win64").entryList(QDir::Files);
+#endif
+		for (QString filename : fileList)
+		{
+			if (filename.toLower().contains("daztounreal.dll") ||
+				filename.toLower().contains("daztounreal.dylib"))
+			{
+				bInstallSuccessful = true;
+				break;
+			}
+		}
+	}
+
+	if (bInstallSuccessful)
+	{
+		QMessageBox::information(0, "Daz To Unreal",
+			tr("Unreal Plugin successfully installed to: ") + sPluginsPath +
+tr("\n\nIf the Unreal Editor is open, please quit and restart Unreal to continue \
+Bridge Export process."));
+	}
+	else
+	{
+		QMessageBox::warning(0, "Daz To Unreal",
+			tr("Sorry, an unknown error occured. Unable to install \
+Unreal Plugin to: ") + sPluginsPath);
+		return;
+	}
+
+	return;
+}
+
+void DzUnrealDialog::HandleAssetTypeComboChange(int state)
+{
+	QString assetNameString = assetNameEdit->text();
+
+	// enable/disable Subdivision if Environment selected
+	if (assetTypeCombo->currentText() == "Environment")
+	{
+		morphsEnabledCheckBox->setChecked(false);
+		morphsEnabledCheckBox->setDisabled(true);
+		morphsButton->setDisabled(true);
+		subdivisionEnabledCheckBox->setChecked(false);
+		subdivisionEnabledCheckBox->setDisabled(true);
+		subdivisionButton->setDisabled(true);
+	}
+	else
+	{
+		morphsEnabledCheckBox->setDisabled(false);
+		morphsButton->setDisabled(false);
+		subdivisionEnabledCheckBox->setDisabled(false);
+		subdivisionButton->setDisabled(false);
+	}
+
+}
+
+void DzUnrealDialog::HandleOpenIntermediateFolderButton(QString sFolderPath)
+{
+	QString sIntermediateFolder = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation) + QDir::separator() + "DazToUnreal";
+	if (intermediateFolderEdit != nullptr)
+	{
+		sIntermediateFolder = intermediateFolderEdit->text();
+	}
+	sIntermediateFolder = sIntermediateFolder.replace("\\", "/");
+	DzBridgeDialog::HandleOpenIntermediateFolderButton(sIntermediateFolder);
 }
 
 #include "moc_DzUnrealDialog.cpp"

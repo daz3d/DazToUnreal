@@ -496,6 +496,14 @@ void FDazToUnrealMaterials::CorrectDazShaders(FString MaterialName, TMap<FString
 		return;
 	}
 
+	TArray<FDUFTextureProperty> Properties = MaterialProperties[MaterialName];
+	if (Properties.Num() == 0)
+	{
+		// This material was likely remapped to a base material and removed
+		UE_LOG(LogTemp, Warning, TEXT("CorrectDazShaders(): INFO: MaterialName has no properties: %s"), *MaterialName);
+		return;
+	}
+
 	FString ShaderName = MaterialProperties[MaterialName][0].ShaderName;
 	FString sMaterialAssetName = MaterialProperties[MaterialName][0].MaterialAssetName;
 

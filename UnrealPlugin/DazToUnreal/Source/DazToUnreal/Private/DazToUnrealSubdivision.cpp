@@ -1,3 +1,8 @@
+#if PLATFORM_MAC
+// Subdivision support in DazStudioPlugin
+#else
+// NOTE: This is for backward-compatibility, all subdivision support already in DazStudioPlugin
+
 #include "DazToUnrealSubdivision.h"
 
 #ifndef M_PI
@@ -35,7 +40,7 @@ struct FDtuOsdSkinWeight
 		Weight = InWeight;
 	}
 
-	const float GetWeight() const 
+	const float GetWeight() const
 	{
 		return Weight;
 	}
@@ -213,3 +218,5 @@ void FDazToUnrealSubdivision::SubdivideMesh(FbxNode* BaseNode, FbxNode* TranferW
 
 	}
 }
+
+#endif // PLATFORM_MAC

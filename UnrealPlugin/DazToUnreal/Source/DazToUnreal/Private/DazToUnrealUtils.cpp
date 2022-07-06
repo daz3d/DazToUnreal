@@ -32,6 +32,7 @@ bool FDazToUnrealUtils::MakeDirectoryAndCheck(FString& Directory)
 		PlatformFile.CreateDirectoryTree(*Directory);
 		if (!FPaths::DirectoryExists(Directory))
 		{
+			UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: Unable to create directory tree: %s"), *Directory);
 			return false;
 		}
 	}
