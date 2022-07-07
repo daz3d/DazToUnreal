@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 2022,
-	"VersionName": "2022.1.17.8",
+	"VersionName": "2022.1.17.21",
 	"FriendlyName": "DazToUnreal",
 	"Description": "",
 	"Category": "Other",
@@ -45,6 +45,10 @@
 	"Plugins": [
 		{
 			"Name": "EditorScriptingUtilities",
+			"Enabled": true
+		},
+		{
+			"Name": "LiveLink",
 			"Enabled": true
 		}
 	]
