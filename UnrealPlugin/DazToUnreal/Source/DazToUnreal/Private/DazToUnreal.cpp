@@ -656,6 +656,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  }
 
 		  // Version 3 "Version, ObjectName, Material, [Type, Color, Opacity, File]"
+		  // DB 2022-July-8: Version 4 is backward compatible with Unreal plugin but further
+		  // review is needed to review remapped records and integrate new features.
 		  if (Version == 3 || Version == 4)
 		  {
 				// DB 2022-Jan-14: Removed older BaseMat naming scheme to use unified "AssetName"
@@ -854,25 +856,6 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 
 	 FDazToUnrealFbx::RenameDuplicateBones(RootBone);
 
-	 // If there are any subdivisions, load the base FBX
-	 FbxScene* BaseScene = nullptr;
-#if PLATFORM_MAC
-// Subdivision support in DazStudioPlugin
-#else
-	 // NOTE: This is for backward-compatibility, all subdivision support already in DazStudioPlugin
-	 for (auto SubdivisionInfo : SubdivisionLevels)
-	 {
-		 if (SubdivisionInfo.Value > 0)
-		 {
-			 FbxImporter* BaseImporter = FbxImporter::Create(SdkManager, "");
-			 const bool bBaseImportStatus = BaseImporter->Initialize(TCHAR_TO_UTF8(*BaseFBXFile));
-			 BaseScene = FbxScene::Create(SdkManager, "");
-			 BaseImporter->Import(BaseScene);
-			 break;
-		 }
-	 }
-#endif
-
 
 	 // Detach geometry from the skeleton
 	 for (int NodeIndex = 0; NodeIndex < Scene->GetNodeCount(); ++NodeIndex)
@@ -893,30 +876,6 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 					 RootNode->AddChild(SceneNode);
 				}
 		  }
-
-#if PLATFORM_MAC
-// Subdivision support in DazStudioPlugin
-#else
-			// NOTE: This is for backward-compatibility, all subdivision support already in DazStudioPlugin
-		  // Fix Subdivision Weights
-		  FString GeometryName = UTF8_TO_TCHAR(SceneNode->GetName());
-		  if (BaseScene && SubdivisionLevels.Contains(GeometryName) && SubdivisionLevels[GeometryName] > 0 && SceneNode->GetMesh())
-		  {
-			  // Find a mesh from the BaseScene to match this mesh
-			  for (int BaseNodeIndex = 0; BaseNodeIndex < BaseScene->GetNodeCount(); ++BaseNodeIndex)
-			  {
-				  FbxNode* BaseSceneNode = BaseScene->GetNode(NodeIndex);
-				  if (BaseSceneNode && BaseSceneNode->GetMesh() && UTF8_TO_TCHAR(BaseSceneNode->GetName()) == GeometryName)
-				  {
-					  int32 SubdivisionLevel = SubdivisionLevels[GeometryName];
-					  FDazToUnrealSubdivision::SubdivideMesh(BaseSceneNode, SceneNode, SubdivisionLevel);
-					  break;
-				  }
-			  }
-
-		  }
-#endif
-
 	 }
 
 	 // Add IK bones

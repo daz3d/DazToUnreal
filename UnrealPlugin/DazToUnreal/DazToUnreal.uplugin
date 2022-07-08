@@ -7,10 +7,10 @@
 	"Category": "Other",
 	"CreatedBy": "Daz 3D, Inc",
 	"CreatedByURL": "",
-	"DocsURL": "",
+	"DocsURL": "https://github.com/daz3d/DazToUnreal#readme",
 	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/070a312bc04c48bcb1a4d193aaddf73e",
-	"SupportURL": "",
-	"EngineVersion": "5.0",
+	"SupportURL": "https://github.com/daz3d/DazToUnreal/issues",
+	"EngineVersion": "5.0.0",
 	"CanContainContent": true,
 	"Installed": true,
 	"Modules": [
@@ -50,6 +50,11 @@
 		{
 			"Name": "LiveLink",
 			"Enabled": true
+		},
+		{
+			"Name": "IKRig",
+			"Enabled": true,
+			"Optional":  true
 		}
 	]
 }
