@@ -154,6 +154,8 @@ void DzUnrealDialog::resetToDefaults()
 	intermediateFolderEdit->setText(DefaultPath);
 
 	portEdit->setText("32345");
+	exportMaterialPropertyCSVCheckBox->setChecked(false);
+
 	m_bDontSaveSettings = false;
 }
 
