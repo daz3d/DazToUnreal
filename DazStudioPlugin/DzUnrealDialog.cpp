@@ -58,12 +58,14 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 If this is your first time using the Daz To Unreal Bridge, please be sure to read or watch \
 the tutorials or videos below to install and enable the Unreal Engine Plugin for the bridge:</h4>\
 <ul>\
-<li><a href=\"https://github.com/daz3d/DazToUnreal/releases\">Download latest updates and bugfixes (Github)</a></li>\
+<li><a href=\"https://github.com/daz3d/DazToUnreal/releases\">Download latest Build dependencies, updates and bugfixes (Github)</a></li>\
 <li><a href=\"https://github.com/daz3d/DazToUnreal#2-how-to-install\">How To Install and Configure the Bridge (Github)</a></li>\
 <li><a href=\"https://www.daz3d.com/unreal-bridge#faq\">Daz To Unreal FAQ (Daz 3D)</a></li>\
 <li><a href=\"https://www.daz3d.com/forums/discussion/574891/official-daztounreal-bridge-what-s-new-and-how-to-use-it\">What's New and How To Use It (Daz 3D Forums)</a></li>\
 </ul>\
-Once the maya plugin is enabled, please add a Character or Prop to the Scene to transfer assets using the Daz To Unreal Bridge.<br><br>\
+<b>NOTE:</b> In order to Package a Project, you will need to download and install the PackageProject-Dependencies.  \
+Please see <a href=\"https://github.com/daz3d/DazToUnreal#2-how-to-install\">Github instructions</a> for instructions to do this.<br><br>\
+Once the Unreal Engine plugin is enabled, please add a Character or Prop to the Scene to transfer assets using the Daz To Unreal Bridge.<br><br>\
 To find out more about Daz Bridges, go to <a href=\"https://www.daz3d.com/daz-bridges\">https://www.daz3d.com/daz-bridges</a><br>\
 ");
 	m_WelcomeLabel->setText(sSetupModeString);
@@ -203,7 +205,6 @@ void DzUnrealDialog::HandleTargetPluginInstallerButton()
 	}
 	else
 	{
-		// Warning, not a valid plugins folder path
 		QMessageBox::information(0, "DazToUnreal Bridge",
 			tr("Please select an Unreal Engine version."));
 		return;
@@ -231,15 +232,25 @@ void DzUnrealDialog::HandleTargetPluginInstallerButton()
 	QString sRootPath = directoryName;
 	QString sPluginsPath = sRootPath + "/plugins";
 	// Check for plugins name
-	if (QRegExp(".*/plugins$").exactMatch(directoryName.toLower()) == true)
+	if (QRegExp(".*/engine$").exactMatch(directoryName.toLower()) == true)
+	{
+		sRootPath = directoryName;
+		sPluginsPath = sRootPath + "/plugins/marketplace";
+	}
+	else if (QRegExp(".*/engine/plugins$").exactMatch(directoryName.toLower()) == true)
+	{
+		sRootPath = directoryName;
+		sPluginsPath = sRootPath + "/marketplace";
+	}
+	else if (QRegExp(".*/engine/plugins/marketplace$").exactMatch(directoryName.toLower()) == true)
 	{
 		sPluginsPath = directoryName;
 		sRootPath = QFileInfo(sPluginsPath).dir().path();
 	}
-	else if (QRegExp(".*/engine$").exactMatch(directoryName.toLower()) == true)
+	else if (QRegExp(".*/plugins$").exactMatch(directoryName.toLower()) == true)
 	{
-		sRootPath = directoryName;
-		sPluginsPath = sRootPath + "/plugins";
+		sPluginsPath = directoryName;
+		sRootPath = QFileInfo(sPluginsPath).dir().path();
 	}
 	else
 	{
@@ -250,7 +261,7 @@ void DzUnrealDialog::HandleTargetPluginInstallerButton()
 			if (foldername.toLower() == "engine")
 			{
 				sRootPath = directoryName + "/engine";
-				sPluginsPath = sRootPath + "/plugins";
+				sPluginsPath = sRootPath + "/plugins/marketplace";
 				break;
 			}
 		}
@@ -330,16 +341,37 @@ or Ignore this error and install the plugin anyway."),
 
 	if (bInstallSuccessful)
 	{
-		QMessageBox::information(0, "Daz To Unreal",
-			tr("Unreal Plugin successfully installed to: ") + sPluginsPath +
-tr("\n\nIf the Unreal Editor is open, please quit and restart Unreal to continue \
-Bridge Export process."));
+		QMessageBox msgBox;
+		msgBox.setTextFormat(Qt::RichText);
+		msgBox.setWindowTitle("Unreal Engine Bridge Plugin Installer");
+		msgBox.setText(tr("<h4>Unreal Plugin was successfully installed to:</h4>") +
+			"<h4><center>" + sPluginsPath + "</center></h4>" +
+			tr("<h4>If the Unreal Editor is open, please quit and restart Unreal to continue \
+the Bridge Export process.</h4>") + 
+			tr("<h4><b>NOTE:</b> In order to Package a Project, you will also need \
+to download and install the PackageProject-Dependencies file from the \
+<a href=\"https://github.com/daz3d/DazToUnreal/releases\">DazToUnreal Github Releases</a> page.</h4>"));
+		msgBox.setStandardButtons(QMessageBox::Ok);
+		msgBox.exec();
 	}
 	else
 	{
-		QMessageBox::warning(0, "Daz To Unreal",
-			tr("Sorry, an unknown error occured. Unable to install \
-Unreal Plugin to: ") + sPluginsPath);
+		QMessageBox msgBox;
+		msgBox.setTextFormat(Qt::RichText);
+		msgBox.setIcon(QMessageBox::Critical);
+		msgBox.setWindowTitle("Unreal Engine Bridge Plugin Installer");
+		msgBox.setText(tr("<h4>Sorry, an unknown error occured. Unable to install \
+Unreal Plugin to:</h4>") +
+			"<h4><center>" + sPluginsPath + "</center></h4>" +
+			tr("<h4>If you were trying to install into the Unreal \
+Engine plugins folder, please make sure you have write permissions to that folder.</h4>") +
+			tr("<h4>For further help, you can go to the \
+<a href=\"https://www.daz3d.com/forums/categories/unreal-discussion\">Daz Forums</a> or the \
+<a href=\"https://github.com/daz3d/DazToUnreal/issues\">Github Issues</a> page.")
+		);
+		msgBox.setStandardButtons(QMessageBox::Ok);
+		msgBox.exec();
+
 		return;
 	}
 
