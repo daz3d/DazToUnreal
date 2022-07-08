@@ -1,51 +1,60 @@
 {
 	"FileVersion": 3,
-	"Version": 5,
-	"VersionName": "5.0.0",
+	"Version": 2022,
+	"VersionName": "2022.1.17.21",
 	"FriendlyName": "DazToUnreal",
 	"Description": "",
 	"Category": "Other",
 	"CreatedBy": "Daz 3D, Inc",
 	"CreatedByURL": "",
-	"DocsURL": "",
+	"DocsURL": "https://github.com/daz3d/DazToUnreal#readme",
 	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/070a312bc04c48bcb1a4d193aaddf73e",
-	"SupportURL": "",
-	"EnabledByDefault": true,
+	"SupportURL": "https://github.com/daz3d/DazToUnreal/issues",
+	"EngineVersion": "5.0.0",
 	"CanContainContent": true,
-	"IsBetaVersion": false,
 	"Installed": true,
 	"Modules": [
 		{
 			"Name": "DazToUnreal",
 			"Type": "Editor",
 			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [
-				"Win64","Mac"
+			"PlatformAllowList": [
+				"Win64",
+				"Mac"
 			]
 		},
 		{
 			"Name": "DazToUnrealDeveloper",
 			"Type": "UncookedOnly",
 			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [
-				"Win64","Mac"
+			"PlatformAllowList": [
+				"Win64",
+				"Mac"
 			]
 		},
 		{
 			"Name": "DazToUnrealRuntime",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [
-				"Win64","Mac"
+			"PlatformAllowList": [
+				"Win64",
+				"Mac"
 			]
 		}
 	],
-
-
 	"Plugins": [
 		{
 			"Name": "EditorScriptingUtilities",
 			"Enabled": true
+		},
+		{
+			"Name": "LiveLink",
+			"Enabled": true
+		},
+		{
+			"Name": "IKRig",
+			"Enabled": true,
+			"Optional":  true
 		}
 	]
 }
