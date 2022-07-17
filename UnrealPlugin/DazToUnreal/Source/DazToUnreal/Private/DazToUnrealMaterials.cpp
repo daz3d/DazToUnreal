@@ -8,6 +8,9 @@
 #include "Engine/SubsurfaceProfile.h"
 #include "AssetRegistryModule.h"
 #include "AssetToolsModule.h"
+#include "Dom/JsonObject.h"
+
+DEFINE_LOG_CATEGORY(LogDazToUnrealMaterial);
 
 FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterialForShader(FString ShaderName)
 {
@@ -876,4 +879,34 @@ bool FDazToUnrealMaterials::SubsurfaceProfilesWouldBeIdentical(USubsurfaceProfil
 	if (ExistingSubsurfaceProfile->Settings.SubsurfaceColor != FColor::FromHex(*GetMaterialProperty(TEXT("SSS Color"), MaterialProperties))) return false;
 	if (ExistingSubsurfaceProfile->Settings.FalloffColor != FColor::FromHex(*GetMaterialProperty(TEXT("Transmitted Color"), MaterialProperties))) return false;
 	return true;
+}
+
+// Returns a map of material to the material it's a duplicate of.
+TMap<TSharedPtr<FJsonValue>, TSharedPtr<FJsonValue>> FDazToUnrealMaterials::FindDuplicateMaterials(TArray<TSharedPtr<FJsonValue>> MaterialList)
+{
+	TMap<TSharedPtr<FJsonValue>, TSharedPtr<FJsonValue>> Duplicates;
+	for (int32 i = 0; i < MaterialList.Num(); i++)
+	{
+		TSharedPtr<FJsonObject> Material = MaterialList[i]->AsObject();
+		FString MaterialName = Material->GetStringField(TEXT("Material Name"));
+		TSharedPtr<FJsonObject> MaterialCopy = MakeShared<FJsonObject>();
+		FJsonObject::Duplicate(Material, MaterialCopy);
+		MaterialCopy->RemoveField(TEXT("Material Name"));
+
+		for (int32 j = i + 1; j < MaterialList.Num(); j++)
+		{
+			TSharedPtr<FJsonObject> CompareMaterial = MaterialList[j]->AsObject();
+			FString CompareMaterialName = CompareMaterial->GetStringField(TEXT("Material Name"));
+			TSharedPtr<FJsonObject> CompareMaterialCopy = MakeShared<FJsonObject>();
+			FJsonObject::Duplicate(CompareMaterial, CompareMaterialCopy);
+			CompareMaterialCopy->RemoveField(TEXT("Material Name"));
+
+			if (FJsonValueObject(MaterialCopy) == FJsonValueObject(CompareMaterialCopy) && !Duplicates.Contains(MaterialList[j]))
+			{
+				Duplicates.Add(MaterialList[j], MaterialList[i]);
+				UE_LOG(LogDazToUnrealMaterial, Display, TEXT("Material %s is a duplicate of %s"), *CompareMaterialName, *MaterialName);
+			}
+		}
+	}
+	return Duplicates;
 }
