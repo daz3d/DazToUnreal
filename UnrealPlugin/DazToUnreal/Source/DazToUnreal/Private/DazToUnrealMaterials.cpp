@@ -885,6 +885,8 @@ bool FDazToUnrealMaterials::SubsurfaceProfilesWouldBeIdentical(USubsurfaceProfil
 TMap<TSharedPtr<FJsonValue>, TSharedPtr<FJsonValue>> FDazToUnrealMaterials::FindDuplicateMaterials(TArray<TSharedPtr<FJsonValue>> MaterialList)
 {
 	TMap<TSharedPtr<FJsonValue>, TSharedPtr<FJsonValue>> Duplicates;
+// JSon Duplicate functions were added in 5.0.  Disabling for UE4 so it can build.
+#if ENGINE_MAJOR_VERSION >= 5
 	for (int32 i = 0; i < MaterialList.Num(); i++)
 	{
 		TSharedPtr<FJsonObject> Material = MaterialList[i]->AsObject();
@@ -908,5 +910,6 @@ TMap<TSharedPtr<FJsonValue>, TSharedPtr<FJsonValue>> FDazToUnrealMaterials::Find
 			}
 		}
 	}
+#endif
 	return Duplicates;
 }
