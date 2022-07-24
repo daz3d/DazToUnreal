@@ -1,4 +1,5 @@
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 set(DZ_PLUGIN_TGT_NAME dzunrealbridge)
@@ -18,6 +19,12 @@ if(WIN32)
 	)
 elseif(APPLE)
 	set(OS_SOURCES "")
+endif()
+
+if(WIN32)
+	set(QRESOURCES "Resources/resources-win.qrc")
+elseif(APPLE)
+	set(QRESOURCES "Resources/resources-mac.qrc")
 endif()
 
 set(DPC_IMAGES_CPP "${CMAKE_CURRENT_BINARY_DIR}/DzUnrealIcon.cpp" )
@@ -41,6 +48,7 @@ add_library( ${DZ_PLUGIN_TGT_NAME} SHARED
 	${DPC_IMAGES_CPP}
 	${OS_SOURCES}
 	${QA_SRCS}
+	${QRESOURCES}
 )
 
 target_include_directories(${DZ_PLUGIN_TGT_NAME}

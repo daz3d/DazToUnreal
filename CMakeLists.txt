@@ -73,7 +73,7 @@ elseif(APPLE)
 	endif()
 	set(CMAKE_MACOSX_RPATH TRUE)
 	set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
-	SET(CMAKE_CXX_FLAGS "-std=gnu++11 ${CMAKE_CXX_FLAGS}")
+	SET(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++ ${CMAKE_CXX_FLAGS}")
 else()
 	message(FATAL_ERROR "Unknown architecture")
 endif(WIN32)
@@ -188,9 +188,6 @@ IF(NOT WIN32)
 		ENDIF(NOT FBX_CLANG)
 		SET(FBX_TMP_TARGET_LIBS ${FBX_TMP_TARGET_LIBS} iconv)
 	ENDIF()
-
-#	SET(CMAKE_CXX_FLAGS "-std=c++11 -stdlib\=libstdc++ ${CMAKE_CXX_FLAGS}")
-    SET(CMAKE_CXX_FLAGS "-std=gnu++11 ${CMAKE_CXX_FLAGS}")
 
 ENDIF(NOT WIN32)
 
