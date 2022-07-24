@@ -1,0 +1,10 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/DazBridgeUnreal">
+        <file alias="UEpluginbase.zip">UEpluginbase.zip</file>
+        <file alias="UE4.25-mac.zip">UE4.25-mac.zip</file>
+        <file alias="UE4.26-mac.zip">UE4.26-mac.zip</file>
+        <file alias="UE4.27-mac.zip">UE4.27-mac.zip</file>
+        <file alias="UE5.0-mac.zip">UE5.0-mac.zip</file>
+    </qresource>
+</RCC>
