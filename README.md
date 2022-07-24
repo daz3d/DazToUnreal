@@ -18,17 +18,31 @@ The DazToUnreal Bridge consists of two parts: a Daz Studio plugin which exports 
 
 
 # 2. How to Install
-### Windows ###
-On the [Release page](https://github.com/daz3d/DazToUnreal/releases), the **dzunrealbridge.dll** can be downloaded, unzipped and copied into the Daz Studio plugins folder (example: "\Daz 3D\Applications\64-bit\DAZ 3D\DAZStudio4\plugins").
-Then select one of the `UE***.zip` files and unzip the contents into a folder named `plugins` in your Unreal Project folder. If the plugins folder does not exist, create one. You should then have a folder named DazToUnreal inside the plugins folder,
-> example: \MyUnrealProject\plugins\DazToUnreal\
+There are three parts to the DazToUnreal Bridge: a Daz Studio plugin, an Unreal Engine plugin and a PackageProject-Dependencies file.
 
-### Mac ###
-On the [Release page](https://github.com/daz3d/DazToUnreal/releases), download, unzip and copy the **libdzunrealbridge.dylib** into the Daz Studio plugins folder.
-Then select one of the `UE***-mac.zip` files to download, depending on your version of Unreal. Then unzip and copy the contents into a folder named `plugins` in your Unreal Project folder. If the plugins folder does not exist, create one. You should then have a folder named DazToUnreal inside the plugins folder,
-> example: \myMacUnrealProject\plugins\DazToUnreal\
+### Daz Studio plugin ###
+- You can install the Daz Studio plugin for the Daz To Unreal Bridge automatically through the Daz Install Manager or Daz Central.  This will add a new menu option under File -> Send To -> Daz To Unreal.
+- For the latest release and bugfixes:
+1. Go to the [Release page](https://github.com/daz3d/DazToUnreal/releases)
+2. Download the zipped **dzunrealbridge.dll** (**libdzunrealbridge.dylib** for macOS)
+3. Unzip and copy it into the Daz Studio plugins folder (example: `\Daz 3D\Applications\64-bit\DAZ 3D\DAZStudio4\plugins`).
 
-Daz Studio can then be started, and the bridge can be accessed from the main menu: File-> Send To-> Daz To Unreal.
+### Unreal Engine plugin ###
+1. The Daz Studio plugin now comes embedded with an installer for the Unreal Engine.  From the DazToUnreal Bridge Dialog, there is now a section in the Advanced Settings for Installing the Unreal Engine plugin.
+2. Select your Unreal Engine version from the drop down menu.
+3. Then click the "Install Plugin" button.  You will see a window popup to choose a folder destination to install the Unreal Engine plugin.  You may choose either the folder where you installed Unreal Engine or your Unreal Project folder.
+4. Click "Select Folder".  You will see a confirmation dialog stating if the plugin installation was successful.
+
+Note: You should only install the Unreal Engine plugin in one place (Engine or Project plugins folder).  If you wish to change the location where you installed the plugin, just delete the `Plugins\DazToUnreal` or `Engine\Plugins\Marketplace\DazToUnreal` folder.
+
+### Package Project Dependencies ###
+In order to Package a Project, you will need to install the corresponding version of the PackageProject files for your version of Unreal Engine.
+1. Go to the [Release page](https://github.com/daz3d/DazToUnreal/releases)
+2. Select one of the `PackageProject-Dependencies-UE***.zip` files that matches your version of Unreal Engine.
+3. Download and unzip the contents into a temporary folder.  In the temporary folder, there should now be a folder named DazToUnreal.
+4. Copy this folder to where you installed the Unreal Engine plugin, either `Engine\Plugins\Marketplace` or `<UnrealProject>\Plugins`.  If you are asked to Merge and/or Replace the existing DazToUnreal folder, click Yes.  
+5. Do not copy it inside the existing DazToUnreal plugins folder.  If you accidentally copied the new folder inside the existing folder, just delete the `DazToUnreal\DazToUnreal` folder and try again.
+6. When successful, you should now have a folder inside the original DazToUnreal plugins folder named `Intermediate`, example: `<UnrealProject>\Plugins\DazToUnreal\Intermedaite\`.
 
 
 # 3. How to Use

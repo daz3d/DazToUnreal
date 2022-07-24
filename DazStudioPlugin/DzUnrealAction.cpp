@@ -52,7 +52,7 @@ void DzUnrealAction::executeAction()
 	 DzMainWindow* mw = dzApp->getInterface();
 	 if (!mw)
 	 {
-         if (m_nNonInteractiveMode == 0) 
+         if (m_nNonInteractiveMode == 0)
 		 {
              QMessageBox::warning(0, tr("Error"),
                  tr("The main window has not been created yet."), QMessageBox::Ok);
@@ -65,12 +65,19 @@ void DzUnrealAction::executeAction()
 	 // input from the user.
     if (dzScene->getNumSelectedNodes() != 1)
     {
-        if (m_nNonInteractiveMode == 0) 
+		DzNodeList rootNodes = buildRootNodeList();
+		if (rootNodes.length() == 1)
 		{
-            QMessageBox::warning(0, tr("Error"),
-                tr("Please select one Character or Prop to send."), QMessageBox::Ok);
-        }
-        return;
+			dzScene->setPrimarySelection(rootNodes[0]);
+		}
+		else if (rootNodes.length() > 1)
+		{
+			if (m_nNonInteractiveMode == 0)
+			{
+				QMessageBox::warning(0, tr("Error"),
+					tr("Please select one Character or Prop to send."), QMessageBox::Ok);
+			}
+		}
     }
 
     // Create the dialog
@@ -85,6 +92,16 @@ void DzUnrealAction::executeAction()
 			m_bridgeDialog->resetToDefaults();
 			m_bridgeDialog->loadSavedSettings();
 		}
+	}
+
+	// Enable autoJCM option in morph selection dialog
+	if (dzScene->getPrimarySelection() != nullptr)
+	{
+		if (m_morphSelectionDialog == nullptr)
+		{
+			m_morphSelectionDialog = DZ_BRIDGE_NAMESPACE::DzBridgeMorphSelectionDialog::Get(m_bridgeDialog);
+		}
+		m_morphSelectionDialog->SetAutoJCMVisible(true);
 	}
 
 	// Prepare member variables when not using GUI
@@ -168,7 +185,7 @@ void DzUnrealAction::writeConfiguration()
 	if (m_pSelectedNode == nullptr)
 		return;
 
-	 QString DTUfilename = m_sDestinationPath + m_sAssetName + ".dtu";
+	 QString DTUfilename = m_sDestinationPath + m_sExportFilename + ".dtu";
 	 QFile DTUfile(DTUfilename);
 	 DTUfile.open(QIODevice::WriteOnly);
 	 DzJsonWriter writer(&DTUfile);
@@ -176,12 +193,12 @@ void DzUnrealAction::writeConfiguration()
 
 	 writeDTUHeader(writer);
 
-	 if (m_sAssetType.toLower().contains("mesh"))
+	 if (m_sAssetType.toLower().contains("mesh") || m_sAssetType == "Animation")
 	 {
 		 QTextStream *pCVSStream = nullptr;
 		 if (m_bExportMaterialPropertiesCSV)
 		 {
-			 QString filename = m_sDestinationPath + m_sAssetName + "_Maps.csv";
+			 QString filename = m_sDestinationPath + m_sExportFilename + "_Maps.csv";
 			 QFile file(filename);
 			 file.open(QIODevice::WriteOnly);
 			 pCVSStream = new QTextStream(&file);
@@ -189,6 +206,17 @@ void DzUnrealAction::writeConfiguration()
 		 }
 		 writeAllMaterials(m_pSelectedNode, writer, pCVSStream);
 		 writeAllMorphs(writer);
+
+		 // DB, 2022-July-5: Daz To Unified Bridge Format support
+		 writeMorphLinks(writer);
+		 writeMorphNames(writer);
+		 DzBoneList aBoneList = getAllBones(m_pSelectedNode);
+		 writeSkeletonData(m_pSelectedNode, writer);
+		 writeHeadTailData(m_pSelectedNode, writer);
+		 writeJointOrientation(aBoneList, writer);
+		 writeLimitData(aBoneList, writer);
+		 writePoseData(m_pSelectedNode, writer, true);
+
 		 writeAllSubdivisions(writer);
 		 writeAllDforceInfo(m_pSelectedNode, writer);
 	 }
@@ -252,9 +280,9 @@ void DzUnrealAction::resetToDefaults()
 
 }
 
-bool DzUnrealAction::setBridgeDialog(DzBasicDialog* arg_dlg) 
+bool DzUnrealAction::setBridgeDialog(DzBasicDialog* arg_dlg)
 {
-	m_bridgeDialog = qobject_cast<DzUnrealDialog*>(arg_dlg); 
+	m_bridgeDialog = qobject_cast<DzUnrealDialog*>(arg_dlg);
 
 	if (m_bridgeDialog == nullptr && arg_dlg != nullptr)
 	{

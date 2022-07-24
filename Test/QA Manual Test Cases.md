@@ -1,6 +1,6 @@
 # QA Manual Test Cases: Unreal script support #
 
-## TC1. Load and Export Genesis 8 Basic Female to Unreal 
+## TC1. Load and Export Genesis 8 Basic Female to Unreal
 1. Start Daz Studio.
 2. Confirm correct version number of pre-release Daz Studio bridge plugin.
 3. Start Unreal Engine.
@@ -146,3 +146,166 @@
 12. Double-click the "Victoria81" asset to show the asset viewer window.
 13. Confirm that the asset has full body tattoos visible in the asset viewer.
 14. Confirm that a "Victoria81" subfolder was generated in the Intermediate Folder, with "Victoria81.dtu" and "Victoria81.fbx" files, and additional "ExportTextures" folder with 8 PNG texture files (d10.png to d17.png).
+
+## TC11. Load and Export Genesis 8 Basic Male to Unreal
+1. Start Daz Studio.
+2. Confirm correct version number of pre-release Daz Studio bridge plugin.
+3. Start Unreal Engine.
+4. Confirm correct version number of pre-release UnrealEngine bridge plugin.
+5. Load Genesis 8 Basic Male.
+6. Select File->Send To->Daz To Unreal.
+7. Confirm Asset Name is "Genesis8Male" in the Daz To Unreal dialog window.
+8. Click "Accept".
+9. Confirm Unreal Engine has successfully generated a new "Genesis8Male" asset in the Content Browser Pane.
+10. Confirm that a "Genesis8Male" subfolder was generated in the Intermediate Folder, with "Genesis8Male.dtu" and "Genesis8Male.fbx" files.
+
+## TC12. Load and Export Genesis 8.1 Basic Male to Unreal
+1. Start Daz Studio.
+2. Confirm correct version number of pre-release Daz Studio bridge plugin.
+3. Start Unreal Engine.
+4. Confirm correct version number of pre-release UnrealEngine bridge plugin.
+5. Load Genesis 8.1 Basic Male.
+6. Select File->Send To->Daz To Unreal.
+7. Confirm Asset Name is "Genesis81Male" in the Daz To Unreal dialog window.
+8. Click "Accept".
+9. Confirm Unreal Engine has successfully generated a new "Genesis81Male" asset in the Content Browser Pane.
+10. Confirm that a "Genesis81Male" subfolder was generated in the Intermediate Folder, with "Genesis81Male.dtu" and "Genesis81Male.fbx" files.
+
+## TC13. Load and Export Genesis 3 Basic Female to Unreal
+1. Start Daz Studio.
+2. Confirm correct version number of pre-release Daz Studio bridge plugin.
+3. Start Unreal Engine.
+4. Confirm correct version number of pre-release UnrealEngine bridge plugin.
+5. Load Genesis 3 Basic Female.
+6. Select File->Send To->Daz To Unreal.
+7. Confirm Asset Name is "Genesis3Female" in the Daz To Unreal dialog window.
+8. Click "Accept".
+9. Confirm Unreal Engine has successfully generated a new "Genesis3Female" asset in the Content Browser Pane.
+10. Confirm that a "Genesis3Female" subfolder was generated in the Intermediate Folder, with "Genesis3Female.dtu" and "Genesis3Female.fbx" files.
+
+## TC14. Load and Export Genesis 3 Basic Male to Unreal
+1. Start Daz Studio.
+2. Confirm correct version number of pre-release Daz Studio bridge plugin.
+3. Start Unreal Engine.
+4. Confirm correct version number of pre-release UnrealEngine bridge plugin.
+5. Load Genesis 3 Basic Male.
+6. Select File->Send To->Daz To Unreal.
+7. Confirm Asset Name is "Genesis3Male" in the Daz To Unreal dialog window.
+8. Click "Accept".
+9. Confirm Unreal Engine has successfully generated a new "Genesis3Male" asset in the Content Browser Pane.
+10. Confirm that a "Genesis3Male" subfolder was generated in the Intermediate Folder, with "Genesis3Male.dtu" and "Genesis3Male.fbx" files.
+
+## TC15. Load and Export Genesis 2 Basic Female to Unreal
+1. Start Daz Studio.
+2. Confirm correct version number of pre-release Daz Studio bridge plugin.
+3. Start Unreal Engine.
+4. Confirm correct version number of pre-release UnrealEngine bridge plugin.
+5. Load Genesis 2 Basic Female.
+6. Select File->Send To->Daz To Unreal.
+7. Confirm Asset Name is "Genesis2Female" in the Daz To Unreal dialog window.
+8. Click "Accept".
+9. Confirm Unreal Engine has successfully generated a new "Genesis2Female" asset in the Content Browser Pane.
+10. Confirm that a "Genesis2Female" subfolder was generated in the Intermediate Folder, with "Genesis2Female.dtu" and "Genesis2Female.fbx" files.
+
+## TC16. Load and Export Genesis 2 Basic Male to Unreal
+1. Start Daz Studio.
+2. Confirm correct version number of pre-release Daz Studio bridge plugin.
+3. Start Unreal Engine.
+4. Confirm correct version number of pre-release UnrealEngine bridge plugin.
+5. Load Genesis 2 Basic Male.
+6. Select File->Send To->Daz To Unreal.
+7. Confirm Asset Name is "Genesis2Male" in the Daz To Unreal dialog window.
+8. Click "Accept".
+9. Confirm Unreal Engine has successfully generated a new "Genesis2Male" asset in the Content Browser Pane.
+10. Confirm that a "Genesis2Male" subfolder was generated in the Intermediate Folder, with "Genesis2Male.dtu" and "Genesis2Male.fbx" files.
+
+## TC17. Load and Export Moonshine Drive-In Movie Theatre Set to Unreal
+1. Start Daz Studio.
+2. Confirm correct version number of pre-release Daz Studio bridge plugin.
+3. Start Unreal Engine.
+4. Confirm correct version number of pre-release UnrealEngine bridge plugin.
+5. Load “!Pre_DriveIn.duf” Environment Set from the Moonshine’s Drive-In Movie Theatre product package.
+6. Select File->Send To->Daz To Unreal.
+7. Confirm Asset Name is “MSD_Ground” in the Daz To Unreal dialog window.
+8. Change Asset Type to “Environment”.
+9. Click “Accept”.
+10. Confirm Unreal Engine has successfully generated multiple assets in the Content Browser Pane.
+11. Confirm Unreal Engine has generated a “MSD_Ground” map level in the main Level Editor window, which has all assets placed in similar position as the Daz Studio Viewport pane.
+12. Confirm that a “MSD_Ground” subfolder was generated in the Intermediate Folder, with multiple “DTU” and “FBX” files generated, including “MSD_Ground.dtu”.
+
+## TC18. Load and Export Genesis 8 Basic Female with Pose to Unreal
+1. Start Daz Studio.
+2. Confirm correct version number of pre-release Daz Studio bridge plugin.
+3. Start Unreal Engine.
+4. Confirm correct version number of pre-release UnrealEngine bridge plugin.
+5. Load Genesis 8 Basic Female.
+6. Select File->Send To->Daz To Unreal.
+7. Confirm Asset Name is "Genesis8Female" in the Daz To Unreal dialog window.
+8. Click "Accept".
+9. Confirm Unreal Engine has successfully generated a new "Genesis8Female" asset in the Content Browser Pane.
+10. Return to Daz Studio and apply “Basic Pose Standing A.duf” to the selected Genesis 8 Female figure.
+11. Select File->Send To->Daz To Unreal.
+12. Change Asset Name to “BasicPoseStandingA”.
+13. Change Asset Type to “Pose”.
+14. Click "Accept".
+15. Confirm Unreal Engine now has a new Pose Asset named “BasicPoseStandingA” in the Pose folder.
+
+## TC19. Load and Export Genesis 8 Basic Female with Aniblock Animation to Unreal
+1. Start Daz Studio.
+2. Confirm correct version number of pre-release Daz Studio bridge plugin.
+3. Start Unreal Engine.
+4. Confirm correct version number of pre-release UnrealEngine bridge plugin.
+5. Load Genesis 8 Basic Female.
+6. Select File->Send To->Daz To Unreal.
+7. Confirm Asset Name is "Genesis8Female" in the Daz To Unreal dialog window.
+8. Click "Accept".
+9. Confirm Unreal Engine has successfully generated a new "Genesis8Female" asset in the Content Browser Pane.
+10. Return to Daz Studio and apply “bow-g8f.ds” to the selected Genesis 8 Female figure.
+11. Open the aniMate2 Pane, right-click in an empty part of the pane and select “Bake To Studio Keyframes”.
+12. Click “Yes” to continue.
+13. Open the Timeline Pane and confirm that it is populated with multiple keyframes.
+14. Select File->Send To->Daz To Unreal.
+15. Change Asset Name to “BowG8F”.
+16. Change Asset Type to “Animation”.
+17. Click “Accept”.
+18. Confirm Unreal Engine now has a new Animation Asset named “BowG8F” in the Animation folder.
+
+## TC20. Load and Export Genesis 8 Basic Female with hair, clothing and props to Unreal
+1. Start Daz Studio.
+2. Confirm correct version number of pre-release Daz Studio bridge plugin.
+3. Start Unreal Engine.
+4. Confirm correct version number of pre-release UnrealEngine bridge plugin.
+5. Load Genesis 8 Basic Female.
+6. Apply “Toulouse Hair.duf” to Genesis 8 Female.
+7. Apply “Shadow Thief !!Outfit.duf” from the “Shadow Thief Outfit for Genesis 8 Female(s)” product.
+8. Apply “Dark Fantasy Long Blade Hande Left.duf” for Genesis 8 Female from the “Dark Fantasy Weapons for Genesis 3 and 8 Female” product.
+9. Apply “Dark Fantasy Long Blade Hande Right.duf” for Genesis 8 Female from the “Dark Fantasy Weapons for Genesis 3 and 8 Female” product.
+10. Select File->Send To->Daz To Unreal.
+11. Confirm Asset Name is "Genesis8Female" in the Daz To Unreal dialog window.
+12. Click "Accept".
+13. Confirm Unreal Engine has successfully generated a new "Genesis8Female" asset in the Content Browser Pane.
+14. Double-click the asset in the Content Browser Pane to view the new asset and confirm that hair, clothing and props are transferred correctly to Unreal Engine.
+
+## TC21. Open Daz Bridge Dialog with Empty Scene
+1. Start Daz Studio.
+2. Confirm correct version number of pre-release Daz Studio bridge plugin.
+3. Select File->Send To->Daz Bridges.
+4. Confirm either pop-up notification to select figure or prop, or Daz Bridge dialog window.
+5. If Daz Bridge dialog appears, confirm Asset Name, Asset Type, Morphs and Subdivision options are disabled.
+6. Click “Accept”.
+7. Confirm pop-up notification to select figure or prop.
+
+## TC22. Install Target Bridge Software (Unity) via Daz Bridge Plugin (Daz To Unity plugin)
+1. Start Daz Studio.
+2. Confirm correct version number of pre-release Daz Studio bridge plugin.
+3. Start Unity Editor with a new HDRP Project.
+4. Load Genesis 8 Basic Female.
+5. Select File->Send To->Daz To Unity.
+6. Confirm Asset Name is "Genesis8Female" in the Daz To Unity dialog window.
+7. Select Unity Assets Folder for the newly created project.
+8. Confirm that “Install Unity Files” is automatically enabled with checkmark.
+9. Click “Accept”.
+10. Switch to Unity Editor and confirm Unity Package Import Window is loaded with DazToUnity installer unity package.
+11. Click “Import”.
+12. Confirm creation of “Assets/Daz3D” folder in Project Pane of Unity Editor.
+13. Confirm correct version number of pre-release Unity bridge plugin.

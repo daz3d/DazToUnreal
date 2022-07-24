@@ -674,8 +674,9 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  }
 
 		  // Version 3 "Version, ObjectName, Material, [Type, Color, Opacity, File]"
-		  // TODO: This should only be 3, need an update for version 4
-		  if (Version >= 3)
+		  // DB 2022-July-8: Version 4 is backward compatible with Unreal plugin but further
+		  // review is needed to review remapped records and integrate new features.
+		  if (Version == 3 || Version == 4)
 		  {
 				// DB 2022-Jan-14: Removed older BaseMat naming scheme to use unified "AssetName"
 //				FString ObjectName = material->GetStringField(TEXT("Asset Name"));
