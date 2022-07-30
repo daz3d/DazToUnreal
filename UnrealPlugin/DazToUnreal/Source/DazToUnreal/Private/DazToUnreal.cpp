@@ -678,11 +678,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  // review is needed to review remapped records and integrate new features.
 		  if (Version == 3 || Version == 4)
 		  {
-				// DB 2022-Jan-14: Removed older BaseMat naming scheme to use unified "AssetName"
-//				FString ObjectName = material->GetStringField(TEXT("Asset Name"));
-//				ObjectName = FDazToUnrealUtils::SanitizeName(ObjectName);
-
-				FString ObjectName = FDazToUnrealUtils::SanitizeName(AssetName);
+				FString ObjectName = material->GetStringField(TEXT("Asset Label"));
+				ObjectName = FDazToUnrealUtils::SanitizeName(ObjectName);
 				IntermediateMaterials.AddUnique(ObjectName + TEXT("_BaseMat"));
 				FString ShaderName = material->GetStringField(TEXT("Material Type"));
 				FString MaterialName;
@@ -1157,6 +1154,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 {
 		  FbxSurfaceMaterial* Material = MaterialArray[MaterialIndex];
 		  FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
+		  FString MaterialFbxObjectName = FDazToUnrealFbx::GetObjectNameForMaterial(Material);
+		  FString MaterialObjectName = FDazToUnrealMaterials::GetFriendlyObjectName(FDazToUnrealUtils::SanitizeName(MaterialFbxObjectName), MaterialProperties);
 
 		  FString NewMaterialName;
 		  if (CachedSettings->UseOriginalMaterialName)
@@ -1165,7 +1164,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  }
 		  else
 		  {
-				 NewMaterialName = AssetName + TEXT("_") + OriginalMaterialName;
+				 NewMaterialName = MaterialObjectName + TEXT("_") + OriginalMaterialName;
 		  }
 
 		  NewMaterialName = FDazToUnrealUtils::SanitizeName(NewMaterialName);
@@ -1176,6 +1175,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  }
 		  else
 		  {
+			    // TODO: Not sure this is needed anymore
 				// search all materialproperties for partial match
 				bool bPartialMatchFound = false;
 				for (auto keyvalPair : MaterialProperties)
@@ -1358,7 +1358,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 				else if (ChildMaterials.Num() == 1)
 				{
 					USubsurfaceProfile* SubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceProfileForMaterial(ChildMaterials[0], CharacterMaterialFolder / ChildMaterials[0], MaterialProperties[ChildMaterials[0]]);
-					FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder / IntermediateMaterialName, CharacterTexturesFolder, ChildMaterials[0], MaterialProperties, CharacterType, nullptr, SubsurfaceProfile);
+					FDazToUnrealMaterials::CreateMaterial(ChildMaterialFolder, CharacterTexturesFolder, ChildMaterials[0], MaterialProperties, CharacterType, nullptr, SubsurfaceProfile);
 				}
 
 		  }

@@ -3,6 +3,7 @@
 #include "Engine/DeveloperSettings.h"
 #include "Engine/EngineTypes.h"
 #include "UObject/SoftObjectPath.h"
+#include "DazToUnrealMaterialPack.h"
 #include "DazToUnrealSettings.generated.h"
 
 /**
@@ -35,7 +36,7 @@ public:
 		SkeletonPostProcessAnimation.Add(FSoftObjectPath(TEXT("/DazToUnreal/Genesis3BaseSkeleton.Genesis3BaseSkeleton")), FSoftClassPath(TEXT("/DazToUnreal/Genesis3JCMPostProcess.Genesis3JCMPostProcess_C")));
 		SkeletonPostProcessAnimation.Add(FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton")), FSoftClassPath(TEXT("/DazToUnreal/Genesis8JCMPostProcess.Genesis8JCMPostProcess_C")));
 
-		BaseShaderMaterials.Add(TEXT("Daz Studio Default"), FSoftObjectPath(TEXT("/DazToUnreal/DSDBaseMaterial.DSDBaseMaterial")));
+		/*BaseShaderMaterials.Add(TEXT("Daz Studio Default"), FSoftObjectPath(TEXT("/DazToUnreal/DSDBaseMaterial.DSDBaseMaterial")));
 		BaseShaderMaterials.Add(TEXT("omUberSurface"), FSoftObjectPath(TEXT("/DazToUnreal/omUberBaseMaterial.omUberBaseMaterial")));
 		BaseShaderMaterials.Add(TEXT("AoA_Subsurface"), FSoftObjectPath(TEXT("/DazToUnreal/AoASubsurfaceBaseMaterial.AoASubsurfaceBaseMaterial")));
 		BaseShaderMaterials.Add(TEXT("Iray Uber"), FSoftObjectPath(TEXT("/DazToUnreal/IrayUberBaseMaterial.IrayUberBaseMaterial")));
@@ -55,7 +56,7 @@ public:
 		BaseScalpMaterial = FSoftObjectPath(TEXT("/DazToUnreal/BaseScalpMaterial.BaseScalpMaterial"));
 		BaseEyeMoistureMaterial = FSoftObjectPath(TEXT("/DazToUnreal/BaseAlphaMaterial.BaseAlphaMaterial"));
 		BaseCorneaMaterial = FSoftObjectPath(TEXT("/DazToUnreal/BaseAlphaMaterial.BaseAlphaMaterial"));
-		NoDrawMaterial = FSoftObjectPath(TEXT("/DazToUnreal/NoDrawMaterial.NoDrawMaterial"));
+		NoDrawMaterial = FSoftObjectPath(TEXT("/DazToUnreal/NoDrawMaterial.NoDrawMaterial"));*/
 
 		UseOriginalMaterialName = false;
 		UseInternalMorphName = false;
@@ -152,49 +153,49 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings)
 		TMap<FSoftObjectPath, FSoftClassPath> SkeletonPostProcessAnimation;
 
-	/** Used to set the default Material to use for a shader type from Daz Studio */
-	UPROPERTY(config, EditAnywhere, Category = MaterialSettings)
-		TMap<FString, FSoftObjectPath> BaseShaderMaterials;
+	/** Material Packs to use.  Order matters, first matching material will be used.*/
+	UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "DazToUnrealMaterialPack"))
+		TArray<FSoftObjectPath> MaterialPacks;
 
-	/** Used to set the default Material to use for a shader type from Daz Studio */
-	UPROPERTY(config, EditAnywhere, Category = MaterialSettings)
-		TMap<FString, FSoftObjectPath> SkinShaderMaterials;
+	///** Used to set the default Material to use for a shader type from Daz Studio */
+	//UPROPERTY(config, EditAnywhere, Category = MaterialSettings)
+	//	TMap<FString, FSoftObjectPath> SkinShaderMaterials;
 
-	/** Override for the base that material instances will be derived from */
-	UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
-		FSoftObjectPath BaseMaterial;
+	///** Override for the base that material instances will be derived from */
+	//UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
+	//	FSoftObjectPath BaseMaterial;
 
-	/** Override for the base with alpha that material instances will be derived from */
-	UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
-		FSoftObjectPath BaseAlphaMaterial;
+	///** Override for the base with alpha that material instances will be derived from */
+	//UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
+	//	FSoftObjectPath BaseAlphaMaterial;
 
-	/** Override for the base with mask that material instances will be derived from */
-	UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
-		FSoftObjectPath BaseMaskedMaterial;
+	///** Override for the base with mask that material instances will be derived from */
+	//UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
+	//	FSoftObjectPath BaseMaskedMaterial;
 
-	/** Override for the base skin material that material instances will be derived from */
-	UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
-		FSoftObjectPath BaseSkinMaterial;
+	///** Override for the base skin material that material instances will be derived from */
+	//UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
+	//	FSoftObjectPath BaseSkinMaterial;
 
-	/** Override for the base hair material that material instances will be derived from */
-	UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
-		FSoftObjectPath BaseHairMaterial;
+	///** Override for the base hair material that material instances will be derived from */
+	//UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
+	//	FSoftObjectPath BaseHairMaterial;
 
-	/** Override for the base scalp material that material instances will be derived from */
-	UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
-		FSoftObjectPath BaseScalpMaterial;
+	///** Override for the base scalp material that material instances will be derived from */
+	//UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
+	//	FSoftObjectPath BaseScalpMaterial;
 
-	/** Override for the base eye moisture material that material instances will be derived from */
-	UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
-		FSoftObjectPath BaseEyeMoistureMaterial;
+	///** Override for the base eye moisture material that material instances will be derived from */
+	//UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
+	//	FSoftObjectPath BaseEyeMoistureMaterial;
 
-	/** Override for the base cornea material that material instances will be derived from */
-	UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
-		FSoftObjectPath BaseCorneaMaterial;
+	///** Override for the base cornea material that material instances will be derived from */
+	//UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
+	//	FSoftObjectPath BaseCorneaMaterial;
 
-	/** Override for the material to use for surfaces that shouldn't be drawn */
-	UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
-		FSoftObjectPath NoDrawMaterial;
+	///** Override for the material to use for surfaces that shouldn't be drawn */
+	//UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "Material"))
+	//	FSoftObjectPath NoDrawMaterial;
 
 	/** Used to change the name of material parameters at import time */
 	UPROPERTY(config, EditAnywhere, Category = MaterialSettings)
@@ -296,4 +297,51 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = SubSurfaceScatterGenesis8Female, meta = (AllowedClasses = "Texture"))
 		FSoftObjectPath TorsoSubSurfaceOpacityGenesis8FemaleTexture;
 
+
+	FSoftObjectPath FindMaterial(FString ShaderName, EDazMaterialType MaterialType) const
+	{
+		for (FSoftObjectPath MaterialPackPath : MaterialPacks)
+		{
+			if (UDazToUnrealMaterialPack* MaterialPack = Cast<UDazToUnrealMaterialPack>(MaterialPackPath.TryLoad()))
+			{
+				FSoftObjectPath MaterialPath = MaterialPack->FindMaterial(ShaderName, MaterialType);
+				if (MaterialPath.IsValid() && !MaterialPath.IsNull())
+				{
+					return MaterialPath;
+				}
+			}
+		}
+
+		// Hard code the old settings.  This could be done via a built in pack instead, but would need to be made in 4.25.
+		if (MaterialType == EDazMaterialType::Base)
+		{
+			if (ShaderName.Compare(TEXT("Daz Studio Default")) == 0) return FSoftObjectPath(TEXT("/DazToUnreal/DSDBaseMaterial.DSDBaseMaterial"));
+			if (ShaderName.Compare(TEXT("omUberSurface")) == 0) return FSoftObjectPath(TEXT("/DazToUnreal/omUberBaseMaterial.omUberBaseMaterial"));
+			if (ShaderName.Compare(TEXT("AoA_Subsurface")) == 0) return FSoftObjectPath(TEXT("/DazToUnreal/AoASubsurfaceBaseMaterial.AoASubsurfaceBaseMaterial"));
+			if (ShaderName.Compare(TEXT("Iray Uber")) == 0) return FSoftObjectPath(TEXT("/DazToUnreal/IrayUberBaseMaterial.IrayUberBaseMaterial"));
+			if (ShaderName.Compare(TEXT("PBRSkin")) == 0) return FSoftObjectPath(TEXT("/DazToUnreal/BasePBRSkinMaterial.BasePBRSkinMaterial"));
+		}
+
+		if (MaterialType == EDazMaterialType::Skin)
+		{
+			if (ShaderName.Compare(TEXT("Daz Studio Default")) == 0) return FSoftObjectPath(TEXT("/DazToUnreal/DSDBaseMaterial.DSDBaseMaterial"));
+			if (ShaderName.Compare(TEXT("omUberSurface")) == 0) return FSoftObjectPath(TEXT("/DazToUnreal/omUberSkinMaterial.omUberSkinMaterial"));
+			if (ShaderName.Compare(TEXT("AoA_Subsurface")) == 0) return FSoftObjectPath(TEXT("/DazToUnreal/AoASubsurfaceSkinMaterial.AoASubsurfaceSkinMaterial"));
+			if (ShaderName.Compare(TEXT("Iray Uber")) == 0) return FSoftObjectPath(TEXT("/DazToUnreal/IrayUberSkinMaterial.IrayUberSkinMaterial"));
+			if (ShaderName.Compare(TEXT("PBRSkin")) == 0) return FSoftObjectPath(TEXT("/DazToUnreal/BasePBRSkinMaterial.BasePBRSkinMaterial"));
+		}
+
+		if(MaterialType == EDazMaterialType::Base) return FSoftObjectPath(TEXT("/DazToUnreal/BaseMaterial.BaseMaterial"));
+		if (MaterialType == EDazMaterialType::Alpha) return FSoftObjectPath(TEXT("/DazToUnreal/BaseAlphaMaterial.BaseAlphaMaterial"));
+		if (MaterialType == EDazMaterialType::Masked) return FSoftObjectPath(TEXT("/DazToUnreal/BaseMaskedMaterial.BaseMaskedMaterial"));
+		if (MaterialType == EDazMaterialType::Skin) return FSoftObjectPath(TEXT("/DazToUnreal/BaseSSSSkinMaterial.BaseSSSSkinMaterial"));
+		if (MaterialType == EDazMaterialType::Hair) return FSoftObjectPath(TEXT("/DazToUnreal/BaseHairMaterial.BaseHairMaterial"));
+		if (MaterialType == EDazMaterialType::Scalp) return FSoftObjectPath(TEXT("/DazToUnreal/BaseScalpMaterial.BaseScalpMaterial"));
+		if (MaterialType == EDazMaterialType::EyeMoisture) return FSoftObjectPath(TEXT("/DazToUnreal/BaseAlphaMaterial.BaseAlphaMaterial"));
+		if (MaterialType == EDazMaterialType::Cornea) return FSoftObjectPath(TEXT("/DazToUnreal/BaseAlphaMaterial.BaseAlphaMaterial"));
+		if (MaterialType == EDazMaterialType::NoDraw) return FSoftObjectPath(TEXT("/DazToUnreal/NoDrawMaterial.NoDrawMaterial"));
+
+		// Fall back to a known default if nothing else was found.
+		return FSoftObjectPath(TEXT("/DazToUnreal/BaseMaterial.BaseMaterial"));
+	}
 };

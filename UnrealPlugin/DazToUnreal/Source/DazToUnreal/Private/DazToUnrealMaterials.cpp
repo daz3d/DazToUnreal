@@ -15,30 +15,19 @@ DEFINE_LOG_CATEGORY(LogDazToUnrealMaterial);
 FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterialForShader(FString ShaderName)
 {
 	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
-	FSoftObjectPath BaseMaterialAssetPath = CachedSettings->BaseMaterial;
-	if (CachedSettings->BaseShaderMaterials.Contains(ShaderName))
-	{
-		BaseMaterialAssetPath = CachedSettings->BaseShaderMaterials[ShaderName];
-	}
+	FSoftObjectPath BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Base);
 	return BaseMaterialAssetPath;
 }
 FSoftObjectPath FDazToUnrealMaterials::GetSkinMaterialForShader(FString ShaderName)
 {
 	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
-	FSoftObjectPath BaseMaterialAssetPath = CachedSettings->BaseSkinMaterial;
-	if (CachedSettings->SkinShaderMaterials.Contains(ShaderName))
-	{
-		BaseMaterialAssetPath = CachedSettings->SkinShaderMaterials[ShaderName];
-	}
+	FSoftObjectPath BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Skin);
 	return BaseMaterialAssetPath;
 }
 
 FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TArray<FDUFTextureProperty > MaterialProperties)
 {
 	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
-
-	// Find the proper Base Material
-	FSoftObjectPath BaseMaterialAssetPath = CachedSettings->BaseMaterial;
 
 	FString AssetType = "";
 	FString ShaderName = "";
@@ -62,29 +51,25 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 	}
 
 	// Set the default material type
-	if (CachedSettings->BaseShaderMaterials.Contains(ShaderName))
-	{
-		BaseMaterialAssetPath = CachedSettings->BaseShaderMaterials[ShaderName];
-		//return BaseMaterialAssetPath;
-	}
+	FSoftObjectPath BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Base);
 
 	if (AssetType == TEXT("Follower/Hair"))
 	{
-		BaseMaterialAssetPath = CachedSettings->BaseHairMaterial;
+		BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Hair);
 		if (MaterialName.EndsWith(Seperator + TEXT("scalp")))
 		{
-			BaseMaterialAssetPath = CachedSettings->BaseScalpMaterial;
+			BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Scalp);
 		}
 	}
 	else if (AssetType == TEXT("Follower/Attachment/Head/Face/Eyelashes"))
 	{
 		if (MaterialName.Contains(Seperator + TEXT("EyeMoisture")))
 		{
-			BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
+			BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::EyeMoisture);
 		}
 		else
 		{
-			BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
+			BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
 		}
 	}
 	else if (AssetType == TEXT("Follower/Attachment/Lower-Body/Hip/Front") &&
@@ -119,31 +104,31 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 		}
 		else if (MaterialName.Contains(Seperator + TEXT("EyeMoisture")))
 		{
-			BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
+			BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::EyeMoisture);
 		}
 		else if (MaterialName.Contains(Seperator + TEXT("EyeReflection")))
 		{
-			BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
+			BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::EyeMoisture);
 		}
 		else if (MaterialName.Contains(Seperator + TEXT("Tear")))
 		{
-			BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
+			BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::EyeMoisture);
 		}
 		else if (MaterialName.EndsWith(Seperator + TEXT("EyeLashes")))
 		{
-			BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
+			BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
 		}
 		else if (MaterialName.EndsWith(Seperator + TEXT("Eyelashes")))
 		{
-			BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
+			BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
 		}
 		else if (MaterialName.EndsWith(Seperator + TEXT("Eyelash")))
 		{
-			BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
+			BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
 		}
 		else if (MaterialName.EndsWith(Seperator + TEXT("cornea")))
 		{
-			BaseMaterialAssetPath = CachedSettings->BaseCorneaMaterial;
+			BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Cornea);
 		}
 		/*else if (MaterialName.EndsWith(TEXT("_sclera")))
 		{
@@ -165,7 +150,7 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 			{
 				if (Property.Name == TEXT("Cutout Opacity Texture"))
 				{
-					BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
+					BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
 				}
 			}
 
@@ -173,7 +158,7 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 	}
 	else if (MaterialName.Contains(Seperator + TEXT("EyeMoisture")))
 	{
-		BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
+		BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::EyeMoisture);
 	}
 	else
 	{
@@ -183,18 +168,18 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 		{
 			if (Property.Name == TEXT("Cutout Opacity Texture"))
 			{
-				BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
+				BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
 			}
 			if (Property.Name == TEXT("Opacity Strength") && Property.Value != TEXT("1"))
 			{
-				BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
+				BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
 			}
 		}
 
 	}
 	if (MaterialName.EndsWith(Seperator + TEXT("NoDraw")))
 	{
-		BaseMaterialAssetPath = CachedSettings->NoDrawMaterial;
+		BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::NoDraw);
 	}
 
 	return BaseMaterialAssetPath;
@@ -204,7 +189,7 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 {
 	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
 
-	FSoftObjectPath BaseMaterialAssetPath = CachedSettings->BaseMaterial;
+	FSoftObjectPath BaseMaterialAssetPath = CachedSettings->FindMaterial(FString(TEXT("None")), EDazMaterialType::Base);
 	// Prepare the material Properties
 	if (MaterialProperties.Contains(MaterialName))
 	{
@@ -912,4 +897,21 @@ TMap<TSharedPtr<FJsonValue>, TSharedPtr<FJsonValue>> FDazToUnrealMaterials::Find
 	}
 #endif
 	return Duplicates;
+}
+
+FString FDazToUnrealMaterials::GetFriendlyObjectName(FString FbxObjectName, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties)
+{
+	// Find the torso material.
+	for (TPair<FString, TArray<FDUFTextureProperty>> Pair : MaterialProperties)
+	{
+		FString AssetType;
+		for (FDUFTextureProperty Property : Pair.Value)
+		{
+			if (Property.MaterialAssetName == FbxObjectName)
+			{
+				return Property.ObjectName;
+			}
+		}
+	}
+	return FString();
 }
