@@ -410,6 +410,12 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Pose"))
 		 AssetType = DazAssetType::Pose;
 
+	 bool UseExperimentalAnimationTransfer = false;
+	 if (JsonObject->HasField(TEXT("Use Experimental Animation Transfer")))
+	 {
+		 UseExperimentalAnimationTransfer = JsonObject->GetBoolField(TEXT("Use Experimental Animation Transfer"));
+	 }
+
 	 // Build AssetIDLookup
 	 FString AssetID = JsonObject->GetStringField(TEXT("AssetID"));
 	 if (!AssetIDLookup.Contains(AssetID))
@@ -481,6 +487,25 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		 FDazToUnrealEnvironment::ImportEnvironment(JsonObject);
 		 UEditorLevelLibrary::SaveCurrentLevel();
 		 return nullptr;
+	 }
+
+	 if (AssetType == DazAssetType::Animation && UseExperimentalAnimationTransfer)
+	 {
+		 DazCharacterType CharacterType = DazCharacterType::Genesis8Male;
+		 if (AssetID.StartsWith(TEXT("Genesis3")))
+		 {
+			 CharacterType = DazCharacterType::Genesis3Male;
+		 }
+		 else if (AssetID.StartsWith(TEXT("Genesis8")))
+		 {
+			 CharacterType = DazCharacterType::Genesis8Male;
+		 }
+		 else if (AssetID == TEXT("Genesis"))
+		 {
+			 CharacterType = DazCharacterType::Genesis1;
+		 }
+		 UObject* NewAnimation = ImportFBXAsset(FBXPath, DAZAnimationImportFolder, DazAssetType::Animation, CharacterType, AssetID, false);
+		 return NewAnimation;
 	 }
 
 	 // If there's an HD FBX File, that's the source
