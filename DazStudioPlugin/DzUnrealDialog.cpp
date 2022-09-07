@@ -61,10 +61,11 @@ the tutorials or videos below to install and enable the Unreal Engine Plugin for
 <li><a href=\"https://github.com/daz3d/DazToUnreal/releases\">Download latest Build dependencies, updates and bugfixes (Github)</a></li>\
 <li><a href=\"https://github.com/daz3d/DazToUnreal#2-how-to-install\">How To Install and Configure the Bridge (Github)</a></li>\
 <li><a href=\"https://www.daz3d.com/unreal-bridge#faq\">Daz To Unreal FAQ (Daz 3D)</a></li>\
-<li><a href=\"https://www.daz3d.com/forums/discussion/574891/official-daztounreal-bridge-what-s-new-and-how-to-use-it\">What's New and How To Use It (Daz 3D Forums)</a></li>\
+<li><a href=\"https://youtu.be/njPE-5EXrIc\">Installing the Daz to Unreal Bridge (Youtube)</a></li>\
+<li><a href=\"https://www.daz3d.com/forums/discussion/574891/official-daztounreal-bridge-what-s-new-and-how-to-use-it/p1\">What's New and How To Use It (Daz 3D Forums)</a></li>\
 </ul>\
 <b>NOTE:</b> In order to Package a Project, you will need to download and install the PackageProject-Dependencies.  \
-Please see <a href=\"https://github.com/daz3d/DazToUnreal#2-how-to-install\">Github instructions</a> for instructions to do this.<br><br>\
+Please see <a href=\"https://github.com/daz3d/DazToUnreal#package-project-dependencies\">Github instructions</a> for instructions to do this.<br><br>\
 Once the Unreal Engine plugin is enabled, please add a Character or Prop to the Scene to transfer assets using the Daz To Unreal Bridge.<br><br>\
 To find out more about Daz Bridges, go to <a href=\"https://www.daz3d.com/daz-bridges\">https://www.daz3d.com/daz-bridges</a><br>\
 ");
