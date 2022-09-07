@@ -5,7 +5,7 @@
 	"FriendlyName": "DazToUnreal",
 	"Description": "",
 	"Category": "Other",
-	"CreatedBy": "Daz 3D, Inc",
+	"CreatedBy": "David Vodhanel",
 	"CreatedByURL": "",
 	"DocsURL": "https://github.com/daz3d/DazToUnreal#readme",
 	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/070a312bc04c48bcb1a4d193aaddf73e",
@@ -18,27 +18,24 @@
 			"Name": "DazToUnreal",
 			"Type": "Editor",
 			"LoadingPhase": "Default",
-			"PlatformAllowList": [
-				"Win64",
-				"Mac"
+			"WhitelistPlatforms": [
+				"Win64"
 			]
 		},
 		{
 			"Name": "DazToUnrealDeveloper",
 			"Type": "UncookedOnly",
 			"LoadingPhase": "Default",
-			"PlatformAllowList": [
-				"Win64",
-				"Mac"
+			"WhitelistPlatforms": [
+				"Win64"
 			]
 		},
 		{
 			"Name": "DazToUnrealRuntime",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
-			"PlatformAllowList": [
-				"Win64",
-				"Mac"
+			"WhitelistPlatforms": [
+				"Win64"
 			]
 		}
 	],

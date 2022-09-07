@@ -116,3 +116,26 @@ void FDazToUnrealFbx::AddWeightsToAllNodes(FbxNode* Parent)
 
 
 }
+
+FString FDazToUnrealFbx::GetObjectNameForMaterial(FbxSurfaceMaterial* Material)
+{
+	FbxScene* Scene = Material->GetScene();
+
+	for (int32 MeshIndex = Scene->GetGeometryCount() - 1; MeshIndex >= 0; --MeshIndex)
+	{
+		FbxGeometry* Geometry = Scene->GetGeometry(MeshIndex);
+		FbxNode* GeometryNode = Geometry->GetNode();
+		int32 MaterialCount = GeometryNode->GetMaterialCount();
+		for (int32 MaterialIndex = 0; MaterialIndex < MaterialCount; MaterialIndex++)
+		{
+			FbxSurfaceMaterial* NodeMaterial = GeometryNode->GetMaterial(MaterialIndex);
+			if (NodeMaterial == Material)
+			{
+				FString ObjectName = UTF8_TO_TCHAR(Geometry->GetName());
+				return ObjectName;
+			}
+		}
+	}
+
+	return FString();
+}

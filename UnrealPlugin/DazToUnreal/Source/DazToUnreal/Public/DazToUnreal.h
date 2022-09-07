@@ -9,6 +9,8 @@
 
 #include "DazToUnrealEnums.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogDazToUnreal, Log, All);
+
 class FToolBarBuilder;
 class FMenuBuilder;
 struct FDUFTextureProperty;

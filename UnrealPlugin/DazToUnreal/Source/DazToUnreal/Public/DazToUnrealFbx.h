@@ -63,6 +63,7 @@ public:
 	static void FixClusterTranformLinks(FbxScene* Scene, FbxNode* RootNode);
 	static void RemoveBindPoses(FbxScene* Scene);
 	static void AddWeightsToAllNodes(FbxNode* Parent);
+	static FString GetObjectNameForMaterial(FbxSurfaceMaterial* Material);
 private:
 	static void RenameDuplicateBones(FbxNode* RootNode, TMap<FString, int>& ExistingBones);
 };
