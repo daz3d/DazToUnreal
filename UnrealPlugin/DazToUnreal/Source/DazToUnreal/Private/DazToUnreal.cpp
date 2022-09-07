@@ -53,7 +53,9 @@
 #include "Serialization/JsonReader.h"
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonSerializer.h"
-#include <Editor/UnrealEd/Public/FileHelpers.h>
+#include "FileHelpers.h"
+
+DEFINE_LOG_CATEGORY(LogDazToUnreal);
 //#include "ISkeletonEditorModule.h"
 //#include "IEditableSkeleton.h"
 
@@ -408,6 +410,12 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Pose"))
 		 AssetType = DazAssetType::Pose;
 
+	 bool UseExperimentalAnimationTransfer = false;
+	 if (JsonObject->HasField(TEXT("Use Experimental Animation Transfer")))
+	 {
+		 UseExperimentalAnimationTransfer = JsonObject->GetBoolField(TEXT("Use Experimental Animation Transfer"));
+	 }
+
 	 // Build AssetIDLookup
 	 FString AssetID = JsonObject->GetStringField(TEXT("AssetID"));
 	 if (!AssetIDLookup.Contains(AssetID))
@@ -481,6 +489,25 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		 return nullptr;
 	 }
 
+	 if (AssetType == DazAssetType::Animation && UseExperimentalAnimationTransfer)
+	 {
+		 DazCharacterType CharacterType = DazCharacterType::Genesis8Male;
+		 if (AssetID.StartsWith(TEXT("Genesis3")))
+		 {
+			 CharacterType = DazCharacterType::Genesis3Male;
+		 }
+		 else if (AssetID.StartsWith(TEXT("Genesis8")))
+		 {
+			 CharacterType = DazCharacterType::Genesis8Male;
+		 }
+		 else if (AssetID == TEXT("Genesis"))
+		 {
+			 CharacterType = DazCharacterType::Genesis1;
+		 }
+		 UObject* NewAnimation = ImportFBXAsset(FBXPath, DAZAnimationImportFolder, DazAssetType::Animation, CharacterType, AssetID, false);
+		 return NewAnimation;
+	 }
+
 	 // If there's an HD FBX File, that's the source
 	 if (FPaths::FileExists(HDFBXFile))
 	 {
@@ -508,10 +535,26 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 TArray<FString> IntermediateMaterials;
 	 m_sourceTextureLookupTable.Reset();
 
+	 // Find duplicate materials
+	 TMap<TSharedPtr<FJsonValue>, TSharedPtr<FJsonValue>> DuplicateMaterials;
 	 TArray<TSharedPtr<FJsonValue>> matList = JsonObject->GetArrayField(TEXT("Materials"));
+	 if (CachedSettings->CombineIdenticalMaterials)
+	 {
+		 
+		 DuplicateMaterials = FDazToUnrealMaterials::FindDuplicateMaterials(matList);
+	 }
+
+	 // Load material values
 	 for (int32 i = 0; i < matList.Num(); i++)
 	 {
+		 // Skip Duplicates
+		 if (DuplicateMaterials.Contains(matList[i]))
+		 {
+			 continue;
+		 }
+
 		  TSharedPtr<FJsonObject> material = matList[i]->AsObject();
+
 		  int32 Version = material->GetIntegerField(TEXT("Version"));
 
 		  // Version 1 "Version, Material, Type, Color, Opacity, File"
@@ -660,11 +703,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  // review is needed to review remapped records and integrate new features.
 		  if (Version == 3 || Version == 4)
 		  {
-				// DB 2022-Jan-14: Removed older BaseMat naming scheme to use unified "AssetName"
-//				FString ObjectName = material->GetStringField(TEXT("Asset Name"));
-//				ObjectName = FDazToUnrealUtils::SanitizeName(ObjectName);
-
-				FString ObjectName = FDazToUnrealUtils::SanitizeName(AssetName);
+				FString ObjectName = material->GetStringField(TEXT("Asset Label"));
+				ObjectName = FDazToUnrealUtils::SanitizeName(ObjectName);
 				IntermediateMaterials.AddUnique(ObjectName + TEXT("_BaseMat"));
 				FString ShaderName = material->GetStringField(TEXT("Material Type"));
 				FString MaterialName;
@@ -1076,46 +1116,72 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  }
 	 }
 
-	 // Get a list of Materials with name collisions
-	 /*TArray<FString> UniqueMaterialNames;
-	 TArray<FString> DuplicateMaterialNames;
-	 for (int32 MaterialIndex = Scene->GetMaterialCount() - 1; MaterialIndex >= 0; --MaterialIndex)
-	 {
-		 //MaterialProperties.Add(MaterialName
-		 FbxSurfaceMaterial *Material = Scene->GetMaterial(MaterialIndex);
-		 FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
-		 if (UniqueMaterialNames.Contains(OriginalMaterialName))
-		 {
-			 DuplciateMaterialNames.Add(OriginalMaterialName);
-		 }
-		 UniqueMaterialNames.AddUnique(OriginalMaterialName);
-	 }
-
-	 // Rename any duplicates adding their shape name
-	 for (int32 MeshIndex = Scene->GetGeometryCount() - 1; MeshIndex >= 0; --MeshIndex)
-	 {
-		 FbxGeometry* Geometry = Scene->GetGeometry(MeshIndex);
-		 FbxNode* GeometryNode = Geometry->GetNode();
-		 for (int32 MaterialIndex = GeometryNode->GetMaterialCount() - 1; MaterialIndex >= 0; --MaterialIndex)
-		 {
-			 FbxSurfaceMaterial *Material = GeometryNode->GetMaterial(MaterialIndex);
-			 FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
-			 if (DuplciateMaterialNames.Contains(OriginalMaterialName))
-			 {
-				 FString NewMaterialName = GeometryNode
-			 }
-		 }
-	 }*/
-
-	 // Rename Materials
+	 // Get FBX scene materials
 	 FbxArray<FbxSurfaceMaterial*> MaterialArray;
 	 Scene->FillMaterialArray(MaterialArray);
+
+	 // Create a mapping of the names of duplicate (identical) materials
+	 if (CachedSettings->CombineIdenticalMaterials)
+	 {
+		 TMap<FString, FString> DuplicateToOriginalName;
+		 for (auto DuplicateMaterialPair : DuplicateMaterials)
+		 {
+			 TSharedPtr<FJsonObject> DuplicateMaterial = DuplicateMaterialPair.Key->AsObject();
+			 FString DuplicateMaterialName = DuplicateMaterial->GetStringField(TEXT("Material Name"));
+
+			 TSharedPtr<FJsonObject> OriginalMaterial = DuplicateMaterialPair.Value->AsObject();
+			 FString OriginalMaterialName = OriginalMaterial->GetStringField(TEXT("Material Name"));
+
+			 DuplicateToOriginalName.Add(DuplicateMaterialName, OriginalMaterialName);
+		 }
+
+		 // Remap FBX Surfaces to remove references to duplicate materials
+		 TMap<FString, FbxSurfaceMaterial*> MaterialNameToFbxMaterial;
+		 for (int32 MaterialIndex = MaterialArray.Size() - 1; MaterialIndex >= 0; --MaterialIndex)
+		 {
+			 FbxSurfaceMaterial* Material = MaterialArray[MaterialIndex];
+			 FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
+			 MaterialNameToFbxMaterial.Add(OriginalMaterialName, Material);
+		 }
+
+		 for (int32 MeshIndex = Scene->GetGeometryCount() - 1; MeshIndex >= 0; --MeshIndex)
+		 {
+			 FbxArray<FbxSurfaceMaterial*> NewMaterialArray;
+			 FbxGeometry* Geometry = Scene->GetGeometry(MeshIndex);
+			 FbxNode* GeometryNode = Geometry->GetNode();
+			 int32 MaterialCount = GeometryNode->GetMaterialCount();
+			 for (int32 AddIndex = 0; AddIndex < MaterialCount; AddIndex++)
+			 {
+				 FbxSurfaceMaterial* MaterialToReplace = GeometryNode->GetMaterial(AddIndex);
+				 FString MaterialToReplaceName = UTF8_TO_TCHAR(MaterialToReplace->GetName());
+				 if (DuplicateToOriginalName.Contains(MaterialToReplaceName))
+				 {
+					 NewMaterialArray.Add(MaterialNameToFbxMaterial[DuplicateToOriginalName[MaterialToReplaceName]]);
+				 }
+				 else
+				 {
+					 NewMaterialArray.Add(MaterialToReplace);
+				 }
+
+			 }
+
+			 GeometryNode->RemoveAllMaterials();
+			 for (int32 AddIndex = 0; AddIndex < MaterialCount; AddIndex++)
+			 {
+				 GeometryNode->AddMaterial(NewMaterialArray[AddIndex]);
+			 }
+		 }
+	 }
+
+	 // Rename Materials
 	 TArray<FString> MaterialNames;
 	 for (int32 MaterialIndex = MaterialArray.Size() - 1; MaterialIndex >= 0; --MaterialIndex)
 	 {
-		  //MaterialProperties.Add(MaterialName
 		  FbxSurfaceMaterial* Material = MaterialArray[MaterialIndex];
 		  FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
+		  FString MaterialFbxObjectName = FDazToUnrealFbx::GetObjectNameForMaterial(Material);
+		  FString MaterialObjectName = FDazToUnrealMaterials::GetFriendlyObjectName(FDazToUnrealUtils::SanitizeName(MaterialFbxObjectName), MaterialProperties);
+
 		  FString NewMaterialName;
 		  if (CachedSettings->UseOriginalMaterialName)
 		  {
@@ -1123,7 +1189,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  }
 		  else
 		  {
-				 NewMaterialName = AssetName + TEXT("_") + OriginalMaterialName;
+				 NewMaterialName = MaterialObjectName + TEXT("_") + OriginalMaterialName;
 		  }
 
 		  NewMaterialName = FDazToUnrealUtils::SanitizeName(NewMaterialName);
@@ -1134,6 +1200,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  }
 		  else
 		  {
+			    // TODO: Not sure this is needed anymore
 				// search all materialproperties for partial match
 				bool bPartialMatchFound = false;
 				for (auto keyvalPair : MaterialProperties)
@@ -1316,7 +1383,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 				else if (ChildMaterials.Num() == 1)
 				{
 					USubsurfaceProfile* SubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceProfileForMaterial(ChildMaterials[0], CharacterMaterialFolder / ChildMaterials[0], MaterialProperties[ChildMaterials[0]]);
-					FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder / IntermediateMaterialName, CharacterTexturesFolder, ChildMaterials[0], MaterialProperties, CharacterType, nullptr, SubsurfaceProfile);
+					FDazToUnrealMaterials::CreateMaterial(ChildMaterialFolder, CharacterTexturesFolder, ChildMaterials[0], MaterialProperties, CharacterType, nullptr, SubsurfaceProfile);
 				}
 
 		  }
@@ -1365,22 +1432,6 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 
 	 return NewObject;
 }
-
-
-
-/*bool FDazToUnrealModule::CreateMaterials(const FString CharacterMaterialFolder, const FString CharacterTexturesFolder, const TArray<FString>& MaterialNames, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties, const DazCharacterType CharacterType)
-{
-	 const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
-
-	 // Update Material Names
-	 for (FString MaterialName : MaterialNames)
-	 {
-		  FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder, CharacterTexturesFolder, MaterialName, MaterialProperties, CharacterType, nullptr);
-	 }
-
-
-	 return true;
-}*/
 
 
 // Modified from the FColor::FromHex function
@@ -1559,6 +1610,7 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bUseT0AsRefPose = CachedSettings->FrameZeroIsReferencePose;
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bConvertScene = true;
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bForceFrontXAxis = CachedSettings->ZeroRootRotationOnImport;
+		  FbxFactory->ImportUI->SkeletalMeshImportData->bImportMeshesInBoneHierarchy = false;
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_SkeletalMesh;
 	 }
 	 if (AssetType == DazAssetType::StaticMesh)

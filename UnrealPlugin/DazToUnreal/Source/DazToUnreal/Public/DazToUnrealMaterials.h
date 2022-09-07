@@ -5,6 +5,10 @@
 
 class UMaterialInstanceConstant;
 class USubsurfaceProfile;
+class FJsonValue;
+
+DECLARE_LOG_CATEGORY_EXTERN(LogDazToUnrealMaterial, Log, All);
+
 // struct for holding material override settings
 struct FDUFTextureProperty
 {
@@ -42,4 +46,10 @@ public:
 	static USubsurfaceProfile* CreateSubsurfaceProfileForMaterial(const FString MaterialName, const FString CharacterMaterialFolder, const TArray<FDUFTextureProperty > MaterialProperties);
 	static bool SubsurfaceProfilesAreIdentical(USubsurfaceProfile* A, USubsurfaceProfile* B);
 	static bool SubsurfaceProfilesWouldBeIdentical(USubsurfaceProfile* ExistingSubsurfaceProfile, const TArray<FDUFTextureProperty > MaterialProperties);
+
+	// Returns a map of material to the material it's a duplicate of.
+	static TMap<TSharedPtr<FJsonValue>, TSharedPtr<FJsonValue>> FindDuplicateMaterials(TArray<TSharedPtr<FJsonValue>> MaterialList);
+
+	// Get the friendly material object name from the fbx name
+	static FString GetFriendlyObjectName(FString FbxObjectName, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties);
 };
