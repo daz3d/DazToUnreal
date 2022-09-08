@@ -1234,7 +1234,14 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 int32 FileFormat = -1;
 
 	 // set file format
-	 FileFormat = SdkManager->GetIOPluginRegistry()->FindWriterIDByDescription("FBX ascii (*.fbx)");
+	 if (CachedSettings->UpdatedFbxAsAscii)
+	 {
+		 FileFormat = SdkManager->GetIOPluginRegistry()->FindWriterIDByDescription("FBX ascii (*.fbx)");
+	 }
+	 else
+	 {
+		 FileFormat = SdkManager->GetIOPluginRegistry()->GetNativeWriterFormat();
+	 }
 
 	 // Make folders for saving the updated FBX file
 	 FString UpdatedFBXFolder = FPaths::GetPath(FBXFile) / TEXT("UpdatedFBX");

@@ -26,6 +26,7 @@ public:
 		FixBoneRotationsOnImport = false;
 		ZeroRootRotationOnImport = false;
 		CombineIdenticalMaterials = true;
+		UpdatedFbxAsAscii = false;
 
 		Genesis1Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis1BaseSkeleton.Genesis1BaseSkeleton"));
 		Genesis3Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis3BaseSkeleton.Genesis3BaseSkeleton"));
@@ -132,6 +133,10 @@ public:
 	/** Combines identical materials on import. Also combines the geometry sections. */
 	UPROPERTY(config, EditAnywhere, Category = PluginSettings)
 		bool CombineIdenticalMaterials;
+
+	/** If true write the Updated (intermediate) FBX file as Ascii */
+	UPROPERTY(config, EditAnywhere, Category = PluginSettings)
+		bool UpdatedFbxAsAscii;
 
 	/** Skeleton to use for Genesis 1 characters */
 	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings, meta = (AllowedClasses = "Skeleton"))
