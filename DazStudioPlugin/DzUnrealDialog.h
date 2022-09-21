@@ -31,8 +31,8 @@ public:
 protected slots:
 	void HandleSelectIntermediateFolderButton();
 	void HandlePortChanged(const QString& port);
-	void HandleTargetPluginInstallerButton();
-	void HandleAssetTypeComboChange(int state);
+	virtual void HandleTargetPluginInstallerButton();
+	virtual void HandleAssetTypeComboChange(int state);
 	virtual void HandleOpenIntermediateFolderButton(QString sFolderPath = "");
 
 protected:
