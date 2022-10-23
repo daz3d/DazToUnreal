@@ -37,6 +37,8 @@ public:
 		SkeletonPostProcessAnimation.Add(FSoftObjectPath(TEXT("/DazToUnreal/Genesis3BaseSkeleton.Genesis3BaseSkeleton")), FSoftClassPath(TEXT("/DazToUnreal/Genesis3JCMPostProcess.Genesis3JCMPostProcess_C")));
 		SkeletonPostProcessAnimation.Add(FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton")), FSoftClassPath(TEXT("/DazToUnreal/Genesis8JCMPostProcess.Genesis8JCMPostProcess_C")));
 
+		AddIKBones = true;
+
 		/*BaseShaderMaterials.Add(TEXT("Daz Studio Default"), FSoftObjectPath(TEXT("/DazToUnreal/DSDBaseMaterial.DSDBaseMaterial")));
 		BaseShaderMaterials.Add(TEXT("omUberSurface"), FSoftObjectPath(TEXT("/DazToUnreal/omUberBaseMaterial.omUberBaseMaterial")));
 		BaseShaderMaterials.Add(TEXT("AoA_Subsurface"), FSoftObjectPath(TEXT("/DazToUnreal/AoASubsurfaceBaseMaterial.AoASubsurfaceBaseMaterial")));
@@ -157,6 +159,10 @@ public:
 	/** A mapping of default post process animations for different skeletons */
 	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings)
 		TMap<FSoftObjectPath, FSoftClassPath> SkeletonPostProcessAnimation;
+
+	/** Add ik bones to the skeleton */
+	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings)
+		bool AddIKBones;
 
 	/** Material Packs to use.  Order matters, first matching material will be used.*/
 	UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "DazToUnrealMaterialPack"))
