@@ -421,7 +421,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 }
 
 	 // Build AssetIDLookup
-	 FString AssetID = JsonObject->GetStringField(TEXT("AssetID"));
+	 FString AssetID = JsonObject->GetStringField(TEXT("Asset ID"));
 	 if (!AssetIDLookup.Contains(AssetID))
 	 {
 		 AssetIDLookup.Add(AssetID, AssetName);
@@ -509,7 +509,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 
 	 if (AssetType == DazAssetType::Animation && UseExperimentalAnimationTransfer)
 	 {
-		 DazCharacterType CharacterType = DazCharacterType::Genesis8Male;
+		 DazCharacterType CharacterType = DazCharacterType::Unknown;
 		 if (AssetID.StartsWith(TEXT("Genesis3")))
 		 {
 			 CharacterType = DazCharacterType::Genesis3Male;
@@ -522,6 +522,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		 {
 			 CharacterType = DazCharacterType::Genesis1;
 		 }
+
 		 UObject* NewAnimation = ImportFBXAsset(FBXPath, DAZAnimationImportFolder, DazAssetType::Animation, CharacterType, AssetID, false);
 		 return NewAnimation;
 	 }
@@ -1721,20 +1722,39 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 #else
 					 Skeleton = SkeletalMesh->Skeleton;
 #endif
-
-					 int32 BoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("pelvis")));
-					 if (BoneIndex == -1)
+					 // Update skeleton retargeting options
+					 int32 HipBoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("hip")));
+					 if (HipBoneIndex != -1)
 					 {
-						  BoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("hip")));
+						 Skeleton->SetBoneTranslationRetargetingMode(HipBoneIndex, EBoneTranslationRetargetingMode::AnimationScaled, false);
 					 }
-					 if (BoneIndex != -1)
-					 {
-						  Skeleton->SetBoneTranslationRetargetingMode(BoneIndex, EBoneTranslationRetargetingMode::Skeleton, true);
-					 }
-					 //ISkeletonEditorModule& SkeletonEditorModule = FModuleManager::LoadModuleChecked<ISkeletonEditorModule>("SkeletonEditor");
-					 //TSharedPtr<IEditableSkeleton> EditableSkeleton = SkeletonEditorModule.CreateEditableSkeleton(Skeleton);
-					 //EditableSkeleton->Set
 
+					 int32 PelvisBoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("pelvis")));
+					 if (PelvisBoneIndex != -1)
+					 {
+						 Skeleton->SetBoneTranslationRetargetingMode(PelvisBoneIndex, EBoneTranslationRetargetingMode::Skeleton, true);
+					 }
+
+					 int32 Spine1BoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("spine1")));
+					 if (Spine1BoneIndex != -1)
+					 {
+						 Skeleton->SetBoneTranslationRetargetingMode(Spine1BoneIndex, EBoneTranslationRetargetingMode::Skeleton, true);
+					 }
+
+					 int32 AbdomenLowerBoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("abdomenLower")));
+					 if (AbdomenLowerBoneIndex != -1)
+					 {
+						 Skeleton->SetBoneTranslationRetargetingMode(AbdomenLowerBoneIndex, EBoneTranslationRetargetingMode::Skeleton, true);
+					 }
+
+					 int32 HeadBoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("head")));
+					 if (HeadBoneIndex != -1)
+					 {
+						 Skeleton->SetBoneTranslationRetargetingMode(HeadBoneIndex, EBoneTranslationRetargetingMode::AnimationRelative, true);
+						 Skeleton->SetBoneTranslationRetargetingMode(HeadBoneIndex, EBoneTranslationRetargetingMode::Skeleton, false);
+					 }
+					 
+					 // Add this skeleton as the default for this character type
 					 CachedSettings->OtherSkeletons.Add(CharacterTypeName, Skeleton);
 					 CachedSettings->SaveConfig(CPF_Config, *CachedSettings->GetDefaultConfigFilename());
 				}
