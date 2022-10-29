@@ -880,6 +880,12 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  }
 	 }
 
+	 // Daz characters sometimes have additional skeletons inside the character for accesories
+	 if (AssetType == DazAssetType::SkeletalMesh)
+	 {
+		 FDazToUnrealFbx::ParentAdditionalSkeletalMeshes(Scene);
+	 }
+
 	 // Daz Studio puts the base bone rotations in a different place than Unreal expects them.
 	 if (CachedSettings->FixBoneRotationsOnImport && AssetType == DazAssetType::SkeletalMesh && RootBone)
 	 {
