@@ -23,8 +23,8 @@ public:
 		PoseImportDirectory.Path = TEXT("/Game/DazToUnreal/Pose");
 		ShowFBXImportDialog = false;
 		FrameZeroIsReferencePose = false;
-		FixBoneRotationsOnImport = false;
-		ZeroRootRotationOnImport = false;
+		FixBoneRotationsOnImport = true;
+		ZeroRootRotationOnImport = true;
 		CombineIdenticalMaterials = true;
 		UpdatedFbxAsAscii = false;
 
