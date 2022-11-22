@@ -284,10 +284,10 @@ void FDazToUnrealMorphs::MergeDualQuaternionToLinearBlendMorph(USkeletalMesh* Me
 				{
 					if (ModifiedPointVertexIndex == DualQuaternionVertexIndex)
 					{
-						FVector3f BasePosition = ImportData.Points[ModifiedPointVertexIndex];
-						FVector3f BaseMorphPosition = ImportData.MorphTargets[PrimaryMorphIndex].Points[ModifiedPointIndex];
-						FVector3f PositionAdjustment = ImportData.MorphTargets[DualQuaternionMorphIndex].Points[DualQuaternionModifiedPointIndex];
-						FVector3f MorphDelta = PositionAdjustment - BasePosition;
+						auto BasePosition = ImportData.Points[ModifiedPointVertexIndex];
+						auto BaseMorphPosition = ImportData.MorphTargets[PrimaryMorphIndex].Points[ModifiedPointIndex];
+						auto PositionAdjustment = ImportData.MorphTargets[DualQuaternionMorphIndex].Points[DualQuaternionModifiedPointIndex];
+						auto MorphDelta = PositionAdjustment - BasePosition;
 						/*for (auto LesserJointLink : LesserJointLinks)
 						{
 							FVector3f OffsetForLesserMorph = GetOffsetForMorph(ImportData, FName(LesserJointLink.MorphName.ToString() + TEXT("_dq2lb")), BasePosition, ModifiedPointVertexIndex);
@@ -312,7 +312,7 @@ void FDazToUnrealMorphs::MergeDualQuaternionToLinearBlendMorph(USkeletalMesh* Me
 	
 }
 
-FVector3f FDazToUnrealMorphs::GetOffsetForMorph(const FSkeletalMeshImportData& ImportData, const FName MorphName, const FVector3f& BasePosition, const uint32 VertexIndex)
+MorphVectorType FDazToUnrealMorphs::GetOffsetForMorph(const FSkeletalMeshImportData& ImportData, const FName MorphName, const MorphVectorType& BasePosition, const uint32 VertexIndex)
 {
 	int32 MorphIndex = 0;
 	for (const FSkeletalMeshImportData& ImportMorphData : ImportData.MorphTargets)
@@ -325,7 +325,7 @@ FVector3f FDazToUnrealMorphs::GetOffsetForMorph(const FSkeletalMeshImportData& I
 			{
 				if (ModifiedPointVertexIndex == VertexIndex)
 				{
-					FVector3f MorphPosition = ImportData.MorphTargets[MorphIndex].Points[ModifiedPointIndex];
+					auto MorphPosition = ImportData.MorphTargets[MorphIndex].Points[ModifiedPointIndex];
 					return MorphPosition - BasePosition;
 				}
 				ModifiedPointIndex++;
@@ -333,7 +333,7 @@ FVector3f FDazToUnrealMorphs::GetOffsetForMorph(const FSkeletalMeshImportData& I
 		}
 		MorphIndex++;
 	}
-	return FVector3f(0.0f, 0.0f, 0.0f);
+	return MorphVectorType(0.0f, 0.0f, 0.0f);
 }
 
 void FDazToUnrealMorphs::FakeDualQuarternion(FName MorphName, FName BoneName, EDazMorphAnimInstanceDriver Axis, float MinBend, float MaxBend, USkeletalMesh* Mesh)

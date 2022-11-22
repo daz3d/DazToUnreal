@@ -9,6 +9,12 @@ class UDazJointControlledMorphAnimInstance;
 class USkeleton;
 class USkeletalMesh;
 
+#if ENGINE_MAJOR_VERSION > 4
+typedef FVector3f MorphVectorType;
+#else
+typedef FVector MorphVectorType;
+#endif
+
 class FDazToUnrealMorphs
 {
 public:
@@ -29,5 +35,5 @@ private:
 	static void MergeDualQuaternionToLinearBlendMorphs(USkeletalMesh* Mesh, TArray<FDazJointControlLink> JointLinks);
 	static TArray<FDazJointControlLink> FindMorphsOnSameBoneAndAxis(FDazJointControlLink TargetLink, TArray<FDazJointControlLink> JointLinks);
 	static void MergeDualQuaternionToLinearBlendMorph(USkeletalMesh* Mesh, FDazJointControlLink JointLink/*, TArray<FDazJointControlLink> LesserJointLinks*/);
-	static FVector3f GetOffsetForMorph(const FSkeletalMeshImportData& ImportData, const FName MorphName, const FVector3f& BasePosition, const uint32 VertexIndex);
+	static MorphVectorType GetOffsetForMorph(const FSkeletalMeshImportData& ImportData, const FName MorphName, const MorphVectorType& BasePosition, const uint32 VertexIndex);
 };
