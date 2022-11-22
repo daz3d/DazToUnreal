@@ -58,6 +58,7 @@
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonSerializer.h"
 #include "FileHelpers.h"
+#include "Async/Async.h"
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
 #include "LevelEditorSubsystem.h"
@@ -372,7 +373,11 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 					TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
 					if (FJsonSerializer::Deserialize(JsonReader, JsonObject) && JsonObject.IsValid())
 					{
-						ImportFromDaz(JsonObject);
+						// In UE5 the ticker can happen on worker threads, but some import processes want the game (main) thread.
+						//AsyncTask(ENamedThreads::GameThread, [this, JsonObject]() {
+							ImportFromDaz(JsonObject);
+							//});
+						
 					}
 					else
 					{
@@ -1141,6 +1146,11 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 									 ChannelsToRemove.AddUnique(Channel);
 								}
 						  }
+					 }
+
+					 for (FbxBlendShapeChannel* ChannelToRemove : ChannelsToRemove)
+					 {
+						 BlendShape->RemoveBlendShapeChannel(ChannelToRemove);
 					 }
 				}
 		  }

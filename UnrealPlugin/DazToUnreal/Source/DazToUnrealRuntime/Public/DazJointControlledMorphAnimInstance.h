@@ -63,6 +63,60 @@ struct DAZTOUNREALRUNTIME_API FDazJointControlLink
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 		TArray<FDazJointControlLinkKey> Keys;
+
+	// returns 1 of the link is in the positive of the primary axis, -1 if negative
+	int8 GetRotationDirection() const
+	{
+		if (Keys.Num() == 0 && Scalar > 0.0f) return 1;
+		if (Keys.Num() == 0 && Scalar < 0.0f) return -1;
+
+		for (auto Key : Keys)
+		{
+			if (Key.BoneRotation > 0.0f) return 1;
+			if (Key.BoneRotation < 0.0f) return -1;
+		}
+
+		return 0;
+	}
+
+	bool MorphIsInChain(const FDazJointControlLink& Other) const
+	{
+		if (BoneName == Other.BoneName &&
+			PrimaryAxis == Other.PrimaryAxis &&
+			SecondaryAxis == Other.SecondaryAxis &&
+			GetRotationDirection() == Other.GetRotationDirection())
+		{
+			return true;
+		}
+		return false;
+	}
+
+	float LargestRotation() const
+	{
+		if (Keys.Num() == 0) return Scalar;
+		float LargestRotation = 0.0f;
+		for (auto Key : Keys)
+		{
+			if (FMath::Abs(Key.BoneRotation) > LargestRotation)
+			{
+				LargestRotation = FMath::Abs(Key.BoneRotation);
+			}
+		}
+		return LargestRotation * (float)GetRotationDirection();
+	}
+
+	TArray<FDazJointControlLink> GetLesserMorphsInChain(const TArray<FDazJointControlLink>& Others) const
+	{
+		TArray<FDazJointControlLink> ReturnLinks;
+		for (auto Other : Others)
+		{
+			if (FMath::Abs(LargestRotation()) > FMath::Abs(Other.LargestRotation()))
+			{
+				ReturnLinks.Add(Other);
+			}
+		}
+		return ReturnLinks;
+	}
 };
 
 /** Proxy override for this UAnimInstance-derived class */
