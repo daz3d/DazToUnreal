@@ -516,7 +516,23 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		 return nullptr;
 	 }
 
-	 if (AssetType == DazAssetType::Animation && UseExperimentalAnimationTransfer)
+	 // Get a list of Pose name mappings
+	 TArray<FString> PoseNameList;
+	 const TArray<TSharedPtr<FJsonValue>>* PoseList;
+	 if (JsonObject->TryGetArrayField(TEXT("Poses"), PoseList))
+	 {
+		 PoseNameList.Add(TEXT("ReferencePose"));
+		 for (int32 i = 0; i < PoseList->Num(); i++)
+		 {
+			 TSharedPtr<FJsonObject> Pose = (*PoseList)[i]->AsObject();
+			 FString PoseName = Pose->GetStringField(TEXT("Name"));
+			 FString PoseLabel = Pose->GetStringField(TEXT("Label"));
+
+			 PoseNameList.Add(PoseLabel);
+		 }
+	 }
+
+	 if ((AssetType == DazAssetType::Animation || AssetType == DazAssetType::Pose) && UseExperimentalAnimationTransfer)
 	 {
 		 DazCharacterType CharacterType = DazCharacterType::Unknown;
 		 if (AssetID.StartsWith(TEXT("Genesis3")))
@@ -533,6 +549,22 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		 }
 
 		 UObject* NewAnimation = ImportFBXAsset(FBXPath, DAZAnimationImportFolder, DazAssetType::Animation, CharacterType, AssetID, false);
+
+		 // If this is a Pose transfer, an AnimSequence was created.  Make a PoseAsset from it.
+		 if (AssetType == DazAssetType::Pose)
+		 {
+			 if (UAnimSequence* AnimSequence = Cast<UAnimSequence>(NewAnimation))
+			 {
+				 UPoseAsset* NewPoseAsset = FDazToUnrealPoses::CreatePoseAsset(AnimSequence, PoseNameList);
+
+				 FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+				 TArray<UObject*> AssetsToSelect;
+				 AssetsToSelect.Add((UObject*)NewPoseAsset);
+				 ContentBrowserModule.Get().SyncBrowserToAssets(AssetsToSelect);
+				 return Cast<UObject>(NewPoseAsset);
+			 }
+		 }
+
 		 return NewAnimation;
 	 }
 
@@ -1091,22 +1123,6 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  {
 			  MorphMappings.Add(MorphName, MorphLabel);
 		  }
-	 }
-
-	 // Get a list of morph name mappings
-	 TArray<FString> PoseNameList;
-	 const TArray<TSharedPtr<FJsonValue>>* PoseList;
-	 if (JsonObject->TryGetArrayField(TEXT("Poses"), PoseList))
-	 {
-		 PoseNameList.Add(TEXT("ReferencePose"));
-		 for (int32 i = 0; i < PoseList->Num(); i++)
-		 {
-			 TSharedPtr<FJsonObject> Pose = (*PoseList)[i]->AsObject();
-			 FString PoseName = Pose->GetStringField(TEXT("Name"));
-			 FString PoseLabel = Pose->GetStringField(TEXT("Label"));
-
-			 PoseNameList.Add(PoseLabel);
-		 }
 	 }
 
 	 // Combine clothing and body morphs
