@@ -6,7 +6,11 @@
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "Factories/SubsurfaceProfileFactory.h"
 #include "Engine/SubsurfaceProfile.h"
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+#include "AssetRegistry/AssetRegistryModule.h"
+#else
 #include "AssetRegistryModule.h"
+#endif
 #include "AssetToolsModule.h"
 #include "Dom/JsonObject.h"
 
