@@ -1,9 +1,6 @@
 #include "DazToUnrealFactory.h"
 #include "DazToUnreal.h"
-#include "Modules/ModuleManager.h"
-#include "Misc/PackageName.h"
-#include "AssetData.h"
-#include "AssetRegistryModule.h"
+
 #include "PackageTools.h"
 #include "Misc/FileHelper.h"
 #include "Engine/SkeletalMesh.h"

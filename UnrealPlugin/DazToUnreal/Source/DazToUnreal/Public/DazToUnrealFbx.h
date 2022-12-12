@@ -64,6 +64,8 @@ public:
 	static void RemoveBindPoses(FbxScene* Scene);
 	static void AddWeightsToAllNodes(FbxNode* Parent);
 	static FString GetObjectNameForMaterial(FbxSurfaceMaterial* Material);
+	static void ParentAdditionalSkeletalMeshes(FbxScene* Scene);
+	static void RemoveNodeAndReparent(FbxNode* NodeToRemove);
 private:
 	static void RenameDuplicateBones(FbxNode* RootNode, TMap<FString, int>& ExistingBones);
 };

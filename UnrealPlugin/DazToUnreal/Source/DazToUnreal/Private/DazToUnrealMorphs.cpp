@@ -3,7 +3,6 @@
 #include "Serialization/JsonReader.h"
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonSerializer.h"
-#include "AssetRegistryModule.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Animation/AnimBlueprint.h"
 #include "Animation/AnimBlueprintGeneratedClass.h"
@@ -96,7 +95,22 @@ UDazJointControlledMorphAnimInstance* FDazToUnrealMorphs::CreateJointControlAnim
 			{
 				FakeDualQuarternion(NewJointLink.MorphName, NewJointLink.BoneName, NewJointLink.PrimaryAxis, 0.0f, 90.0f, Mesh);
 			}
+
 			AnimInstance->ControlLinks.Add(NewJointLink);
+
+			FName DualQuaternionMorphName = FName(NewJointLink.MorphName.ToString() + TEXT("_dq2lb"));
+			if (UMorphTarget* DualQuaternionMorph = Mesh->FindMorphTarget(DualQuaternionMorphName))
+			{
+				FDazJointControlLink DualQuatJointLink = NewJointLink;
+				DualQuatJointLink.MorphName = FName(NewJointLink.MorphName.ToString() + TEXT("_dq2lb"));
+
+				if (DualQuatJointLink.Keys.Num() > 1)
+				{
+					
+				}
+
+				AnimInstance->ControlLinks.Add(DualQuatJointLink);
+			}
 		}
 
 #if 0
@@ -122,6 +136,8 @@ UDazJointControlledMorphAnimInstance* FDazToUnrealMorphs::CreateJointControlAnim
 				}
 			}
 		}
+
+		//MergeDualQuaternionToLinearBlendMorphs(Mesh, AnimInstance->ControlLinks);
 
 		// Recompile the AnimBlueprint and return the updated AnimInstance
 		FBlueprintEditorUtils::MarkBlueprintAsModified(AnimBlueprint);
@@ -195,6 +211,128 @@ bool FDazToUnrealMorphs::IsAutoJCMImport(TSharedPtr<FJsonObject> JsonObject)
 		return true;
 	}
 	return false;
+}
+
+void FDazToUnrealMorphs::MergeDualQuaternionToLinearBlendMorphs(USkeletalMesh* Mesh, TArray<FDazJointControlLink> JointLinks)
+{
+	for (FDazJointControlLink JointLink : JointLinks)
+	{
+		TArray<FDazJointControlLink> MorphsOnSameBoneAndAxis = FindMorphsOnSameBoneAndAxis(JointLink, JointLinks);
+		//if (MorphsOnSameBoneAndAxis.Num() == 1)
+		{
+			MergeDualQuaternionToLinearBlendMorph(Mesh, JointLink/*, JointLink.GetLesserMorphsInChain(MorphsOnSameBoneAndAxis) */ );
+		}
+		/*else if (JointLink.Keys.Num() > 0)
+		{
+			if(JointLinkKeys[])
+		}*/
+	}
+}
+
+TArray<FDazJointControlLink> FDazToUnrealMorphs::FindMorphsOnSameBoneAndAxis(FDazJointControlLink TargetLink, TArray<FDazJointControlLink> JointLinks)
+{
+	//if(TargetLink.Keys.Num() == 0) return 
+	TArray<FDazJointControlLink> MorphsOnSameBoneAndAxis;
+	for (FDazJointControlLink JointLink : JointLinks)
+	{
+		if (JointLink.MorphIsInChain(TargetLink))
+		{
+			MorphsOnSameBoneAndAxis.Add(JointLink);
+		}
+	}
+	return MorphsOnSameBoneAndAxis;
+}
+
+void FDazToUnrealMorphs::MergeDualQuaternionToLinearBlendMorph(USkeletalMesh* Mesh, FDazJointControlLink JointLink/*, TArray<FDazJointControlLink> LesserJointLinks*/)
+{
+	if (UMorphTarget* Morph = Mesh->FindMorphTarget(JointLink.MorphName))
+	{
+		FName DualQuaternionMorphName = FName(JointLink.MorphName.ToString() + TEXT("_dq2lb"));
+		if (UMorphTarget* DualQuaternionMorph = Mesh->FindMorphTarget(DualQuaternionMorphName))
+		{
+			FSkeletalMeshImportData ImportData;
+			Mesh->LoadLODImportedData(0, ImportData);
+
+			int32 PrimaryMorphIndex = 0;
+			for (FSkeletalMeshImportData& ImportMorphData : ImportData.MorphTargets)
+			{
+				FName ImportMorphName = FName(ImportData.MorphTargetNames[PrimaryMorphIndex]);
+				if (ImportMorphName == JointLink.MorphName)
+				{
+					break;
+				}
+				PrimaryMorphIndex++;
+			}
+
+			int32 DualQuaternionMorphIndex = 0;
+			for (FSkeletalMeshImportData& ImportMorphData : ImportData.MorphTargets)
+			{
+				FName ImportMorphName = FName(ImportData.MorphTargetNames[DualQuaternionMorphIndex]);
+				if (ImportMorphName == DualQuaternionMorphName)
+				{
+					break;
+				}
+				DualQuaternionMorphIndex++;
+			}
+
+			int32 ModifiedPointIndex = 0;
+			for (uint32 ModifiedPointVertexIndex : ImportData.MorphTargetModifiedPoints[PrimaryMorphIndex])
+			{
+				int32 DualQuaternionModifiedPointIndex = 0;
+				for (uint32 DualQuaternionVertexIndex : ImportData.MorphTargetModifiedPoints[DualQuaternionMorphIndex])
+				{
+					if (ModifiedPointVertexIndex == DualQuaternionVertexIndex)
+					{
+						auto BasePosition = ImportData.Points[ModifiedPointVertexIndex];
+						auto BaseMorphPosition = ImportData.MorphTargets[PrimaryMorphIndex].Points[ModifiedPointIndex];
+						auto PositionAdjustment = ImportData.MorphTargets[DualQuaternionMorphIndex].Points[DualQuaternionModifiedPointIndex];
+						auto MorphDelta = PositionAdjustment - BasePosition;
+						/*for (auto LesserJointLink : LesserJointLinks)
+						{
+							FVector3f OffsetForLesserMorph = GetOffsetForMorph(ImportData, FName(LesserJointLink.MorphName.ToString() + TEXT("_dq2lb")), BasePosition, ModifiedPointVertexIndex);
+							MorphDelta = MorphDelta - OffsetForLesserMorph;
+						}*/
+						ImportData.MorphTargets[PrimaryMorphIndex].Points[ModifiedPointIndex] = BaseMorphPosition + MorphDelta;
+						break;
+					}
+					DualQuaternionModifiedPointIndex++;
+				}
+
+				//ImportData.MorphTargets[PrimaryMorphIndex].Points[ModifiedPointIndex]
+				ModifiedPointIndex++;
+			}
+
+			Mesh->SaveLODImportedData(0, ImportData);
+		}
+
+
+	}
+
+	
+}
+
+MorphVectorType FDazToUnrealMorphs::GetOffsetForMorph(const FSkeletalMeshImportData& ImportData, const FName MorphName, const MorphVectorType& BasePosition, const uint32 VertexIndex)
+{
+	int32 MorphIndex = 0;
+	for (const FSkeletalMeshImportData& ImportMorphData : ImportData.MorphTargets)
+	{
+		FName ImportMorphName = FName(ImportData.MorphTargetNames[MorphIndex]);
+		if (ImportMorphName == MorphName)
+		{
+			int32 ModifiedPointIndex = 0;
+			for (uint32 ModifiedPointVertexIndex : ImportData.MorphTargetModifiedPoints[MorphIndex])
+			{
+				if (ModifiedPointVertexIndex == VertexIndex)
+				{
+					auto MorphPosition = ImportData.MorphTargets[MorphIndex].Points[ModifiedPointIndex];
+					return MorphPosition - BasePosition;
+				}
+				ModifiedPointIndex++;
+			}
+		}
+		MorphIndex++;
+	}
+	return MorphVectorType(0.0f, 0.0f, 0.0f);
 }
 
 void FDazToUnrealMorphs::FakeDualQuarternion(FName MorphName, FName BoneName, EDazMorphAnimInstanceDriver Axis, float MinBend, float MaxBend, USkeletalMesh* Mesh)

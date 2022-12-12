@@ -23,9 +23,10 @@ public:
 		PoseImportDirectory.Path = TEXT("/Game/DazToUnreal/Pose");
 		ShowFBXImportDialog = false;
 		FrameZeroIsReferencePose = false;
-		FixBoneRotationsOnImport = false;
-		ZeroRootRotationOnImport = false;
+		FixBoneRotationsOnImport = true;
+		ZeroRootRotationOnImport = true;
 		CombineIdenticalMaterials = true;
+		UpdatedFbxAsAscii = false;
 
 		Genesis1Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis1BaseSkeleton.Genesis1BaseSkeleton"));
 		Genesis3Skeleton = FSoftObjectPath(TEXT("/DazToUnreal/Genesis3BaseSkeleton.Genesis3BaseSkeleton"));
@@ -35,6 +36,8 @@ public:
 
 		SkeletonPostProcessAnimation.Add(FSoftObjectPath(TEXT("/DazToUnreal/Genesis3BaseSkeleton.Genesis3BaseSkeleton")), FSoftClassPath(TEXT("/DazToUnreal/Genesis3JCMPostProcess.Genesis3JCMPostProcess_C")));
 		SkeletonPostProcessAnimation.Add(FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton")), FSoftClassPath(TEXT("/DazToUnreal/Genesis8JCMPostProcess.Genesis8JCMPostProcess_C")));
+
+		AddIKBones = true;
 
 		/*BaseShaderMaterials.Add(TEXT("Daz Studio Default"), FSoftObjectPath(TEXT("/DazToUnreal/DSDBaseMaterial.DSDBaseMaterial")));
 		BaseShaderMaterials.Add(TEXT("omUberSurface"), FSoftObjectPath(TEXT("/DazToUnreal/omUberBaseMaterial.omUberBaseMaterial")));
@@ -133,6 +136,10 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = PluginSettings)
 		bool CombineIdenticalMaterials;
 
+	/** If true write the Updated (intermediate) FBX file as Ascii */
+	UPROPERTY(config, EditAnywhere, Category = PluginSettings)
+		bool UpdatedFbxAsAscii;
+
 	/** Skeleton to use for Genesis 1 characters */
 	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings, meta = (AllowedClasses = "Skeleton"))
 		FSoftObjectPath Genesis1Skeleton;
@@ -152,6 +159,10 @@ public:
 	/** A mapping of default post process animations for different skeletons */
 	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings)
 		TMap<FSoftObjectPath, FSoftClassPath> SkeletonPostProcessAnimation;
+
+	/** Add ik bones to the skeleton */
+	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings)
+		bool AddIKBones;
 
 	/** Material Packs to use.  Order matters, first matching material will be used.*/
 	UPROPERTY(config, EditAnywhere, Category = MaterialSettings, meta = (AllowedClasses = "DazToUnrealMaterialPack"))

@@ -10,7 +10,6 @@
 #include "Factories/PoseAssetFactory.h"
 #include "IContentBrowserSingleton.h"
 #include "ContentBrowserModule.h"
-#include "AssetRegistryModule.h"
 #include "PackageTools.h"
 
 // Partially taken from UPoseAssetFactory::FactoryCreateNew

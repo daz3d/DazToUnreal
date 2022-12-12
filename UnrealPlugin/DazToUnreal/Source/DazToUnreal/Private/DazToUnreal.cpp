@@ -30,7 +30,6 @@
 #include "Engine/Texture2D.h"
 #include "Utils.h"
 #include "AssetToolsModule.h"
-#include "AssetRegistryModule.h"
 #include "EditorAssetLibrary.h"
 #include "PackageTools.h"
 #include "ObjectTools.h"
@@ -54,6 +53,11 @@
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonSerializer.h"
 #include "FileHelpers.h"
+#include "Async/Async.h"
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+#include "LevelEditorSubsystem.h"
+#endif
 
 DEFINE_LOG_CATEGORY(LogDazToUnreal);
 //#include "ISkeletonEditorModule.h"
@@ -364,7 +368,11 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 					TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
 					if (FJsonSerializer::Deserialize(JsonReader, JsonObject) && JsonObject.IsValid())
 					{
-						ImportFromDaz(JsonObject);
+						// In UE5 the ticker can happen on worker threads, but some import processes want the game (main) thread.
+						//AsyncTask(ENamedThreads::GameThread, [this, JsonObject]() {
+							ImportFromDaz(JsonObject);
+							//});
+						
 					}
 					else
 					{
@@ -417,7 +425,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 }
 
 	 // Build AssetIDLookup
-	 FString AssetID = JsonObject->GetStringField(TEXT("AssetID"));
+	 FString AssetID = JsonObject->GetStringField(TEXT("Asset ID"));
 	 if (!AssetIDLookup.Contains(AssetID))
 	 {
 		 AssetIDLookup.Add(AssetID, AssetName);
@@ -483,15 +491,45 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 {
 		 FString LevelPath = CharacterFolder / AssetName;
 		 FString TemplatePath = TEXT("/Engine/Content/Maps/Templates/Template_Default");
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+		 if (ULevelEditorSubsystem* LevelEditorSubsystem = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
+		 {
+			 LevelEditorSubsystem->NewLevelFromTemplate(LevelPath, TemplatePath);
+		 }
+#else
 		 UEditorLevelLibrary::NewLevelFromTemplate(LevelPath, TemplatePath);
+#endif
 		 FDazToUnrealEnvironment::ImportEnvironment(JsonObject);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+		 if (ULevelEditorSubsystem* LevelEditorSubsystem = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
+		 {
+			 LevelEditorSubsystem->SaveCurrentLevel();
+		 }
+#else
 		 UEditorLevelLibrary::SaveCurrentLevel();
+#endif
 		 return nullptr;
 	 }
 
-	 if (AssetType == DazAssetType::Animation && UseExperimentalAnimationTransfer)
+	 // Get a list of Pose name mappings
+	 TArray<FString> PoseNameList;
+	 const TArray<TSharedPtr<FJsonValue>>* PoseList;
+	 if (JsonObject->TryGetArrayField(TEXT("Poses"), PoseList))
 	 {
-		 DazCharacterType CharacterType = DazCharacterType::Genesis8Male;
+		 PoseNameList.Add(TEXT("ReferencePose"));
+		 for (int32 i = 0; i < PoseList->Num(); i++)
+		 {
+			 TSharedPtr<FJsonObject> Pose = (*PoseList)[i]->AsObject();
+			 FString PoseName = Pose->GetStringField(TEXT("Name"));
+			 FString PoseLabel = Pose->GetStringField(TEXT("Label"));
+
+			 PoseNameList.Add(PoseLabel);
+		 }
+	 }
+
+	 if ((AssetType == DazAssetType::Animation || AssetType == DazAssetType::Pose) && UseExperimentalAnimationTransfer)
+	 {
+		 DazCharacterType CharacterType = DazCharacterType::Unknown;
 		 if (AssetID.StartsWith(TEXT("Genesis3")))
 		 {
 			 CharacterType = DazCharacterType::Genesis3Male;
@@ -504,7 +542,24 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		 {
 			 CharacterType = DazCharacterType::Genesis1;
 		 }
+
 		 UObject* NewAnimation = ImportFBXAsset(FBXPath, DAZAnimationImportFolder, DazAssetType::Animation, CharacterType, AssetID, false);
+
+		 // If this is a Pose transfer, an AnimSequence was created.  Make a PoseAsset from it.
+		 if (AssetType == DazAssetType::Pose)
+		 {
+			 if (UAnimSequence* AnimSequence = Cast<UAnimSequence>(NewAnimation))
+			 {
+				 UPoseAsset* NewPoseAsset = FDazToUnrealPoses::CreatePoseAsset(AnimSequence, PoseNameList);
+
+				 FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+				 TArray<UObject*> AssetsToSelect;
+				 AssetsToSelect.Add((UObject*)NewPoseAsset);
+				 ContentBrowserModule.Get().SyncBrowserToAssets(AssetsToSelect);
+				 return Cast<UObject>(NewPoseAsset);
+			 }
+		 }
+
 		 return NewAnimation;
 	 }
 
@@ -857,6 +912,12 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  }
 	 }
 
+	 // Daz characters sometimes have additional skeletons inside the character for accesories
+	 if (AssetType == DazAssetType::SkeletalMesh)
+	 {
+		 FDazToUnrealFbx::ParentAdditionalSkeletalMeshes(Scene);
+	 }
+
 	 // Daz Studio puts the base bone rotations in a different place than Unreal expects them.
 	 if (CachedSettings->FixBoneRotationsOnImport && AssetType == DazAssetType::SkeletalMesh && RootBone)
 	 {
@@ -919,7 +980,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 }
 
 	 // Add IK bones
-	 if (RootBone)
+	 if (RootBone && CachedSettings->AddIKBones)
 	 {
 		  // ik_foot_root
 		  FbxNode* IKRootNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_foot_root")));
@@ -938,6 +999,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  // ik_foot_l
 		  FbxNode* IKFootLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_foot_l")));
 		  FbxNode* FootLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("lFoot")));
+		  if(!FootLNode) FootLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("l_foot")));
 		  if (!IKFootLNode && FootLNode)
 		  {
 				// Create IK Root
@@ -954,6 +1016,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  // ik_foot_r
 		  FbxNode* IKFootRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_foot_r")));
 		  FbxNode* FootRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("rFoot")));
+		  if (!FootRNode) FootRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("r_foot")));
 		  if (!IKFootRNode && FootRNode)
 		  {
 				// Create IK Root
@@ -984,6 +1047,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  // ik_hand_gun
 		  FbxNode* IKHandGunNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
 		  FbxNode* HandRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("rHand")));
+		  if (!HandRNode) HandRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("r_hand")));
 		  if (!IKHandGunNode && HandRNode)
 		  {
 				// Create IK Root
@@ -999,8 +1063,6 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 
 		  // ik_hand_r
 		  FbxNode* IKHandRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_r")));
-		  //FbxNode* HandRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("rHand")));
-		  //FbxNode* IKHandGunNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
 		  if (!IKHandRNode && HandRNode && IKHandGunNode)
 		  {
 				// Create IK Root
@@ -1016,7 +1078,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  // ik_hand_l
 		  FbxNode* IKHandLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_l")));
 		  FbxNode* HandLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("lHand")));
-		  //FbxNode* IKHandGunNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
+		  if (!HandLNode) HandLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("l_hand")));
 		  if (!IKHandLNode && HandLNode && IKHandGunNode)
 		  {
 				// Create IK Root
@@ -1058,22 +1120,6 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		  }
 	 }
 
-	 // Get a list of morph name mappings
-	 TArray<FString> PoseNameList;
-	 const TArray<TSharedPtr<FJsonValue>>* PoseList;
-	 if (JsonObject->TryGetArrayField(TEXT("Poses"), PoseList))
-	 {
-		 PoseNameList.Add(TEXT("ReferencePose"));
-		 for (int32 i = 0; i < PoseList->Num(); i++)
-		 {
-			 TSharedPtr<FJsonObject> Pose = (*PoseList)[i]->AsObject();
-			 FString PoseName = Pose->GetStringField(TEXT("Name"));
-			 FString PoseLabel = Pose->GetStringField(TEXT("Label"));
-
-			 PoseNameList.Add(PoseLabel);
-		 }
-	 }
-
 	 // Combine clothing and body morphs
 	 for (int NodeIndex = 0; NodeIndex < Scene->GetNodeCount(); ++NodeIndex)
 	 {
@@ -1111,6 +1157,11 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 									 ChannelsToRemove.AddUnique(Channel);
 								}
 						  }
+					 }
+
+					 for (FbxBlendShapeChannel* ChannelToRemove : ChannelsToRemove)
+					 {
+						 BlendShape->RemoveBlendShapeChannel(ChannelToRemove);
 					 }
 				}
 		  }
@@ -1234,7 +1285,14 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 int32 FileFormat = -1;
 
 	 // set file format
-	 FileFormat = SdkManager->GetIOPluginRegistry()->FindWriterIDByDescription("FBX ascii (*.fbx)");
+	 if (CachedSettings->UpdatedFbxAsAscii)
+	 {
+		 FileFormat = SdkManager->GetIOPluginRegistry()->FindWriterIDByDescription("FBX ascii (*.fbx)");
+	 }
+	 else
+	 {
+		 FileFormat = SdkManager->GetIOPluginRegistry()->GetNativeWriterFormat();
+	 }
 
 	 // Make folders for saving the updated FBX file
 	 FString UpdatedFBXFolder = FPaths::GetPath(FBXFile) / TEXT("UpdatedFBX");
@@ -1505,8 +1563,11 @@ bool FDazToUnrealModule::ImportTextureAssets(TArray<FString>& SourcePaths, FStri
 
 	 UTextureFactory* TextureFactory = NewObject<UTextureFactory>(UTextureFactory::StaticClass());
 	 UAutomatedAssetImportData* ImportData = NewObject<UAutomatedAssetImportData>(UAutomatedAssetImportData::StaticClass());
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+#else
 	 ImportData->FactoryName = TEXT("TextureFactory");
 	 ImportData->Factory = TextureFactory;
+#endif
 	 ImportData->Filenames = SourcePaths;
 	 ImportData->DestinationPath = ImportLocation;
 	 if (BatchConversionMode != 0)
@@ -1693,20 +1754,39 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 #else
 					 Skeleton = SkeletalMesh->Skeleton;
 #endif
-
-					 int32 BoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("pelvis")));
-					 if (BoneIndex == -1)
+					 // Update skeleton retargeting options
+					 int32 HipBoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("hip")));
+					 if (HipBoneIndex != -1)
 					 {
-						  BoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("hip")));
+						 Skeleton->SetBoneTranslationRetargetingMode(HipBoneIndex, EBoneTranslationRetargetingMode::AnimationScaled, false);
 					 }
-					 if (BoneIndex != -1)
-					 {
-						  Skeleton->SetBoneTranslationRetargetingMode(BoneIndex, EBoneTranslationRetargetingMode::Skeleton, true);
-					 }
-					 //ISkeletonEditorModule& SkeletonEditorModule = FModuleManager::LoadModuleChecked<ISkeletonEditorModule>("SkeletonEditor");
-					 //TSharedPtr<IEditableSkeleton> EditableSkeleton = SkeletonEditorModule.CreateEditableSkeleton(Skeleton);
-					 //EditableSkeleton->Set
 
+					 int32 PelvisBoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("pelvis")));
+					 if (PelvisBoneIndex != -1)
+					 {
+						 Skeleton->SetBoneTranslationRetargetingMode(PelvisBoneIndex, EBoneTranslationRetargetingMode::Skeleton, true);
+					 }
+
+					 int32 Spine1BoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("spine1")));
+					 if (Spine1BoneIndex != -1)
+					 {
+						 Skeleton->SetBoneTranslationRetargetingMode(Spine1BoneIndex, EBoneTranslationRetargetingMode::Skeleton, true);
+					 }
+
+					 int32 AbdomenLowerBoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("abdomenLower")));
+					 if (AbdomenLowerBoneIndex != -1)
+					 {
+						 Skeleton->SetBoneTranslationRetargetingMode(AbdomenLowerBoneIndex, EBoneTranslationRetargetingMode::Skeleton, true);
+					 }
+
+					 int32 HeadBoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("head")));
+					 if (HeadBoneIndex != -1)
+					 {
+						 Skeleton->SetBoneTranslationRetargetingMode(HeadBoneIndex, EBoneTranslationRetargetingMode::AnimationRelative, true);
+						 Skeleton->SetBoneTranslationRetargetingMode(HeadBoneIndex, EBoneTranslationRetargetingMode::Skeleton, false);
+					 }
+					 
+					 // Add this skeleton as the default for this character type
 					 CachedSettings->OtherSkeletons.Add(CharacterTypeName, Skeleton);
 					 CachedSettings->SaveConfig(CPF_Config, *CachedSettings->GetDefaultConfigFilename());
 				}
