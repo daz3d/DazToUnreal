@@ -30,11 +30,6 @@
 #include "Engine/Texture2D.h"
 #include "Utils.h"
 #include "AssetToolsModule.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
-#include "AssetRegistry/AssetRegistryModule.h"
-#else
-#include "AssetRegistryModule.h"
-#endif
 #include "EditorAssetLibrary.h"
 #include "PackageTools.h"
 #include "ObjectTools.h"

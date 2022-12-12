@@ -1,13 +1,6 @@
 #include "DazToUnrealFactory.h"
 #include "DazToUnreal.h"
-#include "Modules/ModuleManager.h"
-#include "Misc/PackageName.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MAJOR_VERSION > 0
-#include "AssetRegistry/AssetData.h"
-#else
-#include "AssetData.h"
-#endif
-#include "AssetRegistryModule.h"
+
 #include "PackageTools.h"
 #include "Misc/FileHelper.h"
 #include "Engine/SkeletalMesh.h"

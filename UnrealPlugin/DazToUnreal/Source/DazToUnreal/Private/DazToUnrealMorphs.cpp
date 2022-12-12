@@ -3,7 +3,6 @@
 #include "Serialization/JsonReader.h"
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonSerializer.h"
-#include "AssetRegistryModule.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Animation/AnimBlueprint.h"
 #include "Animation/AnimBlueprintGeneratedClass.h"
