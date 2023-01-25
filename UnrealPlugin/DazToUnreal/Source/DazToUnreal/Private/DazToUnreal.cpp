@@ -1402,8 +1402,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 					 // Create Material
 					 FSoftObjectPath BaseMaterialPath = FDazToUnrealMaterials::GetMostCommonBaseMaterial(ChildMaterials, MaterialProperties);//FDazToUnrealMaterials::GetBaseMaterial(ChildMaterials[0], MaterialProperties[IntermediateMaterialName]);
 					 UObject* BaseMaterial = BaseMaterialPath.TryLoad();
-					 UMaterialInstanceConstant* UnrealMaterialConstant = FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder, CharacterTexturesFolder, IntermediateMaterialName, MaterialProperties, CharacterType, nullptr, MasterSubsurfaceProfile);
-					 UnrealMaterialConstant->SetParentEditorOnly((UMaterial*)BaseMaterial);
+					 UMaterialInstanceConstant* UnrealMaterialConstant = FDazToUnrealMaterials::CreateMaterial(CharacterMaterialFolder, CharacterTexturesFolder, IntermediateMaterialName, MaterialProperties, CharacterType, Cast<UMaterialInterface>(BaseMaterial), MasterSubsurfaceProfile);
+					 //UnrealMaterialConstant->SetParentEditorOnly((UMaterial*)BaseMaterial);
 					 for (FString MaterialName : ChildMaterials)
 					 {
 						USubsurfaceProfile* SubsurfaceProfile = MasterSubsurfaceProfile;
