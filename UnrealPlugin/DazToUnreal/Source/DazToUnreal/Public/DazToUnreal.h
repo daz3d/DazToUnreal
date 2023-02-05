@@ -23,7 +23,8 @@ enum DazAssetType
 	StaticMesh,
 	Animation,
 	Environment,
-	Pose
+	Pose,
+	MLDeformer
 };
 
 struct TextureLookupInfo

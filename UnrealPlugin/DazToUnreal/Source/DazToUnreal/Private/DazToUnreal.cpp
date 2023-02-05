@@ -10,6 +10,7 @@
 #include "DazToUnrealSubdivision.h"
 #include "DazToUnrealMorphs.h"
 #include "DazJointControlledMorphAnimInstance.h"
+#include "DazToUnrealMLDeformer.h"
 
 #include "EditorLevelLibrary.h"
 #include "LevelEditor.h"
@@ -417,6 +418,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		 AssetType = DazAssetType::Environment;
 	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Pose"))
 		 AssetType = DazAssetType::Pose;
+	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("MLDeformer"))
+		 AssetType = DazAssetType::MLDeformer;
 
 	 bool UseExperimentalAnimationTransfer = false;
 	 if (JsonObject->HasField(TEXT("Use Experimental Animation Transfer")))
@@ -449,6 +452,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 
 	 FString DAZImportFolder = CachedSettings->ImportDirectory.Path;
 	 FString DAZAnimationImportFolder = CachedSettings->AnimationImportDirectory.Path;
+	 FString DazMLDeformerImportFolder = CachedSettings->DeformerImportDirectory.Path;
 	 FString CharacterFolder = DAZImportFolder / AssetName;
 	 FString CharacterTexturesFolder = CharacterFolder / TEXT("Textures");
 	 FString CharacterMaterialFolder = CharacterFolder / TEXT("Materials");
@@ -465,6 +469,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 
 	 FString LocalDAZImportFolder = DAZImportFolder.Replace(TEXT("/Game/"), *ContentDirectory);
 	 FString LocalDAZAnimationImportFolder = DAZAnimationImportFolder.Replace(TEXT("/Game/"), *ContentDirectory);
+	 FString LocalDAZMLDeformerImportFolder = DazMLDeformerImportFolder.Replace(TEXT("/Game/"), *ContentDirectory);
 	 FString LocalCharacterFolder = CharacterFolder.Replace(TEXT("/Game/"), *ContentDirectory);
 	 FString LocalCharacterTexturesFolder = CharacterTexturesFolder.Replace(TEXT("/Game/"), *ContentDirectory);
 	 FString LocalCharacterMaterialFolder = CharacterMaterialFolder.Replace(TEXT("/Game/"), *ContentDirectory);
@@ -476,12 +481,14 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 #if PLATFORM_MAC
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZImportFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZAnimationImportFolder)) return nullptr;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZMLDeformerImportFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterTexturesFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterMaterialFolder)) return nullptr;
 #else
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DAZImportFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DAZAnimationImportFolder)) return nullptr;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DazMLDeformerImportFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterTexturesFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterMaterialFolder)) return nullptr;
@@ -527,7 +534,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 		 }
 	 }
 
-	 if ((AssetType == DazAssetType::Animation || AssetType == DazAssetType::Pose) && UseExperimentalAnimationTransfer)
+	 FDazToUnrealMLDeformerParams DazToUnrealMLDeformerParams;
+	 if (((AssetType == DazAssetType::Animation || AssetType == DazAssetType::Pose) && UseExperimentalAnimationTransfer) || AssetType == DazAssetType::MLDeformer)
 	 {
 		 DazCharacterType CharacterType = DazCharacterType::Unknown;
 		 if (AssetID.StartsWith(TEXT("Genesis3")))
@@ -560,7 +568,28 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 			 }
 		 }
 
-		 return NewAnimation;
+		 if (AssetType != DazAssetType::MLDeformer)
+		 {
+			 return NewAnimation;
+		 }
+		 DazToUnrealMLDeformerParams.AnimationAsset = Cast<UAnimSequence>(NewAnimation);
+	 }
+
+	 if (AssetType == DazAssetType::MLDeformer)
+	 {
+		 DazToUnrealMLDeformerParams.JsonImportData = JsonObject;
+		 FDazToUnrealMLDeformer::ImportMLDeformerAssets(DazToUnrealMLDeformerParams);
+
+		 DazToUnrealMLDeformerParams.JsonImportData = JsonObject;
+		 if (DazToUnrealMLDeformerParams.OutAsset)
+		 {
+			 FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+			 TArray<UObject*> AssetsToSelect;
+			 AssetsToSelect.Add(DazToUnrealMLDeformerParams.OutAsset);
+			 ContentBrowserModule.Get().SyncBrowserToAssets(AssetsToSelect);
+			 return DazToUnrealMLDeformerParams.OutAsset;
+		 }
+		 return nullptr;
 	 }
 
 	 // If there's an HD FBX File, that's the source
@@ -1681,7 +1710,7 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 		  FbxFactory->ImportUI->StaticMeshImportData->bForceFrontXAxis = false;
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_StaticMesh;
 	 }
-	 if (AssetType == DazAssetType::Animation || AssetType == DazAssetType::Pose)
+	 if (AssetType == DazAssetType::Animation || AssetType == DazAssetType::Pose || AssetType == DazAssetType::MLDeformer)
 	 {
 		  FbxFactory->ImportUI->bImportAsSkeletal = true;
 		  FbxFactory->ImportUI->Skeleton = Skeleton;
