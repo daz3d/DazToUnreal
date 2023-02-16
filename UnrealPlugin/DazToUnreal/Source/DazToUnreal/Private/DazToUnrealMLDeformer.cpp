@@ -8,6 +8,7 @@
 #include "AlembicImportFactory.h"
 #include "MLDeformerAsset.h"
 #include "MLDeformerModel.h"
+#include "Subsystems/EditorAssetSubsystem.h"
 #endif
 #include "AssetToolsModule.h"
 #include "Dom/JsonObject.h"
@@ -88,10 +89,37 @@ void FDazToUnrealMLDeformer::CreateMLDeformer(FDazToUnrealMLDeformerParams& DazT
 	// Set data after creation
 	if (UMLDeformerAsset* Deformer = Cast<UMLDeformerAsset>(CreatedAsset))
 	{
-		//FTransform Transform(FRotator(), FVector(0.0f, 0.0f, 1.1f), FVector(-1.0f, 0.0f, 0.0f));
-		//Deformer->GetModel()->SetAlignmentTransform(Transform);
-		//Deformer->GetModel()-> = DazToUnrealMLDeformerParams.AnimationAsset;
+		// Open the editor for the new deformer asset
+		GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(Deformer);
+
+		// Set the transform for the alembic data so it lines up with the skeletal mesh
+		FTransform Transform(FRotator(0.0f, 90.0f, -90.0f), FVector(0.0f, 0.0f, 0.0f), FVector(-1.0f, 1.0f, 1.0f));
+		Deformer->GetModel()->SetAlignmentTransform(Transform);
+
+		// Set up a hook for automatically setting the RetargetSourceAsset on the animation
+		Deformer->GetModel()->OnPostEditChangeProperty().AddStatic(FDazToUnrealMLDeformer::ModelPropertyChange, Deformer->GetModel());
+
+		// Return the deformer back to the main function
 		DazToUnrealMLDeformerParams.OutAsset = Deformer;
+	}
+#endif
+}
+
+void FDazToUnrealMLDeformer::ModelPropertyChange(FPropertyChangedEvent& PropertyChangeEvent, UMLDeformerModel* DeformerModel)
+{
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+	if (DeformerModel == nullptr) return;
+
+	// When the SkeletalMesh or AnimSequence are updated set the RetargetSourceAsset on the AnimSequence automatically
+	if (PropertyChangeEvent.GetMemberPropertyName() == "SkeletalMesh" ||
+		PropertyChangeEvent.GetMemberPropertyName() == "AnimSequence")
+	{
+		if (UAnimSequence* AnimSequence = DeformerModel->GetAnimSequence())
+		{
+			AnimSequence->RetargetSourceAsset = DeformerModel->GetSkeletalMesh();
+			UEditorAssetSubsystem* EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
+			EditorAssetSubsystem->SaveLoadedAsset(AnimSequence, true);
+		}
 	}
 #endif
 }

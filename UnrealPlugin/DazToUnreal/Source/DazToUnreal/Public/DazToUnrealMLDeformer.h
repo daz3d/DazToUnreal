@@ -7,6 +7,7 @@
 #endif
 
 class FJsonObject;
+class UMLDeformerModel;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogDazToUnrealMLDeformer, Log, All);
 
@@ -23,4 +24,5 @@ class FDazToUnrealMLDeformer
 public:
 	static void ImportMLDeformerAssets(FDazToUnrealMLDeformerParams& DazToUnrealMLDeformerParams);
 	static void CreateMLDeformer(FDazToUnrealMLDeformerParams& DazToUnrealMLDeformerParams);
+	static void ModelPropertyChange(FPropertyChangedEvent& PropertyChangeEvent, UMLDeformerModel* DeformerModel);
 };
