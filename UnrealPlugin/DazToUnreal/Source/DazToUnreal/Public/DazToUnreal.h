@@ -64,7 +64,7 @@ public:
 	void InstallMaterialAssetsToProject();
 	
 	/** Function to start the import process*/
-	UObject* ImportFromDaz(TSharedPtr<FJsonObject> JsonObject);
+	UObject* ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, const FString& FileName);
 
 private:
 	

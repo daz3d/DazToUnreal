@@ -330,13 +330,13 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 					}
 					else
 					{
-						ImportFromDaz(JsonObject);
+						ImportFromDaz(JsonObject, DtuFile);
 					}
 				}
 			}
 			for (int i = 0; i < environmentQueue.Num(); i++)
 			{
-				ImportFromDaz(environmentQueue[i]);
+				ImportFromDaz(environmentQueue[i], jobPool[i]);
 			}
 
 		}
@@ -371,7 +371,7 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 					{
 						// In UE5 the ticker can happen on worker threads, but some import processes want the game (main) thread.
 						//AsyncTask(ENamedThreads::GameThread, [this, JsonObject]() {
-							ImportFromDaz(JsonObject);
+							ImportFromDaz(JsonObject, FileName);
 							//});
 						
 					}
@@ -398,7 +398,7 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 	return true;
 }
 
-UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
+UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, const FString& FileName)
 {
 	 TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties;
 
@@ -1517,6 +1517,16 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 
 	 }
 
+#if ENGINE_MAJOR_VERSION > 4
+	 // Create a control rig for the character
+	 if (AssetType == DazAssetType::SkeletalMesh)
+	 {
+		 FString SkeletalMeshPackagePath = NewObject->GetOutermost()->GetPathName() + TEXT(".") + NewObject->GetName();
+		 FString CreateControlRigCommand = FString::Format(TEXT("py CreateControlRig.py --skeletalMesh={0} --dtuFile=\"{1}\""), { SkeletalMeshPackagePath, FileName });
+		 GEngine->Exec(NULL, *CreateControlRigCommand);
+	 }
+#endif
+
 	 return NewObject;
 }
 
@@ -1696,7 +1706,7 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 		  FbxFactory->ImportUI->bImportAsSkeletal = true;
 		  FbxFactory->ImportUI->Skeleton = Skeleton;
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bImportMorphTargets = true;
-		  FbxFactory->ImportUI->bImportAnimations = true;
+		  FbxFactory->ImportUI->bImportAnimations = false;
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bUseT0AsRefPose = CachedSettings->FrameZeroIsReferencePose;
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bConvertScene = true;
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bForceFrontXAxis = CachedSettings->ZeroRootRotationOnImport;
