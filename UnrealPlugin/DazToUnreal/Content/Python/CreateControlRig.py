@@ -103,12 +103,12 @@ args = parser.parse_args()
 asset_name = args.skeletalMesh.split('.')[1] + '_CR'
 package_path = args.skeletalMesh.rsplit('/', 1)[0]
 
-blueprint = unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=asset_name,
-                                           package_path=package_path,
-                                           asset_class=unreal.ControlRigBlueprint,
-                                           factory=unreal.ControlRigBlueprintFactory())
+# blueprint = unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=asset_name,
+#                                            package_path=package_path,
+#                                            asset_class=unreal.ControlRigBlueprint,
+#                                            factory=unreal.ControlRigBlueprintFactory())
 
-#blueprint = unreal.load_object(name = '/Game/NewControlRigBlueprint.NewControlRigBlueprint', outer = None)
+blueprint = unreal.load_object(name = '/Game/NewControlRigBlueprint.NewControlRigBlueprint', outer = None)
 library = blueprint.get_local_function_library()
 library_controller = blueprint.get_controller(library)
 hierarchy = blueprint.hierarchy
