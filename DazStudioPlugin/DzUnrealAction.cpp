@@ -235,6 +235,11 @@ void DzUnrealAction::writeConfiguration()
 		 writeEnvironment(writer);
 	 }
 
+	 if (m_sAssetType == "MLDeformer")
+	 {
+		 writeMLDeformerData(writer);
+	 }
+
 	 writer.finishObject();
 	 DTUfile.close();
 
