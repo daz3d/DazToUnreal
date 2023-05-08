@@ -77,6 +77,11 @@
 			"Name": "VertexDeltaModel",
 			"Enabled": true,
 			"Optional": true
+		},
+		{
+			"Name": "ControlRig",
+			"Enabled": true,
+			"Optional": true
 		}
 	]
 }
