@@ -8,7 +8,9 @@
 #include "Animation/AnimBlueprintGeneratedClass.h"
 #include "EdGraphSchema_K2_Actions.h"
 #include "AnimGraphNode_LinkedInputPose.h"
+#if ENGINE_MAJOR_VERSION > 4
 #include "AnimGraphNode_ControlRig.h"
+#endif
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Animation/MorphTarget.h"
 #include "LODUtilities.h"
@@ -71,6 +73,7 @@ UAnimBlueprint* FDazToUnrealMorphs::CreateBlueprint(UObject* InParent, FName Nam
 		TypedNewClass_SKEL->TargetSkeleton = Skeleton;
 	}
 
+#if ENGINE_MAJOR_VERSION > 4
 	// Need to add the Pose Input Node and connect it to the Output Node in the AnimGraph
 	TArray<UEdGraph*> Graphs;
 	NewBP->GetAllGraphs(Graphs);
@@ -112,18 +115,20 @@ UAnimBlueprint* FDazToUnrealMorphs::CreateBlueprint(UObject* InParent, FName Nam
 			//GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->CloseAllEditorsForAsset(NewBP);
 		}
 	}
-
+#endif
 	return NewBP;
-
-	
 }
 
 bool FDazToUnrealMorphs::IsAutoJCMImport(TSharedPtr<FJsonObject> JsonObject)
 {
+	// UE4 doesn't have some of the functions needed for creating the control rig and blueprint automatically.
+#if ENGINE_MAJOR_VERSION > 4
 	const TArray<TSharedPtr<FJsonValue>>* JointLinkList;
 	if (JsonObject->TryGetArrayField(TEXT("JointLinks"), JointLinkList))
 	{
 		return true;
 	}
+#endif
 	return false;
+
 }
