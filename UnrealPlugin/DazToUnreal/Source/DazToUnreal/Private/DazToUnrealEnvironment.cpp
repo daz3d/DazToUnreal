@@ -43,6 +43,7 @@ void FDazToUnrealEnvironment::ImportEnvironment(TSharedPtr<FJsonObject> JsonObje
 
 		FString ParentId = Instance->GetStringField(TEXT("ParentID"));
 		FString InstanceId = Instance->GetStringField(TEXT("Guid"));
+		FString InstanceLabel = Instance->GetStringField(TEXT("InstanceLabel"));
 
 		// Make the child list if needed
 		if (!ParentToChild.Contains(ParentId))
@@ -88,6 +89,10 @@ void FDazToUnrealEnvironment::ImportEnvironment(TSharedPtr<FJsonObject> JsonObje
 				NewActor->SetActorScale3D(FVector(ScaleXPos, ScaleYPos, ScaleZPos));
 				GuidToActor.Add(InstanceId, NewActor);
 				ParentToChild[ParentId].Add(InstanceId);
+				if (InstanceLabel.Len() > 0)
+				{
+					NewActor->SetActorLabel(InstanceLabel);
+				}
 			}
 		}
 		else
@@ -111,6 +116,10 @@ void FDazToUnrealEnvironment::ImportEnvironment(TSharedPtr<FJsonObject> JsonObje
 				}
 				GuidToActor.Add(InstanceId, NewActor);
 				ParentToChild[ParentId].Add(InstanceId);
+				if (InstanceLabel.Len() > 0)
+				{
+					NewActor->SetActorLabel(InstanceLabel);
+				}
 			}
 		}
 	}

@@ -1519,7 +1519,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 
 #if ENGINE_MAJOR_VERSION > 4
 	 // Create a control rig for the character
-	 if (AssetType == DazAssetType::SkeletalMesh)
+	 if (AssetType == DazAssetType::SkeletalMesh && NewObject)
 	 {
 		 FString SkeletalMeshPackagePath = NewObject->GetOutermost()->GetPathName() + TEXT(".") + NewObject->GetName();
 		 FString CreateControlRigCommand = FString::Format(TEXT("py CreateControlRig.py --skeletalMesh={0} --dtuFile=\"{1}\""), { SkeletalMeshPackagePath, FileName });
