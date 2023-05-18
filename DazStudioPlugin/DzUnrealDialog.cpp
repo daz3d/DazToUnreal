@@ -77,8 +77,20 @@ To find out more about Daz Bridges, go to <a href=\"https://www.daz3d.com/daz-br
 
 	settings = new QSettings("Daz 3D", "DazToUnreal");
 
-	// Connect new asset type handler
-	connect(assetTypeCombo, SIGNAL(activated(int)), this, SLOT(HandleAssetTypeComboChange(int)));
+	// add new asset type to assetTypeCombo widget ("MLDeformer")
+	assetTypeCombo->addItem("MLDeformer");
+
+	// Morph Settings
+	mlDeformerSettingsGroupBox = new QGroupBox("MLDeformer Settings", this);
+	QFormLayout* mlDeformerSettingsLayout = new QFormLayout();
+	mlDeformerSettingsGroupBox->setLayout(mlDeformerSettingsLayout);
+	mlDeformerPoseCountEdit = new QLineEdit("500", mlDeformerSettingsGroupBox);
+	mlDeformerPoseCountEdit->setValidator(new QIntValidator());
+	mlDeformerSettingsLayout->addRow("Pose Count", mlDeformerPoseCountEdit);
+	mlDeformerSettingsGroupBox->setVisible(false);
+
+	// Add ML Deformer settings to the mainLayout as a new row without header
+	mainLayout->addRow(mlDeformerSettingsGroupBox);
 
 	// Intermediate Folder
 	QHBoxLayout* intermediateFolderLayout = new QHBoxLayout();
@@ -92,11 +104,13 @@ To find out more about Daz Bridges, go to <a href=\"https://www.daz3d.com/daz-br
 	portEdit = new QLineEdit("32345");
 	connect(portEdit, SIGNAL(textChanged(const QString &)), this, SLOT(HandlePortChanged(const QString &)));
 
+	// Add Port and Intermediate Folder to Advanced Settings container as a new row with specific headers
 	QFormLayout* advancedLayout = qobject_cast<QFormLayout*>(advancedWidget->layout());
 	if (advancedLayout)
 	{
 		advancedLayout->addRow("Port", portEdit);
 		advancedLayout->addRow("Intermediate Folder", intermediateFolderLayout);
+		// reposition the Open Intermediate Folder button so it aligns with the center section
 		advancedLayout->removeWidget(m_OpenIntermediateFolderButton);
 		advancedLayout->addRow("", m_OpenIntermediateFolderButton);
 	}
@@ -143,7 +157,23 @@ bool DzUnrealDialog::loadSavedSettings()
 		portEdit->setText(settings->value("Port").toString());
 	}
 
+	// Animation settings
+	if (!settings->value("MLDeformerPoseCount").isNull())
+	{
+		mlDeformerPoseCountEdit->setText(settings->value("MLDeformerPoseCount").toString());
+	}
+
 	return true;
+}
+
+void DzUnrealDialog::saveSettings()
+{
+	if (settings == nullptr || m_bDontSaveSettings) return;
+
+	DzBridgeDialog::saveSettings();
+
+	// Animation settings
+	settings->setValue("MLDeformerPoseCount", mlDeformerPoseCountEdit->text().toInt());
 }
 
 void DzUnrealDialog::resetToDefaults()
@@ -381,30 +411,6 @@ Engine plugins folder, please make sure you have write permissions to that folde
 	return;
 }
 
-void DzUnrealDialog::HandleAssetTypeComboChange(int state)
-{
-	QString assetNameString = assetNameEdit->text();
-
-	// enable/disable Subdivision if Environment selected
-	if (assetTypeCombo->currentText() == "Environment")
-	{
-		morphsEnabledCheckBox->setChecked(false);
-		morphsEnabledCheckBox->setDisabled(true);
-		morphsButton->setDisabled(true);
-		subdivisionEnabledCheckBox->setChecked(false);
-		subdivisionEnabledCheckBox->setDisabled(true);
-		subdivisionButton->setDisabled(true);
-	}
-	else
-	{
-		morphsEnabledCheckBox->setDisabled(false);
-		morphsButton->setDisabled(false);
-		subdivisionEnabledCheckBox->setDisabled(false);
-		subdivisionButton->setDisabled(false);
-	}
-
-}
-
 void DzUnrealDialog::HandleOpenIntermediateFolderButton(QString sFolderPath)
 {
 	QString sIntermediateFolder = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation) + QDir::separator() + "DazToUnreal";
@@ -415,5 +421,12 @@ void DzUnrealDialog::HandleOpenIntermediateFolderButton(QString sFolderPath)
 	sIntermediateFolder = sIntermediateFolder.replace("\\", "/");
 	DzBridgeDialog::HandleOpenIntermediateFolderButton(sIntermediateFolder);
 }
+
+void DzUnrealDialog::HandleAssetTypeComboChange(const QString& assetType)
+{
+	mlDeformerSettingsGroupBox->setVisible(assetType == "MLDeformer");
+	DzBridgeDialog::HandleAssetTypeComboChange(assetType);
+}
+
 
 #include "moc_DzUnrealDialog.cpp"

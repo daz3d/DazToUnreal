@@ -29,6 +29,8 @@
 #include "DzBridgeMorphSelectionDialog.h"
 #include "DzBridgeSubdivisionDialog.h"
 
+#include "MLDeformer.h"
+
 DzUnrealAction::DzUnrealAction() :
 	 DzBridgeAction(tr("&Daz to Unreal"), tr("Send the selected node to Unreal."))
 {
@@ -324,6 +326,39 @@ QString DzUnrealAction::readGuiRootFolder()
 			rootFolder = intermediateFolderEdit->text().replace("\\", "/");
 	}
 	return rootFolder;
+}
+
+// DB 2023-05-18: Added support for MLDeformer
+// Overrides baseclass implementation with Unreal specific export
+void DzUnrealAction::exportNode(DzNode* Node)
+{
+	if (Node == nullptr)
+		return;
+
+	if (m_sAssetType == "MLDeformer")
+	{
+		QDir dir;
+		dir.mkpath(m_sDestinationPath);
+		DzUnrealDialog* unrealBridgeDialog = qobject_cast<DzUnrealDialog*>(m_bridgeDialog);
+		MLDeformer::GeneratePoses(Node, unrealBridgeDialog->getMLDeformerPoseCountEdit()->text().toInt());
+		exportAnimation(/*bExportingForMLDeformer*/ true);
+		MLDeformer::ExportTrainingData(Node, m_sDestinationPath + m_sExportFilename + ".abc");
+		writeConfiguration();
+		return;
+	}
+
+	DzBridgeAction::exportNode(Node);
+
+}
+
+void DzUnrealAction::exportAnimation(bool bExportingForMLDeformer)
+{
+	DzBridgeAction::exportAnimation();
+}
+
+void DzUnrealAction::exportNodeAnimation(DzNode* Bone, QMap<DzNode*, FbxNode*>& BoneMap, FbxAnimLayer* AnimBaseLayer, float FigureScale, bool bExportingForMLDeformer)
+{
+	DzBridgeAction::exportNodeAnimation(Bone, BoneMap, AnimBaseLayer, FigureScale);
 }
 
 #include "moc_DzUnrealAction.cpp"

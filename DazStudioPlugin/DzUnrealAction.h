@@ -31,6 +31,10 @@ protected:
 	 Q_INVOKABLE void writeConfiguration();
 	 void setExportOptions(DzFileIOSettings& ExportOptions);
 
+	 virtual void exportNode(DzNode* Node);
+	 virtual void exportAnimation(bool bExportingForMLDeformer=true);
+	 virtual void exportNodeAnimation(DzNode* Bone, QMap<DzNode*, FbxNode*>& BoneMap, FbxAnimLayer* AnimBaseLayer, float FigureScale, bool bExportingForMLDeformer=true);
+
 #ifdef UNITTEST_DZBRIDGE
 	 friend class UnitTest_DzUnrealAction;
 #endif
