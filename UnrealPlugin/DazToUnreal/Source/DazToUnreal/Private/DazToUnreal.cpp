@@ -55,6 +55,10 @@
 #include "Serialization/JsonSerializer.h"
 #include "FileHelpers.h"
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+#include "LevelEditorSubsystem.h"
+#endif
+
 DEFINE_LOG_CATEGORY(LogDazToUnreal);
 //#include "ISkeletonEditorModule.h"
 //#include "IEditableSkeleton.h"
@@ -483,9 +487,23 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject)
 	 {
 		 FString LevelPath = CharacterFolder / AssetName;
 		 FString TemplatePath = TEXT("/Engine/Content/Maps/Templates/Template_Default");
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+		 if (ULevelEditorSubsystem* LevelEditorSubsystem = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
+		 {
+			 LevelEditorSubsystem->NewLevelFromTemplate(LevelPath, TemplatePath);
+		 }
+#else
 		 UEditorLevelLibrary::NewLevelFromTemplate(LevelPath, TemplatePath);
+#endif
 		 FDazToUnrealEnvironment::ImportEnvironment(JsonObject);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+		 if (ULevelEditorSubsystem* LevelEditorSubsystem = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
+		 {
+			 LevelEditorSubsystem->SaveCurrentLevel();
+		 }
+#else
 		 UEditorLevelLibrary::SaveCurrentLevel();
+#endif
 		 return nullptr;
 	 }
 
@@ -1505,8 +1523,11 @@ bool FDazToUnrealModule::ImportTextureAssets(TArray<FString>& SourcePaths, FStri
 
 	 UTextureFactory* TextureFactory = NewObject<UTextureFactory>(UTextureFactory::StaticClass());
 	 UAutomatedAssetImportData* ImportData = NewObject<UAutomatedAssetImportData>(UAutomatedAssetImportData::StaticClass());
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+#else
 	 ImportData->FactoryName = TEXT("TextureFactory");
 	 ImportData->Factory = TextureFactory;
+#endif
 	 ImportData->Filenames = SourcePaths;
 	 ImportData->DestinationPath = ImportLocation;
 	 if (BatchConversionMode != 0)

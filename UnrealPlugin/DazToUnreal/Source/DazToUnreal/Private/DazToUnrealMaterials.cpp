@@ -452,12 +452,19 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 				{
 					FStaticParameterSet StaticParameters;
 					UnrealMaterialConstant->GetStaticParameterValues(StaticParameters);
-
-					for (int32 ParameterIdx = 0; ParameterIdx < StaticParameters.StaticSwitchParameters.Num(); ParameterIdx++)
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 1
+                    TArray<FStaticSwitchParameter>& StaticSwitchParameters = StaticParameters.GetRuntime().StaticSwitchParameters;
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+					TArray<FStaticSwitchParameter>& StaticSwitchParameters = StaticParameters.EditorOnly.StaticSwitchParameters;
+#else
+					TArray<FStaticSwitchParameter>& StaticSwitchParameters = StaticParameters.StaticSwitchParameters;
+#endif
+					
+					for (int32 ParameterIdx = 0; ParameterIdx < StaticSwitchParameters.Num(); ParameterIdx++)
 					{
-						for (int32 SwitchParamIdx = 0; SwitchParamIdx < StaticParameters.StaticSwitchParameters.Num(); SwitchParamIdx++)
+						for (int32 SwitchParamIdx = 0; SwitchParamIdx < StaticSwitchParameters.Num(); SwitchParamIdx++)
 						{
-							FStaticSwitchParameter& StaticSwitchParam = StaticParameters.StaticSwitchParameters[SwitchParamIdx];
+							FStaticSwitchParameter& StaticSwitchParam = StaticSwitchParameters[SwitchParamIdx];
 
 							if (StaticSwitchParam.ParameterInfo.Name.ToString() == MaterialProperty.Name)
 							{
@@ -805,7 +812,12 @@ USubsurfaceProfile* FDazToUnrealMaterials::CreateSubsurfaceProfileForMaterial(co
 
 	USubsurfaceProfile* SubsurfaceProfile = nullptr;
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+	FSoftObjectPath SubSurfaceProfilePath(*(CharacterMaterialFolder / SubsurfaceProfileName + TEXT(".") + SubsurfaceProfileName));
+	FAssetData AssetData = AssetRegistryModule.Get().GetAssetByObjectPath(SubSurfaceProfilePath);
+#else
 	FAssetData AssetData = AssetRegistryModule.Get().GetAssetByObjectPath(*(CharacterMaterialFolder / SubsurfaceProfileName + TEXT(".") + SubsurfaceProfileName));
+#endif
 	UObject* Asset = FindObject<UObject>(nullptr, *(CharacterMaterialFolder / SubsurfaceProfileName + TEXT(".") + SubsurfaceProfileName));
 	if (AssetData.IsValid())
 	{
