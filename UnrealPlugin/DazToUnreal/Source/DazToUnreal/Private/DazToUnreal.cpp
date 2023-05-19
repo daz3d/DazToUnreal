@@ -398,6 +398,7 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 	return true;
 }
 
+#include "Editor/LevelEditor/Public/LevelEditorSubsystem.h"
 UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, const FString& FileName)
 {
 	 TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties;
@@ -496,15 +497,20 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 
 	 if (AssetType == DazAssetType::Environment)
 	 {
-		 FString LevelPath = CharacterFolder / AssetName;
+		 FString LevelPath = CharacterFolder / AssetName + FString("_Level");
 		 FString TemplatePath = TEXT("/Engine/Content/Maps/Templates/Template_Default");
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
 		 if (ULevelEditorSubsystem* LevelEditorSubsystem = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
 		 {
 			 LevelEditorSubsystem->NewLevelFromTemplate(LevelPath, TemplatePath);
+			 //LevelEditorSubsystem->NewLevel(LevelPath);
+
+			 // DB - UE 5.x appears to need LoadLevel() after using one of the NewLevel___() functions
+			 LevelEditorSubsystem->LoadLevel(LevelPath);
 		 }
 #else
 		 UEditorLevelLibrary::NewLevelFromTemplate(LevelPath, TemplatePath);
+		 //UEditorLevelLibrary::NewLevel(LevelPath);
 #endif
 		 FDazToUnrealEnvironment::ImportEnvironment(JsonObject);
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
