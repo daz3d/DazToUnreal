@@ -9,7 +9,6 @@
 #include "DazToUnrealPoses.h"
 #include "DazToUnrealSubdivision.h"
 #include "DazToUnrealMorphs.h"
-#include "DazJointControlledMorphAnimInstance.h"
 #include "DazToUnrealMLDeformer.h"
 
 #include "EditorLevelLibrary.h"
@@ -1506,7 +1505,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 
 	 Progress.EnterProgressFrame(1, LOCTEXT("CreatingAutoJCMControlRig", "Creating AutoJCM Control Rig"));
 	 // Create and attach the Joint Control Anim
-	 if (AssetType == DazAssetType::SkeletalMesh && CachedSettings->CreateAutoJCMControlRig)
+	 if (AssetType == DazAssetType::SkeletalMesh && CachedSettings->CreateAutoJCMControlRig && FDazToUnrealMorphs::IsAutoJCMImport(JsonObject))
 	 {
 		 if (USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(NewObject))
 		 {
