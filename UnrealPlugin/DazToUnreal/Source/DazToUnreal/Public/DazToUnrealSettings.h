@@ -38,9 +38,6 @@ public:
 		OtherSkeletons.Add(TEXT("Genesis8_1Male"), FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton")));
 		OtherSkeletons.Add(TEXT("Genesis8_1Female"), FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton")));
 
-		SkeletonPostProcessAnimation.Add(FSoftObjectPath(TEXT("/DazToUnreal/Genesis3BaseSkeleton.Genesis3BaseSkeleton")), FSoftClassPath(TEXT("/DazToUnreal/Genesis3JCMPostProcess.Genesis3JCMPostProcess_C")));
-		SkeletonPostProcessAnimation.Add(FSoftObjectPath(TEXT("/DazToUnreal/Genesis8BaseSkeleton.Genesis8BaseSkeleton")), FSoftClassPath(TEXT("/DazToUnreal/Genesis8JCMPostProcess.Genesis8JCMPostProcess_C")));
-
 		AddIKBones = true;
 
 		UseOriginalMaterialName = false;
