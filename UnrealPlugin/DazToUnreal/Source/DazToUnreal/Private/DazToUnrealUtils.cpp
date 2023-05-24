@@ -21,7 +21,8 @@ FString FDazToUnrealUtils::SanitizeName(FString OriginalName)
 		.Replace(TEXT(">"), TEXT("_"))
 		.Replace(TEXT("?"), TEXT("_"))
 		.Replace(TEXT("\\"), TEXT("_"))
-		.Replace(TEXT(":"), TEXT("_"));
+		.Replace(TEXT(":"), TEXT("_"))
+		.Replace(TEXT("'"), TEXT(""));
 }
 
 bool FDazToUnrealUtils::MakeDirectoryAndCheck(FString& Directory)
