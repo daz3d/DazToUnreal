@@ -57,7 +57,7 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 	// Set the default material type
 	FSoftObjectPath BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Base);
 
-	if (AssetType == TEXT("Follower/Hair"))
+	if (AssetType == TEXT("Follower/Hair") || AssetType == TEXT("Follower/Attachment/Head/Forehead/Eyebrows"))
 	{
 		BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Hair);
 		if (MaterialName.EndsWith(Seperator + TEXT("scalp")))
@@ -164,6 +164,10 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 	{
 		BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::EyeMoisture);
 	}
+	else if (MaterialName.Contains(TEXT("eyebrow"), ESearchCase::IgnoreCase))
+	{
+		BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Hair);
+	}
 	else
 	{
 		//BaseMaterialAssetPath = CachedSettings->BaseMaterial;
@@ -173,10 +177,22 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 			if (Property.Name == TEXT("Cutout Opacity Texture"))
 			{
 				BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
+				break;
 			}
-			if (Property.Name == TEXT("Opacity Strength") && Property.Value != TEXT("1"))
+			else if (Property.Name == TEXT("Cutout Opacity") && Property.Value != TEXT("1"))
 			{
 				BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
+				break;
+			}
+			else if (Property.Name == TEXT("Opacity Strength") && Property.Value != TEXT("1"))
+			{
+				BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
+				break;
+			}
+			else if (Property.Name == TEXT("Refraction Weight") && Property.Value != TEXT("0"))
+			{
+				BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
+				break;
 			}
 		}
 
@@ -200,6 +216,10 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 		BaseMaterialAssetPath = GetBaseMaterial(MaterialName, MaterialProperties[MaterialName]);
 	}
 
+	// DB 2023-May-23: Fix for refraction weight & opacity strength interaction, part 1
+	double RefractionWeight = 0.0;
+	double OpacityStrength = 1.0;
+	double CutoutOpacity = 1.0;
 	FString ShaderName = "";
 	FString AssetType = "";
 	if (MaterialProperties.Contains(MaterialName))
@@ -212,8 +232,35 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 				AssetType = Property.Value;
 				ShaderName = Property.ShaderName;
 			}
+			// DB 2023-May-23: Fix for refraction weight & opacity strength interaction, part 2
+			else if (Property.Name == TEXT("Refraction Weight"))
+			{
+				RefractionWeight = FCString::Atod(*Property.Value);
+			}
+			else if (Property.Name == TEXT("Opacity Strength"))
+			{
+				OpacityStrength = FCString::Atod(*Property.Value);
+			}
+			else if (Property.Name == TEXT("Cutout Opacity"))
+			{
+				CutoutOpacity = FCString::Atod(*Property.Value);
+			}
 		}
 	}
+	// DB 2023-May-23: Fix for refraction weight & opacity strength interaction, part 3
+	if (RefractionWeight > 0.0 && OpacityStrength >= 1.0)
+	{
+		OpacityStrength = 1.0 - RefractionWeight;
+		if (OpacityStrength <= 0.0)
+		{
+			OpacityStrength = 0.09;
+		}
+		SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(OpacityStrength), MaterialProperties);
+	} else if (CutoutOpacity <= 1.0 && OpacityStrength >= 1.0)
+	{
+		SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CutoutOpacity), MaterialProperties);
+	}
+
 	FString Seperator;
 	if ( CachedSettings->UseOriginalMaterialName)
 	{
@@ -461,7 +508,7 @@ void FDazToUnrealMaterials::CorrectDazShaders(FString MaterialName, TMap<FString
 	// Shader Corrections for specific Daz-Shaders
 	////////////////////////////////////////////////////////
 	FString sCleanedName = MaterialName.Replace(TEXT("_"), TEXT(""));
-	double fGlobalTransparencyCorrection = 10.0;
+	double fGlobalTransparencyCorrection = 12.5;
 	if (ShaderName == TEXT("Iray Uber"))
 	{
 		double fIrayUberTransparencyCorrection = fGlobalTransparencyCorrection + 0.0;

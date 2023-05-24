@@ -39,6 +39,7 @@ public:
 	static int BatchConversionMode;
 	static FString BatchConversionDestPath;
 	static TMap<FString, FString> AssetIDLookup;
+	static TArray<UObject*> TextureListToDisableSRGB;
 	TMap<FString, TextureLookupInfo> m_sourceTextureLookupTable;
 	TMap<FString, TextureLookupInfo> m_targetTextureLookupTable;
 

@@ -124,6 +124,7 @@ THIRD_PARTY_INCLUDES_END
 int FDazToUnrealModule::BatchConversionMode;
 FString FDazToUnrealModule::BatchConversionDestPath;
 TMap<FString, FString> FDazToUnrealModule::AssetIDLookup;
+TArray<UObject*> FDazToUnrealModule::TextureListToDisableSRGB;
 
 void FDazToUnrealModule::StartupModule()
 {
@@ -344,6 +345,21 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 	}
 	else if (BatchConversionMode == 0)
 	{
+		// DB 2023-May-23: Disable SRGB in a delayed step after importing textures is done to avoid engine crash
+		if (FDazToUnrealModule::TextureListToDisableSRGB.Num() > 0)
+		{
+			for (int i = 0; i < FDazToUnrealModule::TextureListToDisableSRGB.Num(); i++)
+			{
+				// cast element to UTexture
+				UTexture* Texture = Cast<UTexture>(FDazToUnrealModule::TextureListToDisableSRGB[i]);
+				if (Texture)
+				{
+					Texture->SRGB = false;
+				}
+			}
+			FDazToUnrealModule::TextureListToDisableSRGB.Empty();
+		}
+
 		// Check from messages from the Daz Studio plugin
 		uint32 BytesPending = 0;
 		if (ServerSocket->HasPendingData(BytesPending))
@@ -1626,38 +1642,66 @@ bool FDazToUnrealModule::ImportTextureAssets(TArray<FString>& SourcePaths, FStri
 	 TArray<UObject*> ImportedAssets = AssetToolsModule.Get().ImportAssetsAutomated(ImportData);
 
 	 // Texture Corrections: sRGB
-	 if (ImportedAssets.Num() != SourcePaths.Num())
-	 {
-		 UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ImportTextureAssets() ERROR: ImportedAssets count is not equal to SourcePaths count. Texture Lookup Correction will likely fail..."));
-	 }
-	 int textureIndex = 0;
-	 for (FString SourcePath : SourcePaths)
-	 {
-		 if (m_targetTextureLookupTable.Contains(SourcePath))
-		 {
-			 TextureLookupInfo lookupData = m_targetTextureLookupTable[SourcePath];
-			 if (lookupData.bIsCutOut == true)
-			 {
-				 if (textureIndex >= ImportedAssets.Num())
-				 {
-					 UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: sRGB-corection texture-index lookup procedure returned invalid texture index. Skipping..."));
-				 }
-				 else
-				 {
-					 if (UTexture* texture = Cast<UTexture>(ImportedAssets[textureIndex]))
-					 {
 #if ENGINE_MAJOR_VERSION > 4
-						 // SRGB is crashing UE5, memory access violation???
-//						 texture->SRGB = false;
+	// NOTE: UE5 ImportedAssets count is not 1:1 compatible with SourcePaths count,
+	// so we can't assume index based on iteration through loop. Instead, we need
+	// to search through the ImportedAssets array to find the matching asset based
+	// on source path as retrieved from the
+	// Texture->AssetImportData->GetFirstFilename() function.
+	FDazToUnrealModule::TextureListToDisableSRGB.Empty();
+	for (auto ImportedAsset : ImportedAssets)
+	{
+		if (ImportedAsset->IsA(UTexture::StaticClass()))
+		{
+			UTexture* Texture = Cast<UTexture>(ImportedAsset);
+			FString TextureName = Texture->GetName();
+			FString TexturePath = Texture->AssetImportData->GetFirstFilename();
+			if (m_targetTextureLookupTable.Contains(TexturePath))
+			{
+				TextureLookupInfo lookupData = m_targetTextureLookupTable[TexturePath];
+				if (lookupData.bIsCutOut == true)
+				{
+					// DB 2023-May-23: Disable SRGB in a delayed step after importing textures is done to avoid engine crash (please see Tick() )
+					//UE_LOG(LogTemp, Display, TEXT("DazToUnreal: ImportTextureAssets() Texture %s is a cutout texture. Setting sRGB to false."), *TextureName);
+					FDazToUnrealModule::TextureListToDisableSRGB.Add(Texture);
+				}
+			}
+		}
+	}
+
 #else
-						 texture->SRGB = false;
-#endif
+	if (ImportedAssets.Num() != SourcePaths.Num())
+	 {
+		 UE_LOG(LogTemp, Error, TEXT("DazToUnreal: ImportTextureAssets() ERROR: ImportedAssets count is not equal to SourcePaths count. Texture Lookup Correction will likely fail..."));
+	 }
+	 else
+	 {
+	 	int textureIndex = 0;
+		// Pseudocode: For each sourcepath, check if it is in the lookup table, and if it is, check if it is a cutout texture. If it is, set the texture to sRGB = false.
+	 	for (FString SourcePath : SourcePaths)
+		 {
+			 if (m_targetTextureLookupTable.Contains(SourcePath))
+			 {
+				 TextureLookupInfo lookupData = m_targetTextureLookupTable[SourcePath];
+				 if (lookupData.bIsCutOut == true)
+				 {
+					 if (textureIndex >= ImportedAssets.Num())
+					 {
+						 UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: sRGB-corection texture-index lookup procedure returned invalid texture index. Skipping..."));
+					 }
+					 else
+					 {
+						 if (UTexture* texture = Cast<UTexture>(ImportedAssets[textureIndex]))
+						 {
+							 texture->SRGB = false;
+						 }
 					 }
 				 }
 			 }
+			 textureIndex++;
 		 }
-		 textureIndex++;
 	 }
+#endif
 
 	 if (ImportedAssets.Num() > 0)
 	 {
