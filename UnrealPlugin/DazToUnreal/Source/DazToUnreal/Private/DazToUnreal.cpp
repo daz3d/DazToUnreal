@@ -414,7 +414,6 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 	return true;
 }
 
-#include "Editor/LevelEditor/Public/LevelEditorSubsystem.h"
 UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, const FString& FileName)
 {
 	 TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties;
