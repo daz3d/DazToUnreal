@@ -1,6 +1,7 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource prefix="/DazBridgeUnreal">
+        <file alias="banner.jpg">banner.jpg</file>
         <file alias="UEpluginbase.zip">UEpluginbase.zip</file>
         <file alias="UE4.25.zip">UE4.25-win.zip</file>
         <file alias="UE4.26.zip">UE4.26-win.zip</file>

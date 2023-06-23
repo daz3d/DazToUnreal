@@ -48,29 +48,33 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	// Set the dialog title
 	int revision = PLUGIN_REV % 1000;
 #ifdef _DEBUG
-	setWindowTitle(tr("Daz To Unreal v%1.%2 Build %3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD));
+	setWindowTitle(tr("Daz To Unreal %1 v%2.%3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD));
 #else
-	setWindowTitle(tr("Daz To Unreal v%1.%2").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR));
+	setWindowTitle(tr("Daz To Unreal %1 v%2.%3").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision));
 #endif
 
+
 	// Welcome String for Setup/Welcome Mode
-	QString sSetupModeString = tr("<h4>\
-If this is your first time using the Daz To Unreal Bridge, please be sure to read or watch \
-the tutorials or videos below to install and enable the Unreal Engine Plugin for the bridge:</h4>\
-<ul>\
-<li><a href=\"https://github.com/daz3d/DazToUnreal/releases\">Download latest Build dependencies, updates and bugfixes (Github)</a></li>\
-<li><a href=\"https://github.com/daz3d/DazToUnreal#2-how-to-install\">How To Install and Configure the Bridge (Github)</a></li>\
-<li><a href=\"https://www.daz3d.com/unreal-bridge#faq\">Daz To Unreal FAQ (Daz 3D)</a></li>\
-<li><a href=\"https://youtu.be/njPE-5EXrIc\">Installing the Daz to Unreal Bridge (Youtube)</a></li>\
-<li><a href=\"https://www.daz3d.com/forums/discussion/574891/official-daztounreal-bridge-what-s-new-and-how-to-use-it/p1\">What's New and How To Use It (Daz 3D Forums)</a></li>\
-</ul>\
-<b>NOTE:</b> In order to Package a Project, you will need to download and install the PackageProject-Dependencies.  \
-Please see <a href=\"https://github.com/daz3d/DazToUnreal#package-project-dependencies\">Github instructions</a> for instructions to do this.<br><br>\
-Once the Unreal Engine plugin is enabled, please add a Character or Prop to the Scene to transfer assets using the Daz To Unreal Bridge.<br><br>\
-To find out more about Daz Bridges, go to <a href=\"https://www.daz3d.com/daz-bridges\">https://www.daz3d.com/daz-bridges</a><br>\
+	QString sSetupModeString = tr("\
+<div style=\"background-color:#282f41;\" align=center>\
+<img src=\":/DazBridgeUnreal/banner.jpg\" width=\"370\" height=\"95\" align=\"center\" hspace=\"0\" vspace=\"0\">\
+<table width=100% cellpadding=8 cellspacing=2 style=\"vertical-align:middle; font-size:x-large; font-weight:bold; background-color:#FFAA00;foreground-color:#FFFFFF\" align=center>\
+  <tr>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://www.daz3d.com/unreal-bridge#faq\">FAQ</a></div></td>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://youtu.be/njPE-5EXrIc\">Installation Video</a></td>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://github.com/daz3d/DazToUnreal#3-how-to-use\">Tutorial Video</a></td>\
+  </tr>\
+  <tr>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://github.com/daz3d/DazToUnreal#3-how-to-use\">PDF</a></td>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://github.com/daz3d/DazToUnreal/releases\">Forums</a></td>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://github.com/daz3d/DazToUnreal/releases\">Report Bug</a></td>\
+  </tr>\
+</table>\
+</div>\
 ");
 	m_WelcomeLabel->setText(sSetupModeString);
-	QString sBridgeVersionString = tr("Daz To Unreal Bridge %1.%2 revision %3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD);
+
+	QString sBridgeVersionString = tr("Daz To Unreal Bridge %1 v%2.%3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD);
 	setBridgeVersionStringAndLabel(sBridgeVersionString);
 
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
@@ -123,6 +127,8 @@ To find out more about Daz Bridges, go to <a href=\"https://www.daz3d.com/daz-br
 	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.26");
 	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.27");
 	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.0");
+	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.1");
+	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.2");
 	showTargetPluginInstaller(true);
 
 	// Help pop-ups
@@ -235,6 +241,14 @@ void DzUnrealDialog::HandleTargetPluginInstallerButton()
 	else if (softwareVersion.contains("5.0"))
 	{
 		sBinariesFile = "/UE5.0.zip";
+	}
+	else if (softwareVersion.contains("5.1"))
+	{
+		sBinariesFile = "/UE5.1.zip";
+	}
+	else if (softwareVersion.contains("5.2"))
+	{
+		sBinariesFile = "/UE5.2.zip";
 	}
 	else
 	{
