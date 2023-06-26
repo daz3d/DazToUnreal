@@ -7,5 +7,7 @@
         <file alias="UE4.26.zip">UE4.26-win.zip</file>
         <file alias="UE4.27.zip">UE4.27-win.zip</file>
         <file alias="UE5.0.zip">UE5.0-win.zip</file>
+        <file alias="UE5.1.zip">UE5.1-win.zip</file>
+        <file alias="UE5.2.zip">UE5.2-win.zip</file>
     </qresource>
 </RCC>
