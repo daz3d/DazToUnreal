@@ -1023,8 +1023,16 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 					 SceneNode->GetParent()->GetNodeAttribute() &&
 					 SceneNode->GetParent()->GetNodeAttribute()->GetAttributeType() == FbxNodeAttribute::eSkeleton)
 				{
-					 SceneNode->GetParent()->RemoveChild(SceneNode);
-					 RootNode->AddChild(SceneNode);
+					 // DB 2023-May-26: Only detach skinned geometry, leave props attached to bones
+					 if (NodeGeometry->GetDeformerCount(FbxDeformer::eSkin) > 0)
+					 {
+						 SceneNode->GetParent()->RemoveChild(SceneNode);
+						 RootNode->AddChild(SceneNode);
+					 }
+					 else
+					 {
+						 UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: leaving prop geometry (%s) attached to bone: %s"), ANSI_TO_TCHAR(SceneNode->GetName()), ANSI_TO_TCHAR(SceneNode->GetParent()->GetName()));
+					 }
 				}
 		  }
 	 }
@@ -1321,6 +1329,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 						FbxNode* GeometryNode = Geometry->GetNode();
 						if (GeometryNode->GetMaterialIndex(TCHAR_TO_UTF8(*NewMaterialName)) != -1)
 						{
+							UE_LOG(LogTemp, Warning, TEXT("Material %s not found in material properties, removing geometry..."), *NewMaterialName);
 							Scene->RemoveGeometry(Geometry);
 						}
 					}
@@ -1711,7 +1720,7 @@ bool FDazToUnrealModule::ImportTextureAssets(TArray<FString>& SourcePaths, FStri
 
 UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FString& ImportLocation, const DazAssetType& AssetType, const DazCharacterType& CharacterType, const FString& CharacterTypeName, const bool bSetPostProcessAnimation)
 {
-	 FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
+	 static FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
 	 UDazToUnrealSettings* CachedSettings = GetMutableDefault<UDazToUnrealSettings>();
 
 	 FString NewFBXPath = SourcePath;
@@ -1759,7 +1768,8 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bUseT0AsRefPose = CachedSettings->FrameZeroIsReferencePose;
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bConvertScene = true;
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bForceFrontXAxis = CachedSettings->ZeroRootRotationOnImport;
-		  FbxFactory->ImportUI->SkeletalMeshImportData->bImportMeshesInBoneHierarchy = false;
+		  // DB 2023-May-26: ReEnabling to support bone attached props, until alternative is 100% working
+	 	  FbxFactory->ImportUI->SkeletalMeshImportData->bImportMeshesInBoneHierarchy = true;
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_SkeletalMesh;
 	 }
 	 if (AssetType == DazAssetType::StaticMesh)
