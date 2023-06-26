@@ -1531,26 +1531,27 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 				 SkeletalMesh->PostProcessAnimBlueprint = JointControlAnim->GetClass();
 #endif
 			 }
-
-			 Progress.EnterProgressFrame(1, LOCTEXT("CreatingFullBodyIKControlRig", "Creating Full Body IK Control Rig"));
-#if ENGINE_MAJOR_VERSION > 4
-			 // Create a control rig for the character
-			 if (AssetType == DazAssetType::SkeletalMesh && CachedSettings->CreateFullBodyIKControlRig)
-			 {
-				 FString SkeletalMeshPackagePath = NewObject->GetOutermost()->GetPathName() + TEXT(".") + NewObject->GetName();
-				 FString CreateControlRigCommand = FString::Format(TEXT("py CreateControlRig.py --skeletalMesh={0} --dtuFile=\"{1}\""), { SkeletalMeshPackagePath, FileName });
-				 GEngine->Exec(NULL, *CreateControlRigCommand);
-			 }
-#endif
-
-			 FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
-			 TArray<UObject*> AssetsToSelect;
-			 AssetsToSelect.Add(SkeletalMesh);
-			 ContentBrowserModule.Get().SyncBrowserToAssets(AssetsToSelect);
 		 }
 	 }
 
+	 Progress.EnterProgressFrame(1, LOCTEXT("CreatingFullBodyIKControlRig", "Creating Full Body IK Control Rig"));
+#if ENGINE_MAJOR_VERSION > 4
+	 // Create a control rig for the character
+	 if (AssetType == DazAssetType::SkeletalMesh && CachedSettings->CreateFullBodyIKControlRig)
+	 {
+		 FString SkeletalMeshPackagePath = NewObject->GetOutermost()->GetPathName() + TEXT(".") + NewObject->GetName();
+		 FString CreateControlRigCommand = FString::Format(TEXT("py CreateControlRig.py --skeletalMesh={0} --dtuFile=\"{1}\""), { SkeletalMeshPackagePath, FileName });
+		 GEngine->Exec(NULL, *CreateControlRigCommand);
+	 }
+#endif
 
+	 if (USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(NewObject))
+	 {
+		 FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+		 TArray<UObject*> AssetsToSelect;
+		 AssetsToSelect.Add(SkeletalMesh);
+		 ContentBrowserModule.Get().SyncBrowserToAssets(AssetsToSelect);
+	 }
 
 	 return NewObject;
 }
