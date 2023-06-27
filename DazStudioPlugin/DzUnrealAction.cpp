@@ -45,6 +45,9 @@ DzUnrealAction::DzUnrealAction() :
 	 QAction::setIcon(icon);
 
 	 m_bGenerateNormalMaps = true;
+	 m_bPostProcessFbx = true;
+	 m_bRemoveDuplicateGeografts = true;
+
 }
 
 void DzUnrealAction::executeAction()
@@ -328,12 +331,29 @@ QString DzUnrealAction::readGuiRootFolder()
 	return rootFolder;
 }
 
+bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
+{
+	bool bResult = DzBridgeAction::postProcessFbx(fbxFilePath);
+
+	if (!bResult)
+	{
+		return false;
+	}
+
+	// Insert Unreal specific Fbx Post-processing here
+
+	return true;
+}
+
 // DB 2023-05-18: Added support for MLDeformer
 // Overrides baseclass implementation with Unreal specific export
 void DzUnrealAction::exportNode(DzNode* Node)
 {
 	if (Node == nullptr)
 		return;
+
+	dzScene->selectAllNodes(false);
+	dzScene->setPrimarySelection(Node);
 
 	if (m_sAssetType == "MLDeformer")
 	{
