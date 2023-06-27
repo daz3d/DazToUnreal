@@ -32,8 +32,8 @@ protected:
 	 void setExportOptions(DzFileIOSettings& ExportOptions);
 
 	 virtual void exportNode(DzNode* Node) override;
-	 virtual void exportAnimation(bool bExportingForMLDeformer=true);
-	 virtual void exportNodeAnimation(DzNode* Bone, QMap<DzNode*, FbxNode*>& BoneMap, FbxAnimLayer* AnimBaseLayer, float FigureScale, bool bExportingForMLDeformer=true);
+	 virtual void exportAnimation() override;
+	 virtual void exportNodeAnimation(DzNode* Bone, QMap<DzNode*, FbxNode*>& BoneMap, FbxAnimLayer* AnimBaseLayer, float FigureScale) override;
 
 #ifdef UNITTEST_DZBRIDGE
 	 friend class UnitTest_DzUnrealAction;

@@ -341,7 +341,7 @@ void DzUnrealAction::exportNode(DzNode* Node)
 		dir.mkpath(m_sDestinationPath);
 		DzUnrealDialog* unrealBridgeDialog = qobject_cast<DzUnrealDialog*>(m_bridgeDialog);
 		MLDeformer::GeneratePoses(Node, unrealBridgeDialog->getMLDeformerPoseCountEdit()->text().toInt());
-		exportAnimation(/*bExportingForMLDeformer*/ true);
+		exportAnimation();
 		MLDeformer::ExportTrainingData(Node, m_sDestinationPath + m_sExportFilename + ".abc");
 		writeConfiguration();
 		return;
@@ -351,14 +351,22 @@ void DzUnrealAction::exportNode(DzNode* Node)
 
 }
 
-void DzUnrealAction::exportAnimation(bool bExportingForMLDeformer)
+void DzUnrealAction::exportAnimation()
 {
 	DzBridgeAction::exportAnimation();
+	if (m_sAssetName == "MLDeformer")
+	{
+		// Insert MLDeformer specific code here
+	}
 }
 
-void DzUnrealAction::exportNodeAnimation(DzNode* Bone, QMap<DzNode*, FbxNode*>& BoneMap, FbxAnimLayer* AnimBaseLayer, float FigureScale, bool bExportingForMLDeformer)
+void DzUnrealAction::exportNodeAnimation(DzNode* Bone, QMap<DzNode*, FbxNode*>& BoneMap, FbxAnimLayer* AnimBaseLayer, float FigureScale)
 {
 	DzBridgeAction::exportNodeAnimation(Bone, BoneMap, AnimBaseLayer, FigureScale);
+	if (m_sAssetName == "MLDeformer")
+	{
+		// Insert MLDeformer specific code here
+	}
 }
 
 #include "moc_DzUnrealAction.cpp"
