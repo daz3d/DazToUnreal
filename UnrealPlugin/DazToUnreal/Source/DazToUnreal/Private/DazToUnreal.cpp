@@ -9,7 +9,6 @@
 #include "DazToUnrealPoses.h"
 #include "DazToUnrealSubdivision.h"
 #include "DazToUnrealMorphs.h"
-#include "DazJointControlledMorphAnimInstance.h"
 #include "DazToUnrealMLDeformer.h"
 
 #include "EditorLevelLibrary.h"
@@ -55,6 +54,8 @@
 #include "Serialization/JsonSerializer.h"
 #include "FileHelpers.h"
 #include "Async/Async.h"
+#include "Animation/AnimBlueprint.h"
+#include "Animation/AnimBlueprintGeneratedClass.h"
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
 #include "LevelEditorSubsystem.h"
@@ -416,6 +417,8 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 
 UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, const FString& FileName)
 {
+	FScopedSlowTask Progress(10.0f, LOCTEXT("CreatingAutoJCMControlRig", "Importing from Daz"));
+	Progress.MakeDialog();
 	 TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties;
 
 	 FString FBXPath = JsonObject->GetStringField(TEXT("FBX File"));
@@ -936,6 +939,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 SdkManager->SetIOSettings(ios);
 
 	 // Create the geometry converter
+	 Progress.EnterProgressFrame(1, LOCTEXT("LoadingFBX", "Loading FBX for Updating"));
 	 FbxGeometryConverter* GeometryConverter = new FbxGeometryConverter(SdkManager);
 
 	 FbxImporter* Importer = FbxImporter::Create(SdkManager, "");
@@ -1179,6 +1183,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 }
 
 	 // Combine clothing and body morphs
+	 Progress.EnterProgressFrame(1, LOCTEXT("CombiningMorphs", "Combining Morphs"));
 	 for (int NodeIndex = 0; NodeIndex < Scene->GetNodeCount(); ++NodeIndex)
 	 {
 		  FbxNode* SceneNode = Scene->GetNode(NodeIndex);
@@ -1340,6 +1345,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 }
 
 	 // Create an exporter.
+	 Progress.EnterProgressFrame(1, LOCTEXT("WritingUpdatedFBX", "Writing Updated FBX"));
 	 FbxExporter* Exporter = FbxExporter::Create(SdkManager, "");
 	 int32 FileFormat = -1;
 
@@ -1395,6 +1401,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 }
 
 	 // Import Textures
+	 Progress.EnterProgressFrame(1, LOCTEXT("ImportingTextures", "Importing Textures"));
 	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh)
 	 {
 		  TArray<FString> TexturesFilesToImport;
@@ -1420,6 +1427,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 }
 
 	 // Create Intermediate Materials
+	 Progress.EnterProgressFrame(1, LOCTEXT("CreatingMaterials", "Creating Materials"));
 	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh)
 	 {
 		 // Create a default Master Subsurface Profile if needed
@@ -1507,6 +1515,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 }
 
 	 // Import FBX
+	 Progress.EnterProgressFrame(1, LOCTEXT("ImportingFBX", "Importing the FBX"));
 	 bool bSetPostProcessAnimation = !FDazToUnrealMorphs::IsAutoJCMImport(JsonObject);
 	 UObject* NewObject = ImportFBXAsset(UpdatedFBXFile, CharacterFolder, AssetType, CharacterType, CharacterTypeName, bSetPostProcessAnimation);
 
@@ -1524,8 +1533,9 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 		 }
 	 }
 
+	 Progress.EnterProgressFrame(1, LOCTEXT("CreatingAutoJCMControlRig", "Creating AutoJCM Control Rig"));
 	 // Create and attach the Joint Control Anim
-	 if (AssetType == DazAssetType::SkeletalMesh)
+	 if (AssetType == DazAssetType::SkeletalMesh && CachedSettings->CreateAutoJCMControlRig && FDazToUnrealMorphs::IsAutoJCMImport(JsonObject))
 	 {
 		 if (USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(NewObject))
 		 {
@@ -1534,28 +1544,44 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 #else
 			 USkeleton* Skeleton = SkeletalMesh->Skeleton;
 #endif
-			 if (UDazJointControlledMorphAnimInstance* JointControlAnim = FDazToUnrealMorphs::CreateJointControlAnimation(JsonObject, CharacterFolder, AssetName, Skeleton, SkeletalMesh))
+
+			 if (UAnimBlueprint* JointControlAnimBlueprint = FDazToUnrealMorphs::CreateJointControlAnimation(JsonObject, CharacterFolder, AssetName, Skeleton, SkeletalMesh))
 			 {
-				 //JointControlAnim->CurrentSkeleton = SkeletalMesh->Skeleton;
+				 UAnimInstance* JointControlAnim = Cast<UAnimInstance>(JointControlAnimBlueprint->GetAnimBlueprintGeneratedClass()->ClassDefaultObject);
+				 //if (FDazToUnrealMorphs::IsAutoJCMImport(JsonObject))
+				 {
+					 FString SkeletalMeshPackagePath = NewObject->GetOutermost()->GetPathName() + TEXT(".") + NewObject->GetName();
+					 FString PostProcessAnimPackagePath = JointControlAnimBlueprint->GetOutermost()->GetPathName() + TEXT(".") + JointControlAnimBlueprint->GetName();
+					 FString CreateJCMControlRigCommand = FString::Format(TEXT("py CreateAutoJCMControlRig.py --skeletalMesh={0} --animBlueprint={1} --dtuFile=\"{2}\""), { SkeletalMeshPackagePath, PostProcessAnimPackagePath, FileName });
+					 GEngine->Exec(NULL, *CreateJCMControlRigCommand);
+				 }
 #if ENGINE_MAJOR_VERSION > 4
-				 SkeletalMesh->SetPostProcessAnimBlueprint(JointControlAnim->GetClass());
+				 SkeletalMesh->SetPostProcessAnimBlueprint(JointControlAnimBlueprint->GetAnimBlueprintGeneratedClass());
 #else
 				 SkeletalMesh->PostProcessAnimBlueprint = JointControlAnim->GetClass();
 #endif
 			 }
 		 }
-
 	 }
 
+	 Progress.EnterProgressFrame(1, LOCTEXT("CreatingFullBodyIKControlRig", "Creating Full Body IK Control Rig"));
 #if ENGINE_MAJOR_VERSION > 4
 	 // Create a control rig for the character
-	 if (AssetType == DazAssetType::SkeletalMesh && NewObject)
+	 if (AssetType == DazAssetType::SkeletalMesh && CachedSettings->CreateFullBodyIKControlRig && NewObject)
 	 {
 		 FString SkeletalMeshPackagePath = NewObject->GetOutermost()->GetPathName() + TEXT(".") + NewObject->GetName();
 		 FString CreateControlRigCommand = FString::Format(TEXT("py CreateControlRig.py --skeletalMesh={0} --dtuFile=\"{1}\""), { SkeletalMeshPackagePath, FileName });
 		 GEngine->Exec(NULL, *CreateControlRigCommand);
 	 }
 #endif
+
+	 if (USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(NewObject))
+	 {
+		 FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+		 TArray<UObject*> AssetsToSelect;
+		 AssetsToSelect.Add(SkeletalMesh);
+		 ContentBrowserModule.Get().SyncBrowserToAssets(AssetsToSelect);
+	 }
 
 	 return NewObject;
 }

@@ -8,7 +8,6 @@ public class DazToUnreal : ModuleRules
 	public DazToUnreal(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		
 
 		PublicDependencyModuleNames.AddRange(
 			new string[]
@@ -37,7 +36,8 @@ public class DazToUnreal : ModuleRules
 				"SlateCore",
 				"EditorScriptingUtilities",
 				"SkeletalMeshUtilitiesCommon",
-				"DazToUnrealRuntime",
+				"ControlRig",
+				"ControlRigDeveloper",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
