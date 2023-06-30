@@ -55,17 +55,19 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 
 
 	// Welcome String for Setup/Welcome Mode
+	QString sDazAppDir = dzApp->getHomePath().replace("\\","/");
+	QString sPdfPath = sDazAppDir + "/docs/Plugins" + "/Daz to Unreal/Daz to Unreal.pdf";
 	QString sSetupModeString = tr("\
 <div style=\"background-color:#282f41;\" align=center>\
 <img src=\":/DazBridgeUnreal/banner.jpg\" width=\"370\" height=\"95\" align=\"center\" hspace=\"0\" vspace=\"0\">\
 <table width=100% cellpadding=8 cellspacing=2 style=\"vertical-align:middle; font-size:x-large; font-weight:bold; background-color:#FFAA00;foreground-color:#FFFFFF\" align=center>\
   <tr>\
     <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://www.daz3d.com/unreal-bridge#faq\">FAQ</a></div></td>\
-    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://youtu.be/njPE-5EXrIc\">Installation Video</a></td>\
-    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://github.com/daz3d/DazToUnreal#3-how-to-use\">Tutorial Video</a></td>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://youtu.be/XDDWKNbFrG0\">Installation Video</a></td>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://youtu.be/1dzB2BCYmgY\">Tutorial Video</a></td>\
   </tr>\
   <tr>\
-    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://github.com/daz3d/DazToUnreal#3-how-to-use\">PDF</a></td>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"") + sPdfPath + tr("https://github.com/daz3d/DazToUnreal#3-how-to-use""\">PDF</a></td>\
     <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://github.com/daz3d/DazToUnreal/releases\">Forums</a></td>\
     <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://github.com/daz3d/DazToUnreal/releases\">Report Bug</a></td>\
   </tr>\
