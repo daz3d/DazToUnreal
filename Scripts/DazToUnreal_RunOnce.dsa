@@ -40,7 +40,7 @@ function showInstallReminder()
 	var sText1 = "<h1>DazToUnreal Installation Step 2</h1><p>";
 	var sText2 = "<div style=\"font-size:large;font-weight:bold\">You have successfully completed the first step of the DazToUnreal Installation.<p>";
 	var sText3 = "Please complete the second step of the installation by selecting your Unreal Engine version from drop down menu found in the Advanced Settings section of the DazToUnreal dialog window. Then click Install Plugin and navigate to where you installed Unreal Engine and click <b>Select Folder</b>";
-	var sText4 = "<p>If you need help, please watch the step-by-step Installation Video on the Daz 3D Youtube Channel at <a href=\"https://youtu.be/njPE-5EXrIc\">https://youtu.be/njPE-5EXrIc</a>.</font><p>";
+	var sText4 = "<p>If you need help, please watch the step-by-step Installation Video on the Daz 3D Youtube Channel at <a href=\"https://youtu.be/XDDWKNbFrG0\">https://youtu.be/XDDWKNbFrG0</a>.</font><p>";
 	var sText5 = "<img width=450 src=\"" + sImgPath + "\">";
 	
 	var wDoneDlg = new DzBasicDialog();
@@ -57,7 +57,7 @@ function showInstallReminder()
 
 	wVideoBtn = new DzPushButton( wDoneDlg )
 	wVideoBtn.text = "Watch Installation Video"
-	wVideoBtn.clicked.connect( function() { App.showURL("https://youtu.be/njPE-5EXrIc"); } );
+	wVideoBtn.clicked.connect( function() { App.showURL("https://youtu.be/XDDWKNbFrG0"); } );
 
 	layout = new DzGridLayout( wDoneDlg )
 	layout.addWidget( wTextBox )

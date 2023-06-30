@@ -67,8 +67,8 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
     <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://youtu.be/1dzB2BCYmgY\">Tutorial Video</a></td>\
   </tr>\
   <tr>\
-    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"") + sPdfPath + tr("https://github.com/daz3d/DazToUnreal#3-how-to-use""\">PDF</a></td>\
-    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://github.com/daz3d/DazToUnreal/releases\">Forums</a></td>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"") + sPdfPath + tr("\">PDF</a></td>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://www.daz3d.com/forums/categories/unreal-discussion\">Forums</a></td>\
     <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://github.com/daz3d/DazToUnreal/releases\">Report Bug</a></td>\
   </tr>\
 </table>\
