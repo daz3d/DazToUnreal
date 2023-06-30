@@ -7,6 +7,11 @@ set(DZ_PLUGIN_PROJECT_NAME "DzBridge-Unreal")
 
 include_directories(${COMMON_LIB_INCLUDE_DIR})
 
+set(MLD_SOURCES
+	MLDeformer.cpp
+	MlDeformer.h
+)
+
 # if building a plugin and you want the compiled result placed in the Daz Studio ./plugins directory
 if(DAZ_STUDIO_EXE_DIR)
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${DAZ_STUDIO_EXE_DIR}/plugins)
@@ -45,6 +50,7 @@ add_library( ${DZ_PLUGIN_TGT_NAME} SHARED
 	DzUnrealDialog.h
 	pluginmain.cpp
 	version.h
+	${MLD_SOURCES}
 	${DPC_IMAGES_CPP}
 	${OS_SOURCES}
 	${QA_SRCS}
@@ -55,6 +61,8 @@ target_include_directories(${DZ_PLUGIN_TGT_NAME}
 	PUBLIC
 	${FBX_SDK_INCLUDE}
 	${OPENSUBDIV_INCLUDE}
+	${ALEMBIC_INCLUDE}
+	${IMATH_INCLUDE}
 )
 
 target_link_libraries(${DZ_PLUGIN_TGT_NAME}
@@ -67,6 +75,8 @@ target_link_libraries(${DZ_PLUGIN_TGT_NAME}
 	${DZSDK_QT_NETWORK_TARGET}
 	${FBX_IMPORT_LIBS}
 	${OPENSUBDIV_LIB}
+	${ALEMBIC_LIB}
+	${IMATH_LIB}
 )
 
 

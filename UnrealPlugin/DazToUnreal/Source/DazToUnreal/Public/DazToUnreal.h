@@ -23,7 +23,8 @@ enum DazAssetType
 	StaticMesh,
 	Animation,
 	Environment,
-	Pose
+	Pose,
+	MLDeformer
 };
 
 struct TextureLookupInfo
@@ -38,6 +39,7 @@ public:
 	static int BatchConversionMode;
 	static FString BatchConversionDestPath;
 	static TMap<FString, FString> AssetIDLookup;
+	static TArray<UObject*> TextureListToDisableSRGB;
 	TMap<FString, TextureLookupInfo> m_sourceTextureLookupTable;
 	TMap<FString, TextureLookupInfo> m_targetTextureLookupTable;
 
@@ -63,7 +65,7 @@ public:
 	void InstallMaterialAssetsToProject();
 	
 	/** Function to start the import process*/
-	UObject* ImportFromDaz(TSharedPtr<FJsonObject> JsonObject);
+	UObject* ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, const FString& FileName);
 
 private:
 	

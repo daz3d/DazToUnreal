@@ -139,3 +139,47 @@ FString FDazToUnrealFbx::GetObjectNameForMaterial(FbxSurfaceMaterial* Material)
 
 	return FString();
 }
+
+// Some accesories attached in ways like using the DzRigidFollowNode become additional meshes.
+// This function attached them to the skeleton of the primary mesh so the don't break the skeleton.
+void FDazToUnrealFbx::ParentAdditionalSkeletalMeshes(FbxScene* Scene)
+{
+	FbxNode* RootNode = Scene->GetRootNode();
+
+	// Find the root bone.  There should only be one bone off the scene root
+	FbxNode* RootBone = nullptr;
+	FString RootBoneName = TEXT("");
+	for (int RootNodeIndex = Scene->GetNodeCount() -1; RootNodeIndex >= 0; --RootNodeIndex)
+	{
+		FbxNode* OtherRootNode = Scene->GetNode(RootNodeIndex);
+
+		if (OtherRootNode != RootNode)
+		{
+			if (FbxSkeleton* OtherRootNodeSkeleton = OtherRootNode->GetSkeleton())
+			{
+				OtherRootNodeSkeleton->SetSkeletonType(FbxSkeleton::eLimbNode);
+			}
+			else if(OtherRootNode->GetMesh() == nullptr)
+			{
+				FbxSkeleton* SkeletonAttribute = FbxSkeleton::Create(Scene, OtherRootNode->GetName());
+				SkeletonAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
+				OtherRootNode->SetNodeAttribute(SkeletonAttribute);
+			}
+		}
+	}
+}
+
+// Removes a node and re-parents it's children to it's current parent
+void FDazToUnrealFbx::RemoveNodeAndReparent(FbxNode* NodeToRemove)
+{
+	if (FbxNode* ParentNode = NodeToRemove->GetParent())
+	{
+		for (int ChildIndex = NodeToRemove->GetChildCount() - 1; ChildIndex >= 0; --ChildIndex)
+		{
+			FbxNode* ChildNode = NodeToRemove->GetChild(ChildIndex);
+			NodeToRemove->RemoveChild(ChildNode);
+			ParentNode->AddChild(ChildNode);
+		}
+		ParentNode->RemoveChild(NodeToRemove);
+	}
+}

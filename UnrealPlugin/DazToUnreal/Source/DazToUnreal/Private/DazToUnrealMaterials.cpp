@@ -6,7 +6,11 @@
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "Factories/SubsurfaceProfileFactory.h"
 #include "Engine/SubsurfaceProfile.h"
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+#include "AssetRegistry/AssetRegistryModule.h"
+#else
 #include "AssetRegistryModule.h"
+#endif
 #include "AssetToolsModule.h"
 #include "Dom/JsonObject.h"
 
@@ -53,7 +57,7 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 	// Set the default material type
 	FSoftObjectPath BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Base);
 
-	if (AssetType == TEXT("Follower/Hair"))
+	if (AssetType == TEXT("Follower/Hair") || AssetType == TEXT("Follower/Attachment/Head/Forehead/Eyebrows"))
 	{
 		BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Hair);
 		if (MaterialName.EndsWith(Seperator + TEXT("scalp")))
@@ -160,6 +164,10 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 	{
 		BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::EyeMoisture);
 	}
+	else if (MaterialName.Contains(TEXT("eyebrow"), ESearchCase::IgnoreCase))
+	{
+		BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Hair);
+	}
 	else
 	{
 		//BaseMaterialAssetPath = CachedSettings->BaseMaterial;
@@ -169,10 +177,22 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 			if (Property.Name == TEXT("Cutout Opacity Texture"))
 			{
 				BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
+				break;
 			}
-			if (Property.Name == TEXT("Opacity Strength") && Property.Value != TEXT("1"))
+			else if (Property.Name == TEXT("Cutout Opacity") && Property.Value != TEXT("1"))
 			{
 				BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
+				break;
+			}
+			else if (Property.Name == TEXT("Opacity Strength") && Property.Value != TEXT("1"))
+			{
+				BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
+				break;
+			}
+			else if (Property.Name == TEXT("Refraction Weight") && Property.Value != TEXT("0"))
+			{
+				BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
+				break;
 			}
 		}
 
@@ -185,7 +205,7 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 	return BaseMaterialAssetPath;
 }
 
-UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString CharacterMaterialFolder, const FString CharacterTexturesFolder, FString& MaterialName, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties, const DazCharacterType CharacterType, UMaterialInstanceConstant* ParentMaterial, USubsurfaceProfile* SubsurfaceProfile)
+UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString CharacterMaterialFolder, const FString CharacterTexturesFolder, FString& MaterialName, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties, const DazCharacterType CharacterType, UMaterialInterface* ParentMaterial, USubsurfaceProfile* SubsurfaceProfile)
 {
 	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
 
@@ -196,6 +216,10 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 		BaseMaterialAssetPath = GetBaseMaterial(MaterialName, MaterialProperties[MaterialName]);
 	}
 
+	// DB 2023-May-23: Fix for refraction weight & opacity strength interaction, part 1
+	double RefractionWeight = 0.0;
+	double OpacityStrength = 1.0;
+	double CutoutOpacity = 1.0;
 	FString ShaderName = "";
 	FString AssetType = "";
 	if (MaterialProperties.Contains(MaterialName))
@@ -208,8 +232,35 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 				AssetType = Property.Value;
 				ShaderName = Property.ShaderName;
 			}
+			// DB 2023-May-23: Fix for refraction weight & opacity strength interaction, part 2
+			else if (Property.Name == TEXT("Refraction Weight"))
+			{
+				RefractionWeight = FCString::Atod(*Property.Value);
+			}
+			else if (Property.Name == TEXT("Opacity Strength"))
+			{
+				OpacityStrength = FCString::Atod(*Property.Value);
+			}
+			else if (Property.Name == TEXT("Cutout Opacity"))
+			{
+				CutoutOpacity = FCString::Atod(*Property.Value);
+			}
 		}
 	}
+	// DB 2023-May-23: Fix for refraction weight & opacity strength interaction, part 3
+	if (RefractionWeight > 0.0 && OpacityStrength >= 1.0)
+	{
+		OpacityStrength = 1.0 - RefractionWeight;
+		if (OpacityStrength <= 0.0)
+		{
+			OpacityStrength = 0.09;
+		}
+		SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(OpacityStrength), MaterialProperties);
+	} else if (CutoutOpacity <= 1.0 && OpacityStrength >= 1.0)
+	{
+		SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CutoutOpacity), MaterialProperties);
+	}
+
 	FString Seperator;
 	if ( CachedSettings->UseOriginalMaterialName)
 	{
@@ -226,7 +277,6 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 	{
 		if (MaterialName.Contains(Seperator + TEXT("EyeMoisture")) || MaterialName.EndsWith(Seperator + TEXT("EyeReflection")))
 		{
-			//BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Diffuse Color"), TEXT("Color"), TEXT("#bababa"), MaterialProperties);
@@ -234,14 +284,12 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 		}
 		else if (MaterialName.EndsWith(Seperator + TEXT("Tear")) || MaterialName.EndsWith(Seperator + TEXT("Tears")))
 		{
-			//BaseMaterialAssetPath = CachedSettings->BaseCorneaMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
 		else
 		{
-			//BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("0"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Glossy Layered Weight"), TEXT("Double"), TEXT("0"), MaterialProperties);
 		}
@@ -249,7 +297,6 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 	else if (AssetType == TEXT("Follower/Attachment/Lower-Body/Hip/Front") &&
 		MaterialName.Contains(Seperator + TEXT("Genitalia")))
 	{
-		//BaseMaterialAssetPath = CachedSettings->BaseSkinMaterial;
 		SetMaterialProperty(MaterialName, TEXT("Subsurface Alpha Texture"), TEXT("Texture"), FDazToUnrealTextures::GetSubSurfaceAlphaTexture(CharacterType, MaterialName), MaterialProperties);
 	}
 	else if (AssetType == TEXT("Actor/Character"))
@@ -268,97 +315,48 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 			MaterialName.EndsWith(Seperator + TEXT("Toenails")) ||
 			MaterialName.EndsWith(Seperator + TEXT("Genitalia")))
 		{
-			//BaseMaterialAssetPath = CachedSettings->BaseSkinMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Diffuse Subsurface Color Weight"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultSkinDiffuseSubsurfaceColorWeight), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Subsurface Alpha Texture"), TEXT("Texture"), FDazToUnrealTextures::GetSubSurfaceAlphaTexture(CharacterType, MaterialName), MaterialProperties);
 		}
 		else if (MaterialName.Contains(Seperator + TEXT("EyeMoisture")))
 		{
-			//BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
 		else if (MaterialName.EndsWith(Seperator + TEXT("EyeReflection")) || MaterialName.EndsWith(Seperator + TEXT("Tear")) || MaterialName.EndsWith(Seperator + TEXT("Tears")))
 		{
-			//BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
 		else if (MaterialName.EndsWith(Seperator + TEXT("EyeLashes")) || MaterialName.EndsWith(Seperator + TEXT("Eyelashes")))
 		{
-			//BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("0"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Glossy Layered Weight"), TEXT("Double"), TEXT("0"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
 		else if (MaterialName.EndsWith(Seperator + TEXT("cornea")))
 		{
-			//BaseMaterialAssetPath = CachedSettings->BaseCorneaMaterial;
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
-		else if (MaterialName.EndsWith(Seperator + TEXT("sclera")))
-		{
-			//BaseMaterialAssetPath = CachedSettings->BaseMaterial;
-		}
 		else if (MaterialName.EndsWith(Seperator + TEXT("irises")))
 		{
 			SetMaterialProperty(MaterialName, TEXT("Pixel Depth Offset"), TEXT("Double"), TEXT("0.1"), MaterialProperties);
-			//BaseMaterialAssetPath = CachedSettings->BaseMaterial;
 		}
 		else if (MaterialName.EndsWith(Seperator + TEXT("pupils")))
 		{
 			SetMaterialProperty(MaterialName, TEXT("Pixel Depth Offset"), TEXT("Double"), TEXT("0.1"), MaterialProperties);
-			//BaseMaterialAssetPath = CachedSettings->BaseMaterial;
 		}
-		else
-		{
-			//BaseMaterialAssetPath = CachedSettings->BaseMaterial;
-			if (MaterialProperties.Contains(MaterialName))
-			{
-				TArray<FDUFTextureProperty> Properties = MaterialProperties[MaterialName];
-				for (FDUFTextureProperty Property : Properties)
-				{
-					if (Property.Name == TEXT("Cutout Opacity Texture"))
-					{
-						//BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
-					}
-				}
-			}
-		}
+
 	}
 	else if (MaterialName.Contains(Seperator + TEXT("EyeMoisture")))
 	{
-		//BaseMaterialAssetPath = CachedSettings->BaseEyeMoistureMaterial;
 		SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
 		SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 		SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
-	}
-	else
-	{
-		//BaseMaterialAssetPath = CachedSettings->BaseMaterial;
-		if (MaterialProperties.Contains(MaterialName))
-		{
-			TArray<FDUFTextureProperty> Properties = MaterialProperties[MaterialName];
-			for (FDUFTextureProperty Property : Properties)
-			{
-				if (Property.Name == TEXT("Cutout Opacity Texture"))
-				{
-					//BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
-				}
-				if (Property.Name == TEXT("Opacity Strength") && Property.Value != TEXT("1"))
-				{
-					//BaseMaterialAssetPath = CachedSettings->BaseAlphaMaterial;
-				}
-			}
-		}
-	}
-	if (MaterialName.EndsWith(Seperator + TEXT("NoDraw")))
-	{
-		//BaseMaterialAssetPath = CachedSettings->NoDrawMaterial;
 	}
 
 	CorrectDazShaders(MaterialName, MaterialProperties);
@@ -382,9 +380,13 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 		Package->SetDirtyFlag(true);
 
 		UObject* BaseMaterial = BaseMaterialAssetPath.TryLoad();
-		if (ParentMaterial && ParentMaterial->Parent == BaseMaterial)
+		if (ParentMaterial && ParentMaterial->IsA(UMaterialInstanceConstant::StaticClass()) && Cast<UMaterialInstanceConstant>(ParentMaterial)->Parent == BaseMaterial)
 		{
-			UnrealMaterialConstant->SetParentEditorOnly((UMaterial*)ParentMaterial);
+			UnrealMaterialConstant->SetParentEditorOnly(ParentMaterial);
+		}
+		else if (ParentMaterial && ParentMaterial->IsA(UMaterial::StaticClass()))
+		{
+			UnrealMaterialConstant->SetParentEditorOnly(ParentMaterial);
 		}
 		else
 		{
@@ -453,7 +455,7 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 					FStaticParameterSet StaticParameters;
 					UnrealMaterialConstant->GetStaticParameterValues(StaticParameters);
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 1
-                    TArray<FStaticSwitchParameter>& StaticSwitchParameters = StaticParameters.GetRuntime().StaticSwitchParameters;
+					TArray<FStaticSwitchParameter>& StaticSwitchParameters = StaticParameters.GetRuntime().StaticSwitchParameters;
 #elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
 					TArray<FStaticSwitchParameter>& StaticSwitchParameters = StaticParameters.EditorOnly.StaticSwitchParameters;
 #else
@@ -506,7 +508,7 @@ void FDazToUnrealMaterials::CorrectDazShaders(FString MaterialName, TMap<FString
 	// Shader Corrections for specific Daz-Shaders
 	////////////////////////////////////////////////////////
 	FString sCleanedName = MaterialName.Replace(TEXT("_"), TEXT(""));
-	double fGlobalTransparencyCorrection = 10.0;
+	double fGlobalTransparencyCorrection = 12.5;
 	if (ShaderName == TEXT("Iray Uber"))
 	{
 		double fIrayUberTransparencyCorrection = fGlobalTransparencyCorrection + 0.0;

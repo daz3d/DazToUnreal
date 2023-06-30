@@ -1,13 +1,5 @@
 #include "DazToUnrealFactory.h"
 #include "DazToUnreal.h"
-#include "Modules/ModuleManager.h"
-#include "Misc/PackageName.h"
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MAJOR_VERSION > 0
-#include "AssetRegistry/AssetData.h"
-#else
-#include "AssetData.h"
-#endif
-#include "AssetRegistryModule.h"
 #include "PackageTools.h"
 #include "Misc/FileHelper.h"
 #include "Engine/SkeletalMesh.h"
@@ -40,7 +32,7 @@ UObject* UDazToUnrealFactory::FactoryCreateFile(UClass* InClass, UObject* InPare
 		  TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
 		  if (FJsonSerializer::Deserialize(JsonReader, JsonObject) && JsonObject.IsValid())
 		  {
-				return FDazToUnrealModule::Get().ImportFromDaz(JsonObject);
+				return FDazToUnrealModule::Get().ImportFromDaz(JsonObject, Filename);
 		  }
 	 }
 

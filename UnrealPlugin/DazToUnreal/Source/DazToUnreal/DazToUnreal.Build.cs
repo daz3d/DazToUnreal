@@ -8,7 +8,6 @@ public class DazToUnreal : ModuleRules
 	public DazToUnreal(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		
 
 		PublicDependencyModuleNames.AddRange(
 			new string[]
@@ -37,13 +36,21 @@ public class DazToUnreal : ModuleRules
 				"SlateCore",
 				"EditorScriptingUtilities",
 				"SkeletalMeshUtilitiesCommon",
-				"DazToUnrealRuntime",
+				"ControlRig",
+				"ControlRigDeveloper",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
 
 #if UE_4_26_OR_LATER
 		PrivateDependencyModuleNames.Add("DeveloperSettings");
+#endif
+
+#if UE_5_1_OR_LATER
+		PrivateDependencyModuleNames.Add("AlembicLibrary");
+		PrivateDependencyModuleNames.Add("AlembicImporter");
+		PrivateDependencyModuleNames.Add("MLDeformerFramework");
+		PrivateDependencyModuleNames.Add("NeuralNetworkInference");
 #endif
 
 		DynamicallyLoadedModuleNames.AddRange(
