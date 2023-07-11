@@ -190,7 +190,7 @@ for joint_link in joint_links:
 
         # To Euler
         to_euler_node_name = 'To_Euler_' + link_name
-        rig_controller.add_unit_node_from_struct_path('/Script/RigVM.RigVMFunction_MathQuaternionToEuler', 'Execute', unreal.Vector2D(276.703686, node_height), to_euler_node_name)
+        rig_controller.add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_MathQuaternionToEuler', 'Execute', unreal.Vector2D(276.703686, node_height), to_euler_node_name)
         rig_controller.set_pin_default_value(to_euler_node_name + '.Value', '(X=0.000000,Y=0.000000,Z=0.000000,W=1.000000)', False, False)
         rig_controller.set_pin_expansion(to_euler_node_name + '.Value', False, False)
         rig_controller.set_pin_default_value(to_euler_node_name + '.RotationOrder', rotation_order, False, False)
