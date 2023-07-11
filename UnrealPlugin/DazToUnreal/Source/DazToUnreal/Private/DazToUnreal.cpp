@@ -359,7 +359,9 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 				UTexture* Texture = Cast<UTexture>(FDazToUnrealModule::TextureListToDisableSRGB[i]);
 				if (Texture)
 				{
+					Texture->PreEditChange(nullptr);
 					Texture->SRGB = false;
+					Texture->PostEditChange();
 				}
 			}
 			FDazToUnrealModule::TextureListToDisableSRGB.Empty();
