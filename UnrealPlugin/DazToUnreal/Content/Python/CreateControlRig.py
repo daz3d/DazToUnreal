@@ -2,6 +2,15 @@ import unreal
 import argparse
 import json
 
+def get_scriptstruct_by_node_name(node_name):
+    control_rig_blueprint = unreal.load_object(None, '/DazToUnreal/Python/ControlRig_Node_Library')
+    rig_vm_graph = control_rig_blueprint.get_model()
+    nodes = rig_vm_graph.get_nodes()
+    for node in nodes:
+        if node.get_node_path() == node_name:
+            return node.get_script_struct()
+
+
 last_construction_link = 'PrepareForExecution'
 def create_construction(bone_name):
     global last_construction_link
@@ -9,28 +18,38 @@ def create_construction(bone_name):
     get_bone_transform_node_name = "RigUnit_Construction_GetTransform_" + bone_name
     set_control_transform_node_name = "RigtUnit_Construction_SetTransform_" + control_name
 
-    blueprint.get_controller_by_name('RigVMModel').add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_GetTransform', 'Execute', unreal.Vector2D(137.732236, -595.972187), get_bone_transform_node_name)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_bone_transform_node_name + '.Item', '(Type=Bone)')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_expansion(get_bone_transform_node_name + '.Item', True)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_bone_transform_node_name + '.Space', 'GlobalSpace')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_bone_transform_node_name + '.bInitial', 'True')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_bone_transform_node_name + '.Item.Name', bone_name, True)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_bone_transform_node_name + '.Item.Type', 'Bone', True)
-    blueprint.get_controller_by_name('RigVMModel').set_node_selection([get_bone_transform_node_name])
-    blueprint.get_controller_by_name('RigVMModel').add_template_node('Set Transform::Execute(in Item,in Space,in bInitial,in Value,in Weight,in bPropagateToChildren,io ExecuteContext)', unreal.Vector2D(526.732236, -608.972187), set_control_transform_node_name)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_control_transform_node_name + '.Item', '(Type=Bone,Name="None")')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_expansion(set_control_transform_node_name + '.Item', False)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_control_transform_node_name + '.Space', 'GlobalSpace')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_control_transform_node_name + '.bInitial', 'True')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_control_transform_node_name + '.Weight', '1.000000')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_control_transform_node_name + '.bPropagateToChildren', 'True')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_control_transform_node_name + '.Item.Name', control_name, True)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_control_transform_node_name + '.Item.Type', 'Control', True)
-    blueprint.get_controller_by_name('RigVMModel').add_link(get_bone_transform_node_name + '.Transform', set_control_transform_node_name + '.Value')
-    blueprint.get_controller_by_name('RigVMModel').set_node_position_by_name(set_control_transform_node_name, unreal.Vector2D(512.000000, -656.000000))
-
-    blueprint.get_controller_by_name('RigVMModel').add_link(last_construction_link + '.ExecuteContext', set_control_transform_node_name + '.ExecuteContext')
+    rig_controller.add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_GetTransform', 'Execute', unreal.Vector2D(137.732236, -595.972187), get_bone_transform_node_name)
+    rig_controller.set_pin_default_value(get_bone_transform_node_name + '.Item', '(Type=Bone)')
+    rig_controller.set_pin_expansion(get_bone_transform_node_name + '.Item', True)
+    rig_controller.set_pin_default_value(get_bone_transform_node_name + '.Space', 'GlobalSpace')
+    rig_controller.set_pin_default_value(get_bone_transform_node_name + '.bInitial', 'True')
+    rig_controller.set_pin_default_value(get_bone_transform_node_name + '.Item.Name', bone_name, True)
+    rig_controller.set_pin_default_value(get_bone_transform_node_name + '.Item.Type', 'Bone', True)
+    rig_controller.set_node_selection([get_bone_transform_node_name])
+    try:
+        rig_controller.add_template_node('Set Transform::Execute(in Item,in Space,in bInitial,in Value,in Weight,in bPropagateToChildren,io ExecuteContext)', unreal.Vector2D(526.732236, -608.972187), set_control_transform_node_name)
+    except Exception as e:
+        set_transform_scriptstruct = get_scriptstruct_by_node_name("SetTransform")
+        rig_controller.add_unit_node(set_transform_scriptstruct, 'Execute', unreal.Vector2D(526.732236, -608.972187), set_control_transform_node_name)
+    rig_controller.set_pin_default_value(set_control_transform_node_name + '.Item', '(Type=Bone,Name="None")')
+    rig_controller.set_pin_expansion(set_control_transform_node_name + '.Item', False)
+    rig_controller.set_pin_default_value(set_control_transform_node_name + '.Space', 'GlobalSpace')
+    rig_controller.set_pin_default_value(set_control_transform_node_name + '.bInitial', 'True')
+    rig_controller.set_pin_default_value(set_control_transform_node_name + '.Weight', '1.000000')
+    rig_controller.set_pin_default_value(set_control_transform_node_name + '.bPropagateToChildren', 'True')
+    rig_controller.set_pin_default_value(set_control_transform_node_name + '.Item.Name', control_name, True)
+    rig_controller.set_pin_default_value(set_control_transform_node_name + '.Item.Type', 'Control', True)
+    try:
+        rig_controller.add_link(get_bone_transform_node_name + '.Transform', set_control_transform_node_name + '.Value')
+    except:
+        try:
+            rig_controller.add_link(get_bone_transform_node_name + '.Transform', set_control_transform_node_name + '.Transform')
+        except Exception as e:
+            print("ERROR: CreateControlRig.py, line 45: rig_controller.add_link(): " + str(e))
+    rig_controller.set_node_position_by_name(set_control_transform_node_name, unreal.Vector2D(512.000000, -656.000000))
+    rig_controller.add_link(last_construction_link + '.ExecuteContext', set_control_transform_node_name + '.ExecuteContext')
     last_construction_link = set_control_transform_node_name
+
 
 last_backward_solver_link = 'InverseExecution.ExecuteContext'
 def create_backward_solver(bone_name):
@@ -39,27 +58,37 @@ def create_backward_solver(bone_name):
     get_bone_transform_node_name = "RigUnit_BackwardSolver_GetTransform_" + bone_name
     set_control_transform_node_name = "RigtUnit_BackwardSolver_SetTransform_" + control_name
 
-    #blueprint.get_controller_by_name('RigVMModel').add_link('InverseExecution.ExecuteContext', 'RigUnit_SetTransform_3.ExecuteContext')
-    blueprint.get_controller_by_name('RigVMModel').add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_GetTransform', 'Execute', unreal.Vector2D(-636.574629, -1370.167943), get_bone_transform_node_name)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_bone_transform_node_name + '.Item', '(Type=Bone)')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_expansion(get_bone_transform_node_name + '.Item', True)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_bone_transform_node_name + '.Space', 'GlobalSpace')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_bone_transform_node_name + '.Item.Name', bone_name, True)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_bone_transform_node_name + '.Item.Type', 'Bone', True)
+    #rig_controller.add_link('InverseExecution.ExecuteContext', 'RigUnit_SetTransform_3.ExecuteContext')
+    rig_controller.add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_GetTransform', 'Execute', unreal.Vector2D(-636.574629, -1370.167943), get_bone_transform_node_name)
+    rig_controller.set_pin_default_value(get_bone_transform_node_name + '.Item', '(Type=Bone)')
+    rig_controller.set_pin_expansion(get_bone_transform_node_name + '.Item', True)
+    rig_controller.set_pin_default_value(get_bone_transform_node_name + '.Space', 'GlobalSpace')
+    rig_controller.set_pin_default_value(get_bone_transform_node_name + '.Item.Name', bone_name, True)
+    rig_controller.set_pin_default_value(get_bone_transform_node_name + '.Item.Type', 'Bone', True)
  
-    blueprint.get_controller_by_name('RigVMModel').add_template_node('Set Transform::Execute(in Item,in Space,in bInitial,in Value,in Weight,in bPropagateToChildren,io ExecuteContext)', unreal.Vector2D(-190.574629, -1378.167943), set_control_transform_node_name)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_control_transform_node_name + '.Item', '(Type=Bone,Name="None")')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_expansion(set_control_transform_node_name + '.Item', False)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_control_transform_node_name + '.Space', 'GlobalSpace')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_control_transform_node_name + '.bInitial', 'False')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_control_transform_node_name + '.Weight', '1.000000')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_control_transform_node_name + '.bPropagateToChildren', 'True')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_control_transform_node_name + '.Item.Name', control_name, True)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_control_transform_node_name + '.Item.Type', 'Control', True)
-    #blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_control_transform_node_name + '.Transform', '(Rotation=(X=0.000000,Y=0.000000,Z=0.000000,W=-1.000000),Translation=(X=0.551784,Y=-0.000000,Z=72.358307),Scale3D=(X=1.000000,Y=1.000000,Z=1.000000))', True)
+    try:
+        rig_controller.add_template_node('Set Transform::Execute(in Item,in Space,in bInitial,in Value,in Weight,in bPropagateToChildren,io ExecuteContext)', unreal.Vector2D(-190.574629, -1378.167943), set_control_transform_node_name)
+    except:
+        set_transform_scriptstruct = get_scriptstruct_by_node_name("SetTransform")
+        rig_controller.add_unit_node(set_transform_scriptstruct, 'Execute', unreal.Vector2D(-190.574629, -1378.167943), set_control_transform_node_name)
+    rig_controller.set_pin_default_value(set_control_transform_node_name + '.Item', '(Type=Bone,Name="None")')
+    rig_controller.set_pin_expansion(set_control_transform_node_name + '.Item', False)
+    rig_controller.set_pin_default_value(set_control_transform_node_name + '.Space', 'GlobalSpace')
+    rig_controller.set_pin_default_value(set_control_transform_node_name + '.bInitial', 'False')
+    rig_controller.set_pin_default_value(set_control_transform_node_name + '.Weight', '1.000000')
+    rig_controller.set_pin_default_value(set_control_transform_node_name + '.bPropagateToChildren', 'True')
+    rig_controller.set_pin_default_value(set_control_transform_node_name + '.Item.Name', control_name, True)
+    rig_controller.set_pin_default_value(set_control_transform_node_name + '.Item.Type', 'Control', True)
+    #rig_controller.set_pin_default_value(set_control_transform_node_name + '.Transform', '(Rotation=(X=0.000000,Y=0.000000,Z=0.000000,W=-1.000000),Translation=(X=0.551784,Y=-0.000000,Z=72.358307),Scale3D=(X=1.000000,Y=1.000000,Z=1.000000))', True)
 
-    blueprint.get_controller_by_name('RigVMModel').add_link(get_bone_transform_node_name + '.Transform', set_control_transform_node_name + '.Value')
-    blueprint.get_controller_by_name('RigVMModel').add_link(last_backward_solver_link, set_control_transform_node_name + '.ExecuteContext')
+    try:
+        rig_controller.add_link(get_bone_transform_node_name + '.Transform', set_control_transform_node_name + '.Value')
+    except:
+        try:
+            rig_controller.add_link(get_bone_transform_node_name + '.Transform', set_control_transform_node_name + '.Transform')
+        except Exception as e:
+            print("ERROR: CreateControlRig.py, line 84: rig_controller.add_link(): " + str(e))
+    rig_controller.add_link(last_backward_solver_link, set_control_transform_node_name + '.ExecuteContext')
     last_backward_solver_link = set_control_transform_node_name + '.ExecuteContext'
 
 def create_control(bone_name):
@@ -71,7 +100,10 @@ def create_control(bone_name):
     unreal.EulerTransform(scale=[1, 1, 1]))
 
     key = unreal.RigElementKey(type=unreal.RigElementType.BONE, name=bone_name)
-    control_key = hierarchy_controller.add_control(control_name, unreal.RigElementKey(), default_setting, default_value, True, True)
+    try:
+        control_key = hierarchy_controller.add_control(control_name, unreal.RigElementKey(), default_setting, default_value, True, True)
+    except:
+        control_key = hierarchy_controller.add_control(control_name, unreal.RigElementKey(), default_setting, default_value, True)
     transform = hierarchy.get_global_transform(key, True)
     hierarchy.set_control_offset_transform(control_key, transform, True)
 
@@ -90,25 +122,35 @@ def create_direct_control(bone_name):
     control_name = bone_name + '_ctrl'
     get_control_transform_node_name = "RigUnit_DirectControl_GetTransform_" + bone_name
     set_bone_transform_node_name = "RigtUnit_DirectControl_SetTransform_" + control_name
-    blueprint.get_controller_by_name('RigVMModel').add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_GetTransform', 'Execute', unreal.Vector2D(101.499447, -244.500249), get_control_transform_node_name)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_control_transform_node_name + '.Item', '(Type=Bone)')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_expansion(get_control_transform_node_name + '.Item', True)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_control_transform_node_name + '.Space', 'GlobalSpace')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_control_transform_node_name + '.Item.Name', control_name, True)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_control_transform_node_name + '.Item.Type', 'Control', True)
+    rig_controller.add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_GetTransform', 'Execute', unreal.Vector2D(101.499447, -244.500249), get_control_transform_node_name)
+    rig_controller.set_pin_default_value(get_control_transform_node_name + '.Item', '(Type=Bone)')
+    rig_controller.set_pin_expansion(get_control_transform_node_name + '.Item', True)
+    rig_controller.set_pin_default_value(get_control_transform_node_name + '.Space', 'GlobalSpace')
+    rig_controller.set_pin_default_value(get_control_transform_node_name + '.Item.Name', control_name, True)
+    rig_controller.set_pin_default_value(get_control_transform_node_name + '.Item.Type', 'Control', True)
 
-    blueprint.get_controller_by_name('RigVMModel').add_template_node('Set Transform::Execute(in Item,in Space,in bInitial,in Value,in Weight,in bPropagateToChildren,io ExecuteContext)', unreal.Vector2D(542.832780, -257.833582), set_bone_transform_node_name)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_bone_transform_node_name + '.Item', '(Type=Bone,Name="None")')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_expansion(set_bone_transform_node_name + '.Item', False)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_bone_transform_node_name + '.Space', 'GlobalSpace')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_bone_transform_node_name + '.bInitial', 'False')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_bone_transform_node_name + '.Weight', '1.000000')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_bone_transform_node_name + '.bPropagateToChildren', 'True')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_bone_transform_node_name + '.Item.Name', bone_name, True)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(set_bone_transform_node_name + '.Item.Type', 'Bone', True)
+    try:
+        rig_controller.add_template_node('Set Transform::Execute(in Item,in Space,in bInitial,in Value,in Weight,in bPropagateToChildren,io ExecuteContext)', unreal.Vector2D(542.832780, -257.833582), set_bone_transform_node_name)
+    except:
+        set_transform_scriptstruct = get_scriptstruct_by_node_name("SetTransform")
+        rig_controller.add_unit_node(set_transform_scriptstruct, 'Execute', unreal.Vector2D(542.832780, -257.833582), set_bone_transform_node_name)
+    rig_controller.set_pin_default_value(set_bone_transform_node_name + '.Item', '(Type=Bone,Name="None")')
+    rig_controller.set_pin_expansion(set_bone_transform_node_name + '.Item', False)
+    rig_controller.set_pin_default_value(set_bone_transform_node_name + '.Space', 'GlobalSpace')
+    rig_controller.set_pin_default_value(set_bone_transform_node_name + '.bInitial', 'False')
+    rig_controller.set_pin_default_value(set_bone_transform_node_name + '.Weight', '1.000000')
+    rig_controller.set_pin_default_value(set_bone_transform_node_name + '.bPropagateToChildren', 'True')
+    rig_controller.set_pin_default_value(set_bone_transform_node_name + '.Item.Name', bone_name, True)
+    rig_controller.set_pin_default_value(set_bone_transform_node_name + '.Item.Type', 'Bone', True)
 
-    blueprint.get_controller_by_name('RigVMModel').add_link(get_control_transform_node_name + '.Transform', set_bone_transform_node_name + '.Value')
-    blueprint.get_controller_by_name('RigVMModel').add_link(next_forward_execute, set_bone_transform_node_name + '.ExecuteContext')
+    try:
+        rig_controller.add_link(get_control_transform_node_name + '.Transform', set_bone_transform_node_name + '.Value')
+    except:
+        try:
+            rig_controller.add_link(get_control_transform_node_name + '.Transform', set_bone_transform_node_name + '.Transform')
+        except Exception as e:
+            print("ERROR: CreateControlRig.py: rig_controller.add_Link(): " + str(e))
+    rig_controller.add_link(next_forward_execute, set_bone_transform_node_name + '.ExecuteContext')
     next_forward_execute = set_bone_transform_node_name + '.ExecuteContext'
    
 def create_effector(bone_name):
@@ -116,19 +158,19 @@ def create_effector(bone_name):
     effector_get_transform_widget_height += 250
     control_name = bone_name + '_ctrl'
     get_transform_name = control_name + '_RigUnit_GetTransform'
-    pin_name = blueprint.get_controller_by_name('RigVMModel').insert_array_pin('PBIK.Effectors', -1, '')
+    pin_name = rig_controller.insert_array_pin('PBIK.Effectors', -1, '')
     print(pin_name)
-    blueprint.get_controller_by_name('RigVMModel').add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_GetTransform', 'Execute', unreal.Vector2D(-122.733358, effector_get_transform_widget_height), get_transform_name)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_transform_name + '.Item', '(Type=Bone)')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_expansion(get_transform_name + '.Item', True)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_transform_name + '.Space', 'GlobalSpace')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_transform_name + '.Item.Name', control_name, True)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(get_transform_name + '.Item.Type', 'Control', True)
-    blueprint.get_controller_by_name('RigVMModel').set_node_selection([get_transform_name])
-    blueprint.get_controller_by_name('RigVMModel').add_link(get_transform_name + '.Transform', pin_name + '.Transform')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(pin_name + '.Bone', bone_name, False)
+    rig_controller.add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_GetTransform', 'Execute', unreal.Vector2D(-122.733358, effector_get_transform_widget_height), get_transform_name)
+    rig_controller.set_pin_default_value(get_transform_name + '.Item', '(Type=Bone)')
+    rig_controller.set_pin_expansion(get_transform_name + '.Item', True)
+    rig_controller.set_pin_default_value(get_transform_name + '.Space', 'GlobalSpace')
+    rig_controller.set_pin_default_value(get_transform_name + '.Item.Name', control_name, True)
+    rig_controller.set_pin_default_value(get_transform_name + '.Item.Type', 'Control', True)
+    rig_controller.set_node_selection([get_transform_name])
+    rig_controller.add_link(get_transform_name + '.Transform', pin_name + '.Transform')
+    rig_controller.set_pin_default_value(pin_name + '.Bone', bone_name, False)
     if(bone_name in guide_list):
-        blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(pin_name + '.StrengthAlpha', '0.200000', False)
+        rig_controller.set_pin_default_value(pin_name + '.StrengthAlpha', '0.200000', False)
 
 
 parser = argparse.ArgumentParser(description = 'Creates a Control Rig given a SkeletalMesh')
@@ -155,27 +197,32 @@ if blueprint:
     library_controller = blueprint.get_controller(library)
     hierarchy = blueprint.hierarchy
     hierarchy_controller = hierarchy.get_controller()
-    blueprint.get_controller_by_name('RigVMModel').set_node_selection(['RigUnit_BeginExecution'])
+
+    rig_controller = blueprint.get_controller_by_name('RigVMModel')
+    if rig_controller is None:
+        rig_controller = blueprint.get_controller()
+
+    rig_controller.set_node_selection(['RigUnit_BeginExecution'])
     hierarchy_controller.import_bones_from_asset(args.skeletalMesh, 'None', False, False, True)
 
     # Create Full Body IK Node
-    blueprint.get_controller_by_name('RigVMModel').add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_BeginExecution', 'Execute', unreal.Vector2D(22.229613, 60.424645), 'BeginExecution')
-    blueprint.get_controller_by_name('RigVMModel').add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_PrepareForExecution', 'Execute', unreal.Vector2D(-216.659278, -515.130927), 'PrepareForExecution')
-    blueprint.get_controller_by_name('RigVMModel').add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_InverseExecution', 'Execute', unreal.Vector2D(-307.389434, -270.395477), 'InverseExecution')
-    blueprint.get_controller_by_name('RigVMModel').add_unit_node_from_struct_path('/Script/PBIK.RigUnit_PBIK', 'Execute', unreal.Vector2D(370.599976, 42.845032), 'PBIK')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value('PBIK.Settings', '(Iterations=20,MassMultiplier=1.000000,MinMassMultiplier=0.200000,bStartSolveFromInputPose=True)')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_expansion('PBIK.Settings', False)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value('PBIK.Debug', '(DrawScale=1.000000)')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_expansion('PBIK.Debug', False)
-    blueprint.get_controller_by_name('RigVMModel').set_node_selection(['PBIK'])
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value('PBIK.Root', 'hip', False)
-    blueprint.get_controller_by_name('RigVMModel').insert_array_pin('PBIK.BoneSettings', -1, '')
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value('PBIK.BoneSettings.0.Bone', 'pelvis', False)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value('PBIK.BoneSettings.0.RotationStiffness', '0.900000', False)
-    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value('PBIK.BoneSettings.0.PositionStiffness', '0.900000', False)
+    rig_controller.add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_BeginExecution', 'Execute', unreal.Vector2D(22.229613, 60.424645), 'BeginExecution')
+    rig_controller.add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_PrepareForExecution', 'Execute', unreal.Vector2D(-216.659278, -515.130927), 'PrepareForExecution')
+    rig_controller.add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_InverseExecution', 'Execute', unreal.Vector2D(-307.389434, -270.395477), 'InverseExecution')
+    rig_controller.add_unit_node_from_struct_path('/Script/PBIK.RigUnit_PBIK', 'Execute', unreal.Vector2D(370.599976, 42.845032), 'PBIK')
+    rig_controller.set_pin_default_value('PBIK.Settings', '(Iterations=20,MassMultiplier=1.000000,MinMassMultiplier=0.200000,bStartSolveFromInputPose=True)')
+    rig_controller.set_pin_expansion('PBIK.Settings', False)
+    rig_controller.set_pin_default_value('PBIK.Debug', '(DrawScale=1.000000)')
+    rig_controller.set_pin_expansion('PBIK.Debug', False)
+    rig_controller.set_node_selection(['PBIK'])
+    rig_controller.set_pin_default_value('PBIK.Root', 'hip', False)
+    rig_controller.insert_array_pin('PBIK.BoneSettings', -1, '')
+    rig_controller.set_pin_default_value('PBIK.BoneSettings.0.Bone', 'pelvis', False)
+    rig_controller.set_pin_default_value('PBIK.BoneSettings.0.RotationStiffness', '0.900000', False)
+    rig_controller.set_pin_default_value('PBIK.BoneSettings.0.PositionStiffness', '0.900000', False)
 
     next_forward_execute = 'BeginExecution.ExecuteContext'
-    #blueprint.get_controller_by_name('RigVMModel').add_link('BeginExecution.ExecuteContext', 'PBIK.ExecuteContext')
+    #rig_controller.add_link('BeginExecution.ExecuteContext', 'PBIK.ExecuteContext')
 
     # Get Bone list for character
     dtu_data = json.load(open(args.dtuFile.replace('\"', '')))
@@ -234,60 +281,60 @@ if blueprint:
 
         if not bone_limit_name in exclude_limits:
             #if not bone_limit_name == "l_shin": continue
-            limit_bone_settings = blueprint.get_controller_by_name('RigVMModel').insert_array_pin('PBIK.BoneSettings', -1, '')
-            blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.Bone', bone_limit_name, False)
+            limit_bone_settings = rig_controller.insert_array_pin('PBIK.BoneSettings', -1, '')
+            rig_controller.set_pin_default_value(limit_bone_settings + '.Bone', bone_limit_name, False)
 
             y_delta = abs(bone_limit_x_max - bone_limit_x_min)
             z_delta = abs(bone_limit_y_max - bone_limit_y_min)
             x_delta = abs(bone_limit_z_max - bone_limit_z_min)
 
             if(x_delta < 15.0):
-                blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.X', 'Locked', False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.X', 'Locked', False)
             elif (x_delta > 90.0):
-                blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.X', 'Free', False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.X', 'Free', False)
             else:
-                blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.X', 'Limited', False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.X', 'Limited', False)
 
             if(y_delta < 15.0):
-                blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.Y', 'Locked', False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.Y', 'Locked', False)
             elif (y_delta > 90.0):
-                blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.Y', 'Free', False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.Y', 'Free', False)
             else:
-                blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.Y', 'Limited', False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.Y', 'Limited', False)
 
             if(z_delta < 15.0):
-                blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.Z', 'Locked', False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.Z', 'Locked', False)
             elif (z_delta > 90.0):
-                blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.Z', 'Free', False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.Z', 'Free', False)
             else:
-                blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.Z', 'Limited', False)
-            # blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.X', 'Limited', False)
-            # blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.Y', 'Limited', False)
-            # blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.Z', 'Limited', False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.Z', 'Limited', False)
+            # rig_controller.set_pin_default_value(limit_bone_settings + '.X', 'Limited', False)
+            # rig_controller.set_pin_default_value(limit_bone_settings + '.Y', 'Limited', False)
+            # rig_controller.set_pin_default_value(limit_bone_settings + '.Z', 'Limited', False)
 
             # It feels like Min\Max angel aren't the actual extents, but the amount of rotation allowed.  So they shoudl be 0 to abs(min, max)
             # I think there's a bug if a min rotation is more negative than max is positive, the negative gets clamped to the relative positive.
-            blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.MinX', str(min(bone_limit_z_max, bone_limit_z_min)), False)
-            blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.MaxX', str(max(bone_limit_z_max, abs(bone_limit_z_min))), False)
-            blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.MinY', str(min(bone_limit_x_max, bone_limit_x_min)), False)
-            blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.MaxY', str(max(bone_limit_x_max, abs(bone_limit_x_min))), False)
-            blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.MinZ', str(min(bone_limit_y_max, bone_limit_y_min)), False)
-            blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.MaxZ', str(max(bone_limit_y_max, abs(bone_limit_y_min))), False)
+            rig_controller.set_pin_default_value(limit_bone_settings + '.MinX', str(min(bone_limit_z_max, bone_limit_z_min)), False)
+            rig_controller.set_pin_default_value(limit_bone_settings + '.MaxX', str(max(bone_limit_z_max, abs(bone_limit_z_min))), False)
+            rig_controller.set_pin_default_value(limit_bone_settings + '.MinY', str(min(bone_limit_x_max, bone_limit_x_min)), False)
+            rig_controller.set_pin_default_value(limit_bone_settings + '.MaxY', str(max(bone_limit_x_max, abs(bone_limit_x_min))), False)
+            rig_controller.set_pin_default_value(limit_bone_settings + '.MinZ', str(min(bone_limit_y_max, bone_limit_y_min)), False)
+            rig_controller.set_pin_default_value(limit_bone_settings + '.MaxZ', str(max(bone_limit_y_max, abs(bone_limit_y_min))), False)
 
 
-            # blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.MinX', str(min(bone_limit_z_max, bone_limit_z_min)), False)
-            # blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.MaxX', str(max(bone_limit_z_max, bone_limit_z_min)), False)
-            # blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.MinY', str(min(bone_limit_x_max, bone_limit_x_min)), False)
-            # blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.MaxY', str(max(bone_limit_x_max, bone_limit_x_min)), False)
-            # blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.MinZ', str(min(bone_limit_y_max, bone_limit_y_min)), False)
-            # blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.MaxZ', str(max(bone_limit_y_max, bone_limit_y_min)), False)
+            # rig_controller.set_pin_default_value(limit_bone_settings + '.MinX', str(min(bone_limit_z_max, bone_limit_z_min)), False)
+            # rig_controller.set_pin_default_value(limit_bone_settings + '.MaxX', str(max(bone_limit_z_max, bone_limit_z_min)), False)
+            # rig_controller.set_pin_default_value(limit_bone_settings + '.MinY', str(min(bone_limit_x_max, bone_limit_x_min)), False)
+            # rig_controller.set_pin_default_value(limit_bone_settings + '.MaxY', str(max(bone_limit_x_max, bone_limit_x_min)), False)
+            # rig_controller.set_pin_default_value(limit_bone_settings + '.MinZ', str(min(bone_limit_y_max, bone_limit_y_min)), False)
+            # rig_controller.set_pin_default_value(limit_bone_settings + '.MaxZ', str(max(bone_limit_y_max, bone_limit_y_min)), False)
 
             if bone_limit_name in stiff_limits:
-                blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.PositionStiffness', '0.800000', False)
-                blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.RotationStiffness', '0.800000', False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.PositionStiffness', '0.800000', False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.RotationStiffness', '0.800000', False)
 
             # Figure out preferred angles, the primary angle is the one that turns the furthest from base pose
-            blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.bUsePreferredAngles', 'true', False)
+            rig_controller.set_pin_default_value(limit_bone_settings + '.bUsePreferredAngles', 'true', False)
 
             y_max_rotate = max(abs(bone_limit_x_min), abs(bone_limit_x_max))
             z_max_rotate = max(abs(bone_limit_y_min), abs(bone_limit_y_max))
@@ -298,28 +345,28 @@ if blueprint:
             limit_divider = 1.0
             if x_max_rotate > y_max_rotate and x_max_rotate > z_max_rotate:
                 if abs(bone_limit_z_min) > abs(bone_limit_z_max):
-                    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.PreferredAngles.X', str(bone_limit_z_min / limit_divider), False)
+                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.X', str(bone_limit_z_min / limit_divider), False)
                 else:
-                    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.PreferredAngles.X', str(bone_limit_z_max / limit_divider), False)
+                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.X', str(bone_limit_z_max / limit_divider), False)
 
             if y_max_rotate > x_max_rotate and y_max_rotate > z_max_rotate:
                 if abs(bone_limit_x_min) > abs(bone_limit_x_max):
-                    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.PreferredAngles.Y', str(bone_limit_x_min / limit_divider), False)
+                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Y', str(bone_limit_x_min / limit_divider), False)
                 else:
-                    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.PreferredAngles.Y', str(bone_limit_x_max / limit_divider), False)
+                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Y', str(bone_limit_x_max / limit_divider), False)
         
             if z_max_rotate > x_max_rotate and z_max_rotate > y_max_rotate:
                 if abs(bone_limit_y_min) > abs(bone_limit_y_max):
-                    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.PreferredAngles.Z', str(bone_limit_y_min / limit_divider), False)
+                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Z', str(bone_limit_y_min / limit_divider), False)
                 else:
-                    blueprint.get_controller_by_name('RigVMModel').set_pin_default_value(limit_bone_settings + '.PreferredAngles.Z', str(bone_limit_y_max / limit_divider), False)
-            # blueprint.get_controller_by_name('RigVMModel').set_pin_default_value('PBIK.BoneSettings.0.Bone', 'pelvis', False)
-            # blueprint.get_controller_by_name('RigVMModel').set_pin_default_value('PBIK.BoneSettings.0.RotationStiffness', '0.900000', False)
-            # blueprint.get_controller_by_name('RigVMModel').set_pin_default_value('PBIK.BoneSettings.0.PositionStiffness', '0.900000', False)
+                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Z', str(bone_limit_y_max / limit_divider), False)
+            # rig_controller.set_pin_default_value('PBIK.BoneSettings.0.Bone', 'pelvis', False)
+            # rig_controller.set_pin_default_value('PBIK.BoneSettings.0.RotationStiffness', '0.900000', False)
+            # rig_controller.set_pin_default_value('PBIK.BoneSettings.0.PositionStiffness', '0.900000', False)
         
 
     # Attach the node to execute
-    blueprint.get_controller_by_name('RigVMModel').add_link(next_forward_execute, 'PBIK.ExecuteContext')
+    rig_controller.add_link(next_forward_execute, 'PBIK.ExecuteContext')
 
     skeletal_mesh = unreal.load_object(name = args.skeletalMesh, outer = None)
     unreal.ControlRigBlueprintLibrary.set_preview_mesh(blueprint, skeletal_mesh)
@@ -327,4 +374,4 @@ if blueprint:
     # Turn on notifications and force a recompile
     blueprint.suspend_notifications(False)
     unreal.ControlRigBlueprintLibrary.recompile_vm(blueprint)
-    #blueprint.get_controller_by_name('RigVMModel').add_link('RigUnit_BeginExecution.ExecuteContext', 'PBIK.ExecuteContext')
+    #rig_controller.add_link('RigUnit_BeginExecution.ExecuteContext', 'PBIK.ExecuteContext')

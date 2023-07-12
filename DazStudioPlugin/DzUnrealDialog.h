@@ -19,6 +19,7 @@ class DzUnrealDialog : public DZ_BRIDGE_NAMESPACE::DzBridgeDialog {
 public:
 	Q_INVOKABLE QLineEdit* getIntermediateFolderEdit() { return intermediateFolderEdit; }
 	Q_INVOKABLE QLineEdit* getPortEdit() { return portEdit; }
+	Q_INVOKABLE QLineEdit* getMLDeformerPoseCountEdit() { return mlDeformerPoseCountEdit; }
 
 	/** Constructor **/
 	 DzUnrealDialog(QWidget *parent=nullptr);
@@ -26,14 +27,15 @@ public:
 	/** Destructor **/
 	virtual ~DzUnrealDialog() {}
 
-	Q_INVOKABLE void resetToDefaults();
+	Q_INVOKABLE void resetToDefaults() override;
+	Q_INVOKABLE void saveSettings() override;
 
 protected slots:
 	void HandleSelectIntermediateFolderButton();
 	void HandlePortChanged(const QString& port);
-	virtual void HandleTargetPluginInstallerButton();
-	virtual void HandleAssetTypeComboChange(int state);
-	virtual void HandleOpenIntermediateFolderButton(QString sFolderPath = "");
+	void HandleTargetPluginInstallerButton() override;
+	void HandleOpenIntermediateFolderButton(QString sFolderPath = "") override;
+	void HandleAssetTypeComboChange(const QString& assetType) override;
 
 protected:
 	Q_INVOKABLE bool loadSavedSettings();
@@ -41,6 +43,10 @@ protected:
 	QLineEdit* portEdit;
 	QLineEdit* intermediateFolderEdit;
 	QPushButton* intermediateFolderButton;
+
+	// MLDeformer settings
+	QGroupBox* mlDeformerSettingsGroupBox;
+	QLineEdit* mlDeformerPoseCountEdit;
 
 #ifdef UNITTEST_DZBRIDGE
 	friend class UnitTest_DzUnrealDialog;

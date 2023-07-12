@@ -61,7 +61,7 @@ public class DazToUnreal : ModuleRules
 			);
 
         AddEngineThirdPartyPrivateStaticDependencies(Target, "FBX");
-		AddEngineThirdPartyPrivateStaticDependencies(Target, new string[] { "MikkTSpace", "OpenSubdiv" });
+		AddEngineThirdPartyPrivateStaticDependencies(Target, new string[] { "MikkTSpace" });
 
 		// Filter UE5 Content from UE4 builds
 		string VersionSpecificFilterIni = Path.Combine(PluginDirectory, "Resources", "UE4_FilterPlugin.ini");

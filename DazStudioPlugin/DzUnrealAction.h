@@ -31,6 +31,11 @@ protected:
 	 Q_INVOKABLE void writeConfiguration();
 	 void setExportOptions(DzFileIOSettings& ExportOptions);
 
+	 virtual void exportNode(DzNode* Node) override;
+	 virtual void exportAnimation() override;
+	 virtual void exportNodeAnimation(DzNode* Bone, QMap<DzNode*, FbxNode*>& BoneMap, FbxAnimLayer* AnimBaseLayer, float FigureScale) override;
+	 virtual bool postProcessFbx(QString fbxFilePath) override;
+
 #ifdef UNITTEST_DZBRIDGE
 	 friend class UnitTest_DzUnrealAction;
 #endif

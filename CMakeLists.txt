@@ -257,9 +257,9 @@ if(NOT IMATH_DIR)
 endif()
 set(IMATH_INCLUDE "${IMATH_DIR}/include/Imath" CACHE PATH "Path to Imath include folder" )
 if(WIN32)
-	set(IMATH_LIB "${IMATH_DIR}/lib/Imath-3_1_d.lib" CACHE FILEPATH "Path to Imath CPU static library (Imath-3_1_d.lib)" )
+	set(IMATH_LIB "${IMATH_DIR}/lib/Imath-3_1.lib" CACHE FILEPATH "Path to Imath CPU static library (Imath-3_1.lib)" )
 elseif(APPLE)
-	set(IMATH_LIB "${IMATH_DIR}/lib/3_1_d.a" CACHE FILEPATH "Path to Imath CPU static library (Imath-3_1_d.a)" )
+	set(IMATH_LIB "${IMATH_DIR}/lib/3_1.a" CACHE FILEPATH "Path to Imath CPU static library (Imath-3_1.a)" )
 endif()
 
 ############################
