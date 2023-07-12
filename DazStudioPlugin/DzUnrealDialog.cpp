@@ -48,37 +48,55 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	// Set the dialog title
 	int revision = PLUGIN_REV % 1000;
 #ifdef _DEBUG
-	setWindowTitle(tr("Daz To Unreal v%1.%2 Build %3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD));
+	setWindowTitle(tr("Daz To Unreal %1 v%2.%3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD));
 #else
-	setWindowTitle(tr("Daz To Unreal v%1.%2").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR));
+	setWindowTitle(tr("Daz To Unreal %1 v%2.%3").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision));
 #endif
 
+
 	// Welcome String for Setup/Welcome Mode
-	QString sSetupModeString = tr("<h4>\
-If this is your first time using the Daz To Unreal Bridge, please be sure to read or watch \
-the tutorials or videos below to install and enable the Unreal Engine Plugin for the bridge:</h4>\
-<ul>\
-<li><a href=\"https://github.com/daz3d/DazToUnreal/releases\">Download latest Build dependencies, updates and bugfixes (Github)</a></li>\
-<li><a href=\"https://github.com/daz3d/DazToUnreal#2-how-to-install\">How To Install and Configure the Bridge (Github)</a></li>\
-<li><a href=\"https://www.daz3d.com/unreal-bridge#faq\">Daz To Unreal FAQ (Daz 3D)</a></li>\
-<li><a href=\"https://youtu.be/njPE-5EXrIc\">Installing the Daz to Unreal Bridge (Youtube)</a></li>\
-<li><a href=\"https://www.daz3d.com/forums/discussion/574891/official-daztounreal-bridge-what-s-new-and-how-to-use-it/p1\">What's New and How To Use It (Daz 3D Forums)</a></li>\
-</ul>\
-<b>NOTE:</b> In order to Package a Project, you will need to download and install the PackageProject-Dependencies.  \
-Please see <a href=\"https://github.com/daz3d/DazToUnreal#package-project-dependencies\">Github instructions</a> for instructions to do this.<br><br>\
-Once the Unreal Engine plugin is enabled, please add a Character or Prop to the Scene to transfer assets using the Daz To Unreal Bridge.<br><br>\
-To find out more about Daz Bridges, go to <a href=\"https://www.daz3d.com/daz-bridges\">https://www.daz3d.com/daz-bridges</a><br>\
+	QString sDazAppDir = dzApp->getHomePath().replace("\\","/");
+	QString sPdfPath = sDazAppDir + "/docs/Plugins" + "/Daz to Unreal/Daz to Unreal.pdf";
+	QString sSetupModeString = tr("\
+<div style=\"background-color:#282f41;\" align=center>\
+<img src=\":/DazBridgeUnreal/banner.jpg\" width=\"370\" height=\"95\" align=\"center\" hspace=\"0\" vspace=\"0\">\
+<table width=100% cellpadding=8 cellspacing=2 style=\"vertical-align:middle; font-size:x-large; font-weight:bold; background-color:#FFAA00;foreground-color:#FFFFFF\" align=center>\
+  <tr>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://www.daz3d.com/unreal-bridge#faq\">FAQ</a></div></td>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://youtu.be/XDDWKNbFrG0\">Installation Video</a></td>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://youtu.be/1dzB2BCYmgY\">Tutorial Video</a></td>\
+  </tr>\
+  <tr>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"file:///") + sPdfPath + tr("\">PDF</a></td>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://www.daz3d.com/forums/categories/unreal-discussion\">Forums</a></td>\
+    <td width=33% style=\"text-align:center; background-color:#282f41;\"><div align=center><a href=\"https://github.com/daz3d/DazToUnreal/issues\">Report Bug</a></td>\
+  </tr>\
+</table>\
+</div>\
 ");
 	m_WelcomeLabel->setText(sSetupModeString);
-	QString sBridgeVersionString = tr("Daz To Unreal Bridge %1.%2 revision %3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD);
+
+	QString sBridgeVersionString = tr("Daz To Unreal Bridge %1 v%2.%3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD);
 	setBridgeVersionStringAndLabel(sBridgeVersionString);
 
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 
 	settings = new QSettings("Daz 3D", "DazToUnreal");
 
-	// Connect new asset type handler
-	connect(assetTypeCombo, SIGNAL(activated(int)), this, SLOT(HandleAssetTypeComboChange(int)));
+	// add new asset type to assetTypeCombo widget ("MLDeformer")
+	assetTypeCombo->addItem("MLDeformer");
+
+	// Morph Settings
+	mlDeformerSettingsGroupBox = new QGroupBox("MLDeformer Settings", this);
+	QFormLayout* mlDeformerSettingsLayout = new QFormLayout();
+	mlDeformerSettingsGroupBox->setLayout(mlDeformerSettingsLayout);
+	mlDeformerPoseCountEdit = new QLineEdit("500", mlDeformerSettingsGroupBox);
+	mlDeformerPoseCountEdit->setValidator(new QIntValidator());
+	mlDeformerSettingsLayout->addRow("Pose Count", mlDeformerPoseCountEdit);
+	mlDeformerSettingsGroupBox->setVisible(false);
+
+	// Add ML Deformer settings to the mainLayout as a new row without header
+	mainLayout->addRow(mlDeformerSettingsGroupBox);
 
 	// Intermediate Folder
 	QHBoxLayout* intermediateFolderLayout = new QHBoxLayout();
@@ -92,11 +110,13 @@ To find out more about Daz Bridges, go to <a href=\"https://www.daz3d.com/daz-br
 	portEdit = new QLineEdit("32345");
 	connect(portEdit, SIGNAL(textChanged(const QString &)), this, SLOT(HandlePortChanged(const QString &)));
 
+	// Add Port and Intermediate Folder to Advanced Settings container as a new row with specific headers
 	QFormLayout* advancedLayout = qobject_cast<QFormLayout*>(advancedWidget->layout());
 	if (advancedLayout)
 	{
 		advancedLayout->addRow("Port", portEdit);
 		advancedLayout->addRow("Intermediate Folder", intermediateFolderLayout);
+		// reposition the Open Intermediate Folder button so it aligns with the center section
 		advancedLayout->removeWidget(m_OpenIntermediateFolderButton);
 		advancedLayout->addRow("", m_OpenIntermediateFolderButton);
 	}
@@ -109,6 +129,8 @@ To find out more about Daz Bridges, go to <a href=\"https://www.daz3d.com/daz-br
 	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.26");
 	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.27");
 	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.0");
+	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.1");
+	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.2");
 	showTargetPluginInstaller(true);
 
 	// Help pop-ups
@@ -143,7 +165,23 @@ bool DzUnrealDialog::loadSavedSettings()
 		portEdit->setText(settings->value("Port").toString());
 	}
 
+	// Animation settings
+	if (!settings->value("MLDeformerPoseCount").isNull())
+	{
+		mlDeformerPoseCountEdit->setText(settings->value("MLDeformerPoseCount").toString());
+	}
+
 	return true;
+}
+
+void DzUnrealDialog::saveSettings()
+{
+	if (settings == nullptr || m_bDontSaveSettings) return;
+
+	DzBridgeDialog::saveSettings();
+
+	// Animation settings
+	settings->setValue("MLDeformerPoseCount", mlDeformerPoseCountEdit->text().toInt());
 }
 
 void DzUnrealDialog::resetToDefaults()
@@ -205,6 +243,14 @@ void DzUnrealDialog::HandleTargetPluginInstallerButton()
 	else if (softwareVersion.contains("5.0"))
 	{
 		sBinariesFile = "/UE5.0.zip";
+	}
+	else if (softwareVersion.contains("5.1"))
+	{
+		sBinariesFile = "/UE5.1.zip";
+	}
+	else if (softwareVersion.contains("5.2"))
+	{
+		sBinariesFile = "/UE5.2.zip";
 	}
 	else
 	{
@@ -381,30 +427,6 @@ Engine plugins folder, please make sure you have write permissions to that folde
 	return;
 }
 
-void DzUnrealDialog::HandleAssetTypeComboChange(int state)
-{
-	QString assetNameString = assetNameEdit->text();
-
-	// enable/disable Subdivision if Environment selected
-	if (assetTypeCombo->currentText() == "Environment")
-	{
-		morphsEnabledCheckBox->setChecked(false);
-		morphsEnabledCheckBox->setDisabled(true);
-		morphsButton->setDisabled(true);
-		subdivisionEnabledCheckBox->setChecked(false);
-		subdivisionEnabledCheckBox->setDisabled(true);
-		subdivisionButton->setDisabled(true);
-	}
-	else
-	{
-		morphsEnabledCheckBox->setDisabled(false);
-		morphsButton->setDisabled(false);
-		subdivisionEnabledCheckBox->setDisabled(false);
-		subdivisionButton->setDisabled(false);
-	}
-
-}
-
 void DzUnrealDialog::HandleOpenIntermediateFolderButton(QString sFolderPath)
 {
 	QString sIntermediateFolder = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation) + QDir::separator() + "DazToUnreal";
@@ -415,5 +437,12 @@ void DzUnrealDialog::HandleOpenIntermediateFolderButton(QString sFolderPath)
 	sIntermediateFolder = sIntermediateFolder.replace("\\", "/");
 	DzBridgeDialog::HandleOpenIntermediateFolderButton(sIntermediateFolder);
 }
+
+void DzUnrealDialog::HandleAssetTypeComboChange(const QString& assetType)
+{
+	mlDeformerSettingsGroupBox->setVisible(assetType == "MLDeformer");
+	DzBridgeDialog::HandleAssetTypeComboChange(assetType);
+}
+
 
 #include "moc_DzUnrealDialog.cpp"

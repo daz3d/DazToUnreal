@@ -29,6 +29,8 @@
 #include "DzBridgeMorphSelectionDialog.h"
 #include "DzBridgeSubdivisionDialog.h"
 
+#include "MLDeformer.h"
+
 DzUnrealAction::DzUnrealAction() :
 	 DzBridgeAction(tr("&Daz to Unreal"), tr("Send the selected node to Unreal."))
 {
@@ -43,6 +45,9 @@ DzUnrealAction::DzUnrealAction() :
 	 QAction::setIcon(icon);
 
 	 m_bGenerateNormalMaps = true;
+	 m_bPostProcessFbx = true;
+	 m_bRemoveDuplicateGeografts = true;
+
 }
 
 void DzUnrealAction::executeAction()
@@ -324,6 +329,64 @@ QString DzUnrealAction::readGuiRootFolder()
 			rootFolder = intermediateFolderEdit->text().replace("\\", "/");
 	}
 	return rootFolder;
+}
+
+bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
+{
+	bool bResult = DzBridgeAction::postProcessFbx(fbxFilePath);
+
+	if (!bResult)
+	{
+		return false;
+	}
+
+	// Insert Unreal specific Fbx Post-processing here
+
+	return true;
+}
+
+// DB 2023-05-18: Added support for MLDeformer
+// Overrides baseclass implementation with Unreal specific export
+void DzUnrealAction::exportNode(DzNode* Node)
+{
+	if (Node == nullptr)
+		return;
+
+	dzScene->selectAllNodes(false);
+	dzScene->setPrimarySelection(Node);
+
+	if (m_sAssetType == "MLDeformer")
+	{
+		QDir dir;
+		dir.mkpath(m_sDestinationPath);
+		DzUnrealDialog* unrealBridgeDialog = qobject_cast<DzUnrealDialog*>(m_bridgeDialog);
+		MLDeformer::GeneratePoses(Node, unrealBridgeDialog->getMLDeformerPoseCountEdit()->text().toInt());
+		exportAnimation();
+		MLDeformer::ExportTrainingData(Node, m_sDestinationPath + m_sExportFilename + ".abc");
+		writeConfiguration();
+		return;
+	}
+
+	DzBridgeAction::exportNode(Node);
+
+}
+
+void DzUnrealAction::exportAnimation()
+{
+	DzBridgeAction::exportAnimation();
+	if (m_sAssetName == "MLDeformer")
+	{
+		// Insert MLDeformer specific code here
+	}
+}
+
+void DzUnrealAction::exportNodeAnimation(DzNode* Bone, QMap<DzNode*, FbxNode*>& BoneMap, FbxAnimLayer* AnimBaseLayer, float FigureScale)
+{
+	DzBridgeAction::exportNodeAnimation(Bone, BoneMap, AnimBaseLayer, FigureScale);
+	if (m_sAssetName == "MLDeformer")
+	{
+		// Insert MLDeformer specific code here
+	}
 }
 
 #include "moc_DzUnrealAction.cpp"

@@ -61,6 +61,10 @@
 #include "LevelEditorSubsystem.h"
 #endif
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+#include "LevelEditorSubsystem.h"
+#endif
+
 DEFINE_LOG_CATEGORY(LogDazToUnreal);
 //#include "ISkeletonEditorModule.h"
 //#include "IEditableSkeleton.h"
@@ -125,6 +129,7 @@ THIRD_PARTY_INCLUDES_END
 int FDazToUnrealModule::BatchConversionMode;
 FString FDazToUnrealModule::BatchConversionDestPath;
 TMap<FString, FString> FDazToUnrealModule::AssetIDLookup;
+TArray<UObject*> FDazToUnrealModule::TextureListToDisableSRGB;
 
 void FDazToUnrealModule::StartupModule()
 {
@@ -345,6 +350,23 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 	}
 	else if (BatchConversionMode == 0)
 	{
+		// DB 2023-May-23: Disable SRGB in a delayed step after importing textures is done to avoid engine crash
+		if (FDazToUnrealModule::TextureListToDisableSRGB.Num() > 0)
+		{
+			for (int i = 0; i < FDazToUnrealModule::TextureListToDisableSRGB.Num(); i++)
+			{
+				// cast element to UTexture
+				UTexture* Texture = Cast<UTexture>(FDazToUnrealModule::TextureListToDisableSRGB[i]);
+				if (Texture)
+				{
+					Texture->PreEditChange(nullptr);
+					Texture->SRGB = false;
+					Texture->PostEditChange();
+				}
+			}
+			FDazToUnrealModule::TextureListToDisableSRGB.Empty();
+		}
+
 		// Check from messages from the Daz Studio plugin
 		uint32 BytesPending = 0;
 		if (ServerSocket->HasPendingData(BytesPending))
@@ -499,15 +521,20 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 
 	 if (AssetType == DazAssetType::Environment)
 	 {
-		 FString LevelPath = CharacterFolder / AssetName;
+		 FString LevelPath = CharacterFolder / AssetName + FString("_Level");
 		 FString TemplatePath = TEXT("/Engine/Content/Maps/Templates/Template_Default");
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
 		 if (ULevelEditorSubsystem* LevelEditorSubsystem = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
 		 {
 			 LevelEditorSubsystem->NewLevelFromTemplate(LevelPath, TemplatePath);
+			 //LevelEditorSubsystem->NewLevel(LevelPath);
+
+			 // DB - UE 5.x appears to need LoadLevel() after using one of the NewLevel___() functions
+			 LevelEditorSubsystem->LoadLevel(LevelPath);
 		 }
 #else
 		 UEditorLevelLibrary::NewLevelFromTemplate(LevelPath, TemplatePath);
+		 //UEditorLevelLibrary::NewLevel(LevelPath);
 #endif
 		 FDazToUnrealEnvironment::ImportEnvironment(JsonObject);
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
@@ -1006,8 +1033,16 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 					 SceneNode->GetParent()->GetNodeAttribute() &&
 					 SceneNode->GetParent()->GetNodeAttribute()->GetAttributeType() == FbxNodeAttribute::eSkeleton)
 				{
-					 SceneNode->GetParent()->RemoveChild(SceneNode);
-					 RootNode->AddChild(SceneNode);
+					 // DB 2023-May-26: Only detach skinned geometry, leave props attached to bones
+					 if (NodeGeometry->GetDeformerCount(FbxDeformer::eSkin) > 0)
+					 {
+						 SceneNode->GetParent()->RemoveChild(SceneNode);
+						 RootNode->AddChild(SceneNode);
+					 }
+					 else
+					 {
+						 UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: leaving prop geometry (%s) attached to bone: %s"), ANSI_TO_TCHAR(SceneNode->GetName()), ANSI_TO_TCHAR(SceneNode->GetParent()->GetName()));
+					 }
 				}
 		  }
 	 }
@@ -1305,6 +1340,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 						FbxNode* GeometryNode = Geometry->GetNode();
 						if (GeometryNode->GetMaterialIndex(TCHAR_TO_UTF8(*NewMaterialName)) != -1)
 						{
+							UE_LOG(LogTemp, Warning, TEXT("Material %s not found in material properties, removing geometry..."), *NewMaterialName);
 							Scene->RemoveGeometry(Geometry);
 						}
 					}
@@ -1537,7 +1573,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 Progress.EnterProgressFrame(1, LOCTEXT("CreatingFullBodyIKControlRig", "Creating Full Body IK Control Rig"));
 #if ENGINE_MAJOR_VERSION > 4
 	 // Create a control rig for the character
-	 if (AssetType == DazAssetType::SkeletalMesh && CachedSettings->CreateFullBodyIKControlRig)
+	 if (AssetType == DazAssetType::SkeletalMesh && CachedSettings->CreateFullBodyIKControlRig && NewObject)
 	 {
 		 FString SkeletalMeshPackagePath = NewObject->GetOutermost()->GetPathName() + TEXT(".") + NewObject->GetName();
 		 FString CreateControlRigCommand = FString::Format(TEXT("py CreateControlRig.py --skeletalMesh={0} --dtuFile=\"{1}\""), { SkeletalMeshPackagePath, FileName });
@@ -1646,38 +1682,66 @@ bool FDazToUnrealModule::ImportTextureAssets(TArray<FString>& SourcePaths, FStri
 	 TArray<UObject*> ImportedAssets = AssetToolsModule.Get().ImportAssetsAutomated(ImportData);
 
 	 // Texture Corrections: sRGB
-	 if (ImportedAssets.Num() != SourcePaths.Num())
-	 {
-		 UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ImportTextureAssets() ERROR: ImportedAssets count is not equal to SourcePaths count. Texture Lookup Correction will likely fail..."));
-	 }
-	 int textureIndex = 0;
-	 for (FString SourcePath : SourcePaths)
-	 {
-		 if (m_targetTextureLookupTable.Contains(SourcePath))
-		 {
-			 TextureLookupInfo lookupData = m_targetTextureLookupTable[SourcePath];
-			 if (lookupData.bIsCutOut == true)
-			 {
-				 if (textureIndex >= ImportedAssets.Num())
-				 {
-					 UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: sRGB-corection texture-index lookup procedure returned invalid texture index. Skipping..."));
-				 }
-				 else
-				 {
-					 if (UTexture* texture = Cast<UTexture>(ImportedAssets[textureIndex]))
-					 {
 #if ENGINE_MAJOR_VERSION > 4
-						 // SRGB is crashing UE5, memory access violation???
-//						 texture->SRGB = false;
+	// NOTE: UE5 ImportedAssets count is not 1:1 compatible with SourcePaths count,
+	// so we can't assume index based on iteration through loop. Instead, we need
+	// to search through the ImportedAssets array to find the matching asset based
+	// on source path as retrieved from the
+	// Texture->AssetImportData->GetFirstFilename() function.
+	FDazToUnrealModule::TextureListToDisableSRGB.Empty();
+	for (auto ImportedAsset : ImportedAssets)
+	{
+		if (ImportedAsset->IsA(UTexture::StaticClass()))
+		{
+			UTexture* Texture = Cast<UTexture>(ImportedAsset);
+			FString TextureName = Texture->GetName();
+			FString TexturePath = Texture->AssetImportData->GetFirstFilename();
+			if (m_targetTextureLookupTable.Contains(TexturePath))
+			{
+				TextureLookupInfo lookupData = m_targetTextureLookupTable[TexturePath];
+				if (lookupData.bIsCutOut == true)
+				{
+					// DB 2023-May-23: Disable SRGB in a delayed step after importing textures is done to avoid engine crash (please see Tick() )
+					//UE_LOG(LogTemp, Display, TEXT("DazToUnreal: ImportTextureAssets() Texture %s is a cutout texture. Setting sRGB to false."), *TextureName);
+					FDazToUnrealModule::TextureListToDisableSRGB.Add(Texture);
+				}
+			}
+		}
+	}
+
 #else
-						 texture->SRGB = false;
-#endif
+	if (ImportedAssets.Num() != SourcePaths.Num())
+	 {
+		 UE_LOG(LogTemp, Error, TEXT("DazToUnreal: ImportTextureAssets() ERROR: ImportedAssets count is not equal to SourcePaths count. Texture Lookup Correction will likely fail..."));
+	 }
+	 else
+	 {
+	 	int textureIndex = 0;
+		// Pseudocode: For each sourcepath, check if it is in the lookup table, and if it is, check if it is a cutout texture. If it is, set the texture to sRGB = false.
+	 	for (FString SourcePath : SourcePaths)
+		 {
+			 if (m_targetTextureLookupTable.Contains(SourcePath))
+			 {
+				 TextureLookupInfo lookupData = m_targetTextureLookupTable[SourcePath];
+				 if (lookupData.bIsCutOut == true)
+				 {
+					 if (textureIndex >= ImportedAssets.Num())
+					 {
+						 UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: sRGB-corection texture-index lookup procedure returned invalid texture index. Skipping..."));
+					 }
+					 else
+					 {
+						 if (UTexture* texture = Cast<UTexture>(ImportedAssets[textureIndex]))
+						 {
+							 texture->SRGB = false;
+						 }
 					 }
 				 }
 			 }
+			 textureIndex++;
 		 }
-		 textureIndex++;
 	 }
+#endif
 
 	 if (ImportedAssets.Num() > 0)
 	 {
@@ -1688,7 +1752,7 @@ bool FDazToUnrealModule::ImportTextureAssets(TArray<FString>& SourcePaths, FStri
 
 UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FString& ImportLocation, const DazAssetType& AssetType, const DazCharacterType& CharacterType, const FString& CharacterTypeName, const bool bSetPostProcessAnimation)
 {
-	 FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
+	 static FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
 	 UDazToUnrealSettings* CachedSettings = GetMutableDefault<UDazToUnrealSettings>();
 
 	 FString NewFBXPath = SourcePath;
@@ -1736,7 +1800,8 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bUseT0AsRefPose = CachedSettings->FrameZeroIsReferencePose;
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bConvertScene = true;
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bForceFrontXAxis = CachedSettings->ZeroRootRotationOnImport;
-		  FbxFactory->ImportUI->SkeletalMeshImportData->bImportMeshesInBoneHierarchy = false;
+		  // DB 2023-May-26: ReEnabling to support bone attached props, until alternative is 100% working
+	 	  FbxFactory->ImportUI->SkeletalMeshImportData->bImportMeshesInBoneHierarchy = true;
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_SkeletalMesh;
 	 }
 	 if (AssetType == DazAssetType::StaticMesh)

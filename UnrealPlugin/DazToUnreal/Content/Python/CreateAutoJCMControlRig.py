@@ -2,6 +2,17 @@ import unreal
 import argparse
 import json
 
+
+def get_scriptstruct_by_node_name(node_name):
+    control_rig_blueprint = unreal.load_object(None, '/DazToUnreal/Python/ControlRig_Node_Library')
+    rig_vm_graph = control_rig_blueprint.get_model()
+    nodes = rig_vm_graph.get_nodes()
+    for node in nodes:
+        if node.get_node_path() == node_name:
+            return node.get_script_struct()
+
+
+
 parser = argparse.ArgumentParser(description = 'Creates a Control Rig given a SkeletalMesh')
 parser.add_argument('--skeletalMesh', help='Skeletal Mesh to Use')
 parser.add_argument('--animBlueprint', help='Anim Blueprint that contains the Control Rig Node')
@@ -26,6 +37,8 @@ unreal.ControlRigBlueprintLibrary.set_preview_mesh(blueprint, skeletal_mesh)
 blueprint.suspend_notifications(True)
 
 rig_controller = blueprint.get_controller_by_name('RigVMModel')
+if rig_controller is None:
+    rig_controller = blueprint.get_controller()
 
 morph_target_names = skeletal_mesh.get_all_morph_target_names()
 
@@ -47,7 +60,7 @@ hierarchy_controller = hierarchy.get_controller()
 hierarchy_controller.import_bones_from_asset(args.skeletalMesh, 'None', False, False, True)
 hierarchy_controller.import_curves_from_asset(args.skeletalMesh, 'None', False)
 
-blueprint.get_controller_by_name('RigVMModel').add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_BeginExecution', 'Execute', unreal.Vector2D(-97.954082, -704.318460), 'BeginExecution')
+rig_controller.add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_BeginExecution', 'Execute', unreal.Vector2D(-97.954082, -704.318460), 'BeginExecution')
 
 
 # Get Bone list for character
@@ -184,9 +197,14 @@ for joint_link in joint_links:
         rig_controller.set_pin_default_value(get_transform_node_name + '.Item.Type', 'Bone', False, False)
 
         make_relative_node_name = 'MakeRelative_' + link_name
-        rig_controller.add_template_node('Make Relative::Execute(in Global,in Parent,out Local)', unreal.Vector2D(-50.0, node_height), make_relative_node_name)
+        try:
+            rig_controller.add_template_node('Make Relative::Execute(in Global,in Parent,out Local)', unreal.Vector2D(-50.0, node_height), make_relative_node_name)
+        except:
+            make_relative_scriptstruct = get_scriptstruct_by_node_name("MathTransformMakeRelative")
+            rig_controller.add_unit_node(make_relative_scriptstruct, 'Execute', unreal.Vector2D(-50.0, node_height), make_relative_node_name)
         rig_controller.add_link(get_initial_transform_node_name + '.Transform', make_relative_node_name + '.Parent')
         rig_controller.add_link(get_transform_node_name + '.Transform', make_relative_node_name + '.Global')
+
 
         # To Euler
         to_euler_node_name = 'To_Euler_' + link_name
@@ -201,7 +219,11 @@ for joint_link in joint_links:
 
         # Remap
         remap_node_name = 'Remap_' + link_name
-        rig_controller.add_template_node('Remap::Execute(in Value,in SourceMinimum,in SourceMaximum,in TargetMinimum,in TargetMaximum,in bClamp,out Result)', unreal.Vector2D(759.666641, node_height), remap_node_name)
+        try:
+            rig_controller.add_template_node('Remap::Execute(in Value,in SourceMinimum,in SourceMaximum,in TargetMinimum,in TargetMaximum,in bClamp,out Result)', unreal.Vector2D(759.666641, node_height), remap_node_name)
+        except:
+            remap_script_struct = get_scriptstruct_by_node_name("MathFloatRemap")
+            rig_controller.add_unit_node(remap_script_struct, 'Execute', unreal.Vector2D(759.666641, node_height), remap_node_name)
         rig_controller.add_link(to_euler_node_name + '.Result.' + joint_link_primary_axis[0], remap_node_name +'.Value')
         rig_controller.set_pin_default_value(remap_node_name +'.SourceMinimum', str(joint_min), False, False)
         rig_controller.set_pin_default_value(remap_node_name +'.SourceMaximum', str(joint_max), False, False)
