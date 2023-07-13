@@ -122,22 +122,28 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	}
 
 	// Configure Target Plugin Installer
-	renameTargetPluginInstaller("Unreal Plugin Installer");
-	m_TargetSoftwareVersionCombo->clear();
-	m_TargetSoftwareVersionCombo->addItem("Select Unreal Version");
-	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.25");
-	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.26");
-	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.27");
-	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.0");
-	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.1");
-	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.2");
-	showTargetPluginInstaller(true);
+	if (m_TargetSoftwareVersionCombo)
+	{
+		renameTargetPluginInstaller("Unreal Plugin Installer");
+		m_TargetSoftwareVersionCombo->clear();
+		m_TargetSoftwareVersionCombo->addItem("Select Unreal Version");
+		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.25");
+		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.26");
+		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.27");
+		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.0");
+		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.1");
+		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.2");
+		showTargetPluginInstaller(true);
+	}
 
 	// Help pop-ups
 	intermediateFolderEdit->setWhatsThis("DazToUnreal will collect the assets in a subfolder under this folder.  Unreal will import them from here.");
 	intermediateFolderButton->setWhatsThis("DazToUnreal will collect the assets in a subfolder under this folder.  Unreal will import them from here.");
 	portEdit->setWhatsThis("The UDP port used to talk to the DazToUnreal Unreal plugin.\nThis needs to match the port set in the Project Settings in Unreal.\nDefault is 32345.");
-	m_wTargetPluginInstaller->setWhatsThis("You can install the Unreal Plugin by selecting the desired Unreal Engine version and the selecting either the Unreal Engine folder or an Unreal Project folder.");
+	if (m_wTargetPluginInstaller)
+	{
+		m_wTargetPluginInstaller->setWhatsThis("You can install the Unreal Plugin by selecting the desired Unreal Engine version and the selecting either the Unreal Engine folder or an Unreal Project folder.");
+	}
 
 	// Set Defaults
 	resetToDefaults();
