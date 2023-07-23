@@ -15,7 +15,7 @@ public:
 	static void ExportTrainingData(DzNode* Node, QString FileName);
 
 private:
-	static void GetBoneList(DzNode* Node, QMap<QString, QList<DzNode*>>& Bones);
+	static void GetBoneList(DzNode* Node, QMap<QString, QList<DzNode*> >& Bones);
 	static float RandomInRange(float Min, float Max);
 	static void GetFigureList(DzNode* Node, QList<DzNode*>& Figures);
 	static void TurnOnInteractiveUpdates(DzNode* Node);
