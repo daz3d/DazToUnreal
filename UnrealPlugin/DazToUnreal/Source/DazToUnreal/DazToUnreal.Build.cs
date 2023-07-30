@@ -59,6 +59,10 @@ public class DazToUnreal : ModuleRules
 		PrivateDependencyModuleNames.Add("IKRig");
 #endif
 
+#if UE_5_3_OR_LATER
+		PrivateDependencyModuleNames.Remove("NeuralNetworkInference");
+#endif
+
 		DynamicallyLoadedModuleNames.AddRange(
 			new string[]
 			{
