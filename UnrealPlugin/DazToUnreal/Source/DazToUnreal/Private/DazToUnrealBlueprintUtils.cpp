@@ -1,9 +1,15 @@
 #include "DazToUnrealBlueprintUtils.h"
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+#include "ReferenceSkeleton.h"
+#include "Animation/Skeleton.h"
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION == 2
 #include "IKRigDefinition.h"
 #endif
-#include "Animation/Skeleton.h"
-#include "ReferenceSkeleton.h"
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION > 2
+#include "Rig/IKRigDefinition.h"
+#endif
+
 
 UDazToUnrealBlueprintUtils::UDazToUnrealBlueprintUtils(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)

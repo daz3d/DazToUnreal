@@ -64,8 +64,12 @@
 #include "LevelEditorSubsystem.h"
 #endif
 
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION == 2
 #include "IKRigDefinition.h"
+#endif
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION > 2
+#include "Rig/IKRigDefinition.h"
 #endif
 
 
