@@ -56,14 +56,18 @@
 #include "Async/Async.h"
 #include "Animation/AnimBlueprint.h"
 #include "Animation/AnimBlueprintGeneratedClass.h"
+#include "ToolMenuSection.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "ContentBrowserMenuContexts.h"
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION > 0
 #include "LevelEditorSubsystem.h"
 #endif
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
-#include "LevelEditorSubsystem.h"
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+#include "IKRigDefinition.h"
 #endif
+
 
 DEFINE_LOG_CATEGORY(LogDazToUnreal);
 //#include "ISkeletonEditorModule.h"
@@ -187,6 +191,8 @@ void FDazToUnrealModule::StartupModule()
 			LevelEditorModule.GetToolBarExtensibilityManager()->AddExtender(ToolbarExtender);
 		}
 	}
+
+	AddCreateRetargeterMenu();
 
 	/*FGlobalTabmanager::Get()->RegisterNomadTabSpawner(DazToUnrealTabName, FOnSpawnTab::CreateRaw(this, &FDazToUnrealModule::OnSpawnPluginTab))
 		.SetDisplayName(LOCTEXT("FDazToUnrealTabTitle", "DazToUnreal"))
@@ -400,12 +406,12 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 					}
 					else
 					{
-						UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: Unable to parse DTU File: %s"), *FileName);
+						UE_LOG(LogDazToUnreal, Warning, TEXT("DazToUnreal: ERROR: Unable to parse DTU File: %s"), *FileName);
 					}
 				}
 				else
 				{
-					UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: Unable to find DTU file: %s"), *FileName);
+					UE_LOG(LogDazToUnreal, Warning, TEXT("DazToUnreal: ERROR: Unable to find DTU file: %s"), *FileName);
 				}
 			}
 		}
@@ -631,7 +637,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 // If there isn't an FBX file, stop
 	 if (!FPaths::FileExists(FBXFile))
 	 {
-		 	UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: Unable to load FBXFile: %s"), *FBXFile);
+		 	UE_LOG(LogDazToUnreal, Warning, TEXT("DazToUnreal: ERROR: Unable to load FBXFile: %s"), *FBXFile);
 		  return nullptr;
 	 }
 
@@ -1041,7 +1047,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 					 }
 					 else
 					 {
-						 UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: leaving prop geometry (%s) attached to bone: %s"), ANSI_TO_TCHAR(SceneNode->GetName()), ANSI_TO_TCHAR(SceneNode->GetParent()->GetName()));
+						 UE_LOG(LogDazToUnreal, Warning, TEXT("DazToUnreal: leaving prop geometry (%s) attached to bone: %s"), ANSI_TO_TCHAR(SceneNode->GetName()), ANSI_TO_TCHAR(SceneNode->GetParent()->GetName()));
 					 }
 				}
 		  }
@@ -1340,7 +1346,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 						FbxNode* GeometryNode = Geometry->GetNode();
 						if (GeometryNode->GetMaterialIndex(TCHAR_TO_UTF8(*NewMaterialName)) != -1)
 						{
-							UE_LOG(LogTemp, Warning, TEXT("Material %s not found in material properties, removing geometry..."), *NewMaterialName);
+							UE_LOG(LogDazToUnreal, Warning, TEXT("Material %s not found in material properties, removing geometry..."), *NewMaterialName);
 							Scene->RemoveGeometry(Geometry);
 						}
 					}
@@ -1712,7 +1718,7 @@ bool FDazToUnrealModule::ImportTextureAssets(TArray<FString>& SourcePaths, FStri
 #else
 	if (ImportedAssets.Num() != SourcePaths.Num())
 	 {
-		 UE_LOG(LogTemp, Error, TEXT("DazToUnreal: ImportTextureAssets() ERROR: ImportedAssets count is not equal to SourcePaths count. Texture Lookup Correction will likely fail..."));
+		 UE_LOG(LogDazToUnreal, Error, TEXT("DazToUnreal: ImportTextureAssets() ERROR: ImportedAssets count is not equal to SourcePaths count. Texture Lookup Correction will likely fail..."));
 	 }
 	 else
 	 {
@@ -1727,7 +1733,7 @@ bool FDazToUnrealModule::ImportTextureAssets(TArray<FString>& SourcePaths, FStri
 				 {
 					 if (textureIndex >= ImportedAssets.Num())
 					 {
-						 UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: sRGB-corection texture-index lookup procedure returned invalid texture index. Skipping..."));
+						 UE_LOG(LogDazToUnreal, Warning, TEXT("DazToUnreal: ERROR: sRGB-corection texture-index lookup procedure returned invalid texture index. Skipping..."));
 					 }
 					 else
 					 {
@@ -1935,6 +1941,123 @@ void FDazToUnrealModule::InstallDazStudioPlugin()
 	 FString InstallerPath = IPluginManager::Get().FindPlugin("DazToUnreal")->GetBaseDir() / TEXT("Resources") / TEXT("DazToUnrealSetup.exe");
 	 FString InstallerAbsolutePath = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*InstallerPath);
 	 FPlatformProcess::LaunchFileInDefaultExternalApplication(*InstallerAbsolutePath, NULL, ELaunchVerb::Open);
+}
+
+void FDazToUnrealModule::AddCreateRetargeterMenu()
+{
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+	// Create a new context menu item for Skeletal Meshes
+	UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("ContentBrowser.AssetContextMenu.SkeletalMesh");
+	FToolMenuSection& Section = Menu->FindOrAddSection("GetAssetActions");
+
+	Section.AddSubMenu(
+		"CreateIKRetargeterSubMenu",
+		LOCTEXT("CreateIKRetargeterSubMenu_Label", "Create IK Retargeter"),
+		LOCTEXT("CreateIKRetargeterSubMenu_ ToolTip", "Create or update and IKRetargeter for this mesh."),
+		FNewToolMenuDelegate::CreateRaw(this, &FDazToUnrealModule::AddCreateRetargeterSubMenu),
+		false);
+#endif
+}
+
+void FDazToUnrealModule::AddCreateRetargeterSubMenu(UToolMenu* Menu)
+{
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+	// Get selected SkeletalMesh
+	USkeletalMesh* TargetSkeletalMesh = nullptr;
+	if (const UContentBrowserAssetContextMenuContext* CBContext = Menu->Context.FindContext<UContentBrowserAssetContextMenuContext>())
+	{
+		TargetSkeletalMesh = CBContext->LoadFirstSelectedObject<USkeletalMesh>();
+	}
+
+
+	FToolMenuSection& Section = Menu->AddSection("SourceMesh", LOCTEXT("SourceMesh_Label", "Source Mesh"));
+
+	// Find all SkeletalMeshes
+	TArray<FAssetData> Assets;
+	IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+	AssetRegistry.GetAssetsByClass(USkeletalMesh::StaticClass()->GetClassPathName(), Assets);
+
+	// Add a menu entry for each SkeletalMesh
+	for (FAssetData Asset : Assets)
+	{
+		const TAttribute<FText> Label = FText::FromString(Asset.AssetName.ToString());
+		FName Name = FName(Asset.AssetName.ToString());
+
+		Section.AddMenuEntry(
+			Name,
+			Label,
+		LOCTEXT("CreateSkeletalMeshToolSubMenuItemTip", "Choose this as the source asset for creating a retargeter."),
+		FSlateIcon(),
+		FUIAction(FExecuteAction::CreateRaw(this, &FDazToUnrealModule::OnCreateRetargeterClicked, Asset.GetSoftObjectPath(), TargetSkeletalMesh))
+		);
+ 
+	}
+#endif
+}
+
+void FDazToUnrealModule::OnCreateRetargeterClicked(FSoftObjectPath SourceObjectPath, USkeletalMesh* TargetSkeletalMesh)
+{
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+	USkeletalMesh* SourceSkeletalMesh = Cast<USkeletalMesh>(SourceObjectPath.TryLoad());
+	if (!SourceSkeletalMesh || !TargetSkeletalMesh) return;
+
+	// Find or Create the Source IKRig
+	UIKRigDefinition* SourceIKRig = FindIKRigForSkeletalMesh(SourceSkeletalMesh);
+	if (!SourceIKRig)
+	{
+		FString SkeletalMeshPackagePath = SourceSkeletalMesh->GetOutermost()->GetPathName() + TEXT(".") + SourceSkeletalMesh->GetName();
+		FString CreateIKRigCommand = FString::Format(TEXT("py CreateIKRig.py --skeletalMesh={0}"), { SkeletalMeshPackagePath });
+		UE_LOG(LogDazToUnreal, Log, TEXT("Creating Source IK Rig with command: %s"), *CreateIKRigCommand);
+		GEngine->Exec(NULL, *CreateIKRigCommand);
+		SourceIKRig = FindIKRigForSkeletalMesh(SourceSkeletalMesh);
+	}
+
+	// Find or Create the Target IKRig
+	UIKRigDefinition* TargetIKRig = FindIKRigForSkeletalMesh(TargetSkeletalMesh);
+	if (!TargetIKRig)
+	{
+		FString SkeletalMeshPackagePath = TargetSkeletalMesh->GetOutermost()->GetPathName() + TEXT(".") + TargetSkeletalMesh->GetName();
+		FString CreateIKRigCommand = FString::Format(TEXT("py CreateIKRig.py --skeletalMesh={0}"), { SkeletalMeshPackagePath });
+		UE_LOG(LogDazToUnreal, Log, TEXT("Creating Source IK Rig with command: %s"), *CreateIKRigCommand);
+		GEngine->Exec(NULL, *CreateIKRigCommand);
+		TargetIKRig = FindIKRigForSkeletalMesh(TargetSkeletalMesh);
+	}
+
+	// Create or Update the IKRetargeter
+	if (SourceIKRig && TargetIKRig)
+	{
+		TargetSkeletalMesh->GetSkeleton()->UpdateReferencePoseFromMesh(TargetSkeletalMesh);
+		FString SourceIKRigPackagePath = SourceIKRig->GetOutermost()->GetPathName() + TEXT(".") + SourceIKRig->GetName();
+		FString TargetIKRigPackagePath = TargetIKRig->GetOutermost()->GetPathName() + TEXT(".") + TargetIKRig->GetName();
+		FString CreateIKRetargeterCommand = FString::Format(TEXT("py CreateIKRetargeter.py --sourceIKRig={0} --targetIKRig={1}"), { SourceIKRigPackagePath, TargetIKRigPackagePath });
+		UE_LOG(LogDazToUnreal, Log, TEXT("Creating IK Retargeter with command: %s"), *CreateIKRetargeterCommand);
+		GEngine->Exec(NULL, *CreateIKRetargeterCommand);
+	}
+#endif
+}
+
+UIKRigDefinition* FDazToUnrealModule::FindIKRigForSkeletalMesh(USkeletalMesh* SkeletalMesh)
+{
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+	TArray<FAssetData> Assets;
+	IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+	AssetRegistry.GetAssetsByClass(UIKRigDefinition::StaticClass()->GetClassPathName(), Assets);
+
+	UIKRigDefinition* SourceIKRig = nullptr;
+
+	// First try to find an IKRig that has this mesh as the preview.
+	for (FAssetData Asset : Assets)
+	{
+		if (UIKRigDefinition* IKRigDefinition = Cast<UIKRigDefinition>(Asset.GetAsset()))
+		{
+			if (IKRigDefinition->PreviewSkeletalMesh == SkeletalMesh)
+			{
+				return IKRigDefinition;
+			}
+		}
+	}
+#endif
+	return nullptr;
 }
 
 #undef LOCTEXT_NAMESPACE

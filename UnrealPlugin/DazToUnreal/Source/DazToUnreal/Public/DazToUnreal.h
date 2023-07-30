@@ -75,6 +75,20 @@ private:
 
 	//TSharedRef<class SDockTab> OnSpawnPluginTab(const class FSpawnTabArgs& SpawnTabArgs);
 
+	// Section for IKRetargeter creation menus
+private:
+
+	// Create the menu for ik retargeter creation
+	void AddCreateRetargeterMenu();
+
+	// Create the per skeletal mesh menu
+	void AddCreateRetargeterSubMenu(UToolMenu* Menu);
+
+	// Create an IK Retargeter and IKRigs if needed for retargeting between two skeletal meshes
+	void OnCreateRetargeterClicked(FSoftObjectPath SourceObjectPath, class USkeletalMesh* TargetSkeletalMesh);
+	
+	// Find a control rig for the skeletal mesh
+	class UIKRigDefinition* FindIKRigForSkeletalMesh(class USkeletalMesh* SkeletalMesh);
 private:
 	TSharedPtr<class FUICommandList> PluginCommands;
 
