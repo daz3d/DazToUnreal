@@ -181,7 +181,9 @@ args = parser.parse_args()
 asset_name = args.skeletalMesh.split('.')[1] + '_CR'
 package_path = args.skeletalMesh.rsplit('/', 1)[0]
 
-blueprint = unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=asset_name,
+blueprint = unreal.load_object(name = package_path + '/' + asset_name , outer = None)
+if not blueprint:
+    blueprint = unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=asset_name,
                                            package_path=package_path,
                                            asset_class=unreal.ControlRigBlueprint,
                                            factory=unreal.ControlRigBlueprintFactory())
@@ -266,60 +268,82 @@ if blueprint:
             hierarchy_controller.set_parent(unreal.RigElementKey(type=unreal.RigElementType.CONTROL, name= child_bone + '_ctrl'), unreal.RigElementKey(type=unreal.RigElementType.CONTROL, name= parent_bone + '_ctrl'), True)
             hierarchy.set_local_transform(unreal.RigElementKey(type=unreal.RigElementType.CONTROL, name=child_bone + '_ctrl'), unreal.Transform(location=[0.000000,0.000000,0.000000],rotation=[0.000000,0.000000,-0.000000],scale=[1.000000,1.000000,1.000000]), True, True)
         
+    skeletal_mesh = unreal.load_object(name = args.skeletalMesh, outer = None)
+    skeletal_mesh_import_data = skeletal_mesh.get_editor_property('asset_import_data')
+    skeletal_mesh_force_front_x = skeletal_mesh_import_data.get_editor_property('force_front_x_axis')
 
     stiff_limits = ['l_shoulder', 'r_shoulder']
     stiff_limits+= ['lCollar', 'rCollar']
     exclude_limits = ['root', 'hip', 'pelvis']
     for bone_limits in limits.values():
+
+        # Get the name of the bone
         bone_limit_name = bone_limits[0]
-        bone_limit_x_min = bone_limits[2] * -1.0
-        bone_limit_x_max = bone_limits[3] * -1.0
+
+        # Add twist bones to the exlude list
+        if 'twist' in bone_limit_name.lower():
+            exluded_bone_settings = rig_controller.insert_array_pin('PBIK.ExcludedBones', -1, '')
+            rig_controller.set_pin_default_value(exluded_bone_settings, bone_limit_name, False)
+
+        # Get the bone limits
+        bone_limit_x_min = bone_limits[2]
+        bone_limit_x_max = bone_limits[3]
         bone_limit_y_min = bone_limits[4] * -1.0
         bone_limit_y_max = bone_limits[5] * -1.0
-        bone_limit_z_min = bone_limits[6]
-        bone_limit_z_max = bone_limits[7]
+        bone_limit_z_min = bone_limits[6] * -1.0
+        bone_limit_z_max = bone_limits[7] * -1.0
+
+        # update the axis if force front was used (facing right)
+        if skeletal_mesh_force_front_x:
+            bone_limit_y_min = bone_limits[2] * -1.0
+            bone_limit_y_max = bone_limits[3] * -1.0
+            bone_limit_z_min = bone_limits[4] * -1.0
+            bone_limit_z_max = bone_limits[5] * -1.0
+            bone_limit_x_min = bone_limits[6]
+            bone_limit_x_max = bone_limits[7]
 
         if not bone_limit_name in exclude_limits:
             #if not bone_limit_name == "l_shin": continue
             limit_bone_settings = rig_controller.insert_array_pin('PBIK.BoneSettings', -1, '')
             rig_controller.set_pin_default_value(limit_bone_settings + '.Bone', bone_limit_name, False)
 
-            y_delta = abs(bone_limit_x_max - bone_limit_x_min)
-            z_delta = abs(bone_limit_y_max - bone_limit_y_min)
-            x_delta = abs(bone_limit_z_max - bone_limit_z_min)
+            
+            x_delta = abs(bone_limit_x_max - bone_limit_x_min)
+            y_delta = abs(bone_limit_y_max - bone_limit_y_min)
+            z_delta = abs(bone_limit_z_max - bone_limit_z_min)
 
             if(x_delta < 15.0):
                 rig_controller.set_pin_default_value(limit_bone_settings + '.X', 'Locked', False)
             elif (x_delta > 90.0):
                 rig_controller.set_pin_default_value(limit_bone_settings + '.X', 'Free', False)
             else:
-                rig_controller.set_pin_default_value(limit_bone_settings + '.X', 'Limited', False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.X', 'Free', False)
 
             if(y_delta < 15.0):
                 rig_controller.set_pin_default_value(limit_bone_settings + '.Y', 'Locked', False)
             elif (y_delta > 90.0):
                 rig_controller.set_pin_default_value(limit_bone_settings + '.Y', 'Free', False)
             else:
-                rig_controller.set_pin_default_value(limit_bone_settings + '.Y', 'Limited', False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.Y', 'Free', False)
 
             if(z_delta < 15.0):
                 rig_controller.set_pin_default_value(limit_bone_settings + '.Z', 'Locked', False)
             elif (z_delta > 90.0):
                 rig_controller.set_pin_default_value(limit_bone_settings + '.Z', 'Free', False)
             else:
-                rig_controller.set_pin_default_value(limit_bone_settings + '.Z', 'Limited', False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.Z', 'Free', False)
             # rig_controller.set_pin_default_value(limit_bone_settings + '.X', 'Limited', False)
             # rig_controller.set_pin_default_value(limit_bone_settings + '.Y', 'Limited', False)
             # rig_controller.set_pin_default_value(limit_bone_settings + '.Z', 'Limited', False)
 
             # It feels like Min\Max angel aren't the actual extents, but the amount of rotation allowed.  So they shoudl be 0 to abs(min, max)
             # I think there's a bug if a min rotation is more negative than max is positive, the negative gets clamped to the relative positive.
-            rig_controller.set_pin_default_value(limit_bone_settings + '.MinX', str(min(bone_limit_z_max, bone_limit_z_min)), False)
-            rig_controller.set_pin_default_value(limit_bone_settings + '.MaxX', str(max(bone_limit_z_max, abs(bone_limit_z_min))), False)
-            rig_controller.set_pin_default_value(limit_bone_settings + '.MinY', str(min(bone_limit_x_max, bone_limit_x_min)), False)
-            rig_controller.set_pin_default_value(limit_bone_settings + '.MaxY', str(max(bone_limit_x_max, abs(bone_limit_x_min))), False)
-            rig_controller.set_pin_default_value(limit_bone_settings + '.MinZ', str(min(bone_limit_y_max, bone_limit_y_min)), False)
-            rig_controller.set_pin_default_value(limit_bone_settings + '.MaxZ', str(max(bone_limit_y_max, abs(bone_limit_y_min))), False)
+            rig_controller.set_pin_default_value(limit_bone_settings + '.MinX', str(min(bone_limit_x_max, bone_limit_x_min)), False)
+            rig_controller.set_pin_default_value(limit_bone_settings + '.MaxX', str(max(bone_limit_x_max, abs(bone_limit_x_min))), False)
+            rig_controller.set_pin_default_value(limit_bone_settings + '.MinY', str(min(bone_limit_y_max, bone_limit_y_min)), False)
+            rig_controller.set_pin_default_value(limit_bone_settings + '.MaxY', str(max(bone_limit_y_max, abs(bone_limit_y_min))), False)
+            rig_controller.set_pin_default_value(limit_bone_settings + '.MinZ', str(min(bone_limit_z_max, bone_limit_z_min)), False)
+            rig_controller.set_pin_default_value(limit_bone_settings + '.MaxZ', str(max(bone_limit_z_max, abs(bone_limit_z_min))), False)
 
 
             # rig_controller.set_pin_default_value(limit_bone_settings + '.MinX', str(min(bone_limit_z_max, bone_limit_z_min)), False)
@@ -336,30 +360,30 @@ if blueprint:
             # Figure out preferred angles, the primary angle is the one that turns the furthest from base pose
             rig_controller.set_pin_default_value(limit_bone_settings + '.bUsePreferredAngles', 'true', False)
 
-            y_max_rotate = max(abs(bone_limit_x_min), abs(bone_limit_x_max))
-            z_max_rotate = max(abs(bone_limit_y_min), abs(bone_limit_y_max))
-            x_max_rotate = max(abs(bone_limit_z_min), abs(bone_limit_z_max))
+            x_max_rotate = max(abs(bone_limit_x_min), abs(bone_limit_x_max))
+            y_max_rotate = max(abs(bone_limit_y_min), abs(bone_limit_y_max))
+            z_max_rotate = max(abs(bone_limit_z_min), abs(bone_limit_z_max))
             #print(bone_limit_name, x_max_rotate, y_max_rotate, z_max_rotate)
 
             
             limit_divider = 1.0
             if x_max_rotate > y_max_rotate and x_max_rotate > z_max_rotate:
-                if abs(bone_limit_z_min) > abs(bone_limit_z_max):
-                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.X', str(bone_limit_z_min / limit_divider), False)
+                if abs(bone_limit_x_min) > abs(bone_limit_x_max):
+                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.X', str(bone_limit_x_min / limit_divider), False)
                 else:
-                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.X', str(bone_limit_z_max / limit_divider), False)
+                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.X', str(bone_limit_x_max / limit_divider), False)
 
             if y_max_rotate > x_max_rotate and y_max_rotate > z_max_rotate:
-                if abs(bone_limit_x_min) > abs(bone_limit_x_max):
-                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Y', str(bone_limit_x_min / limit_divider), False)
+                if abs(bone_limit_y_min) > abs(bone_limit_y_max):
+                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Y', str(bone_limit_y_min / limit_divider), False)
                 else:
-                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Y', str(bone_limit_x_max / limit_divider), False)
+                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Y', str(bone_limit_y_max / limit_divider), False)
         
             if z_max_rotate > x_max_rotate and z_max_rotate > y_max_rotate:
-                if abs(bone_limit_y_min) > abs(bone_limit_y_max):
-                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Z', str(bone_limit_y_min / limit_divider), False)
+                if abs(bone_limit_z_min) > abs(bone_limit_z_max):
+                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Z', str(bone_limit_z_min / limit_divider), False)
                 else:
-                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Z', str(bone_limit_y_max / limit_divider), False)
+                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Z', str(bone_limit_z_max / limit_divider), False)
             # rig_controller.set_pin_default_value('PBIK.BoneSettings.0.Bone', 'pelvis', False)
             # rig_controller.set_pin_default_value('PBIK.BoneSettings.0.RotationStiffness', '0.900000', False)
             # rig_controller.set_pin_default_value('PBIK.BoneSettings.0.PositionStiffness', '0.900000', False)
@@ -368,7 +392,6 @@ if blueprint:
     # Attach the node to execute
     rig_controller.add_link(next_forward_execute, 'PBIK.ExecuteContext')
 
-    skeletal_mesh = unreal.load_object(name = args.skeletalMesh, outer = None)
     unreal.ControlRigBlueprintLibrary.set_preview_mesh(blueprint, skeletal_mesh)
 
     # Turn on notifications and force a recompile

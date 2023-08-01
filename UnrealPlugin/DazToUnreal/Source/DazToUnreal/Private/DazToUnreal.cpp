@@ -1569,6 +1569,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 					 FString SkeletalMeshPackagePath = NewObject->GetOutermost()->GetPathName() + TEXT(".") + NewObject->GetName();
 					 FString PostProcessAnimPackagePath = JointControlAnimBlueprint->GetOutermost()->GetPathName() + TEXT(".") + JointControlAnimBlueprint->GetName();
 					 FString CreateJCMControlRigCommand = FString::Format(TEXT("py CreateAutoJCMControlRig.py --skeletalMesh={0} --animBlueprint={1} --dtuFile=\"{2}\""), { SkeletalMeshPackagePath, PostProcessAnimPackagePath, FileName });
+					 UE_LOG(LogDazToUnreal, Log, TEXT("Creating AutoJCM Control Rig with command: %s"), *CreateJCMControlRigCommand);
 					 GEngine->Exec(NULL, *CreateJCMControlRigCommand);
 				 }
 #if ENGINE_MAJOR_VERSION > 4
@@ -1587,6 +1588,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 {
 		 FString SkeletalMeshPackagePath = NewObject->GetOutermost()->GetPathName() + TEXT(".") + NewObject->GetName();
 		 FString CreateControlRigCommand = FString::Format(TEXT("py CreateControlRig.py --skeletalMesh={0} --dtuFile=\"{1}\""), { SkeletalMeshPackagePath, FileName });
+		 UE_LOG(LogDazToUnreal, Log, TEXT("Creating Control Rig with command: %s"), *CreateControlRigCommand);
 		 GEngine->Exec(NULL, *CreateControlRigCommand);
 	 }
 #endif
