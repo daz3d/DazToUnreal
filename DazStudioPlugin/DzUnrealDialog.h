@@ -38,7 +38,7 @@ protected slots:
 	void HandleAssetTypeComboChange(const QString& assetType) override;
 
 protected:
-	Q_INVOKABLE bool loadSavedSettings();
+	Q_INVOKABLE bool loadSavedSettings() override;
 
 	QLineEdit* portEdit;
 	QLineEdit* intermediateFolderEdit;

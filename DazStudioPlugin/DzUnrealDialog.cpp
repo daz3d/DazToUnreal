@@ -83,6 +83,9 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 
 	settings = new QSettings("Daz 3D", "DazToUnreal");
 
+	// Rename Animation Options Box
+	animationSettingsGroupBox->setTitle("Animation Settings");
+
 	// add new asset type to assetTypeCombo widget ("MLDeformer")
 	assetTypeCombo->addItem("MLDeformer");
 
@@ -119,6 +122,12 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 		// reposition the Open Intermediate Folder button so it aligns with the center section
 		advancedLayout->removeWidget(m_OpenIntermediateFolderButton);
 		advancedLayout->addRow("", m_OpenIntermediateFolderButton);
+
+		// Disable Experimental Options Checkbox
+		m_enableExperimentalOptionsCheckBox->setEnabled(false);
+		m_enableExperimentalOptionsCheckBox->setToolTip(tr("No experimental options in this version."));
+		m_enableExperimentalOptionsCheckBox->setWhatsThis(tr("No experimental options in this version."));
+
 	}
 
 	// Configure Target Plugin Installer
@@ -441,8 +450,10 @@ void DzUnrealDialog::HandleOpenIntermediateFolderButton(QString sFolderPath)
 void DzUnrealDialog::HandleAssetTypeComboChange(const QString& assetType)
 {
 	mlDeformerSettingsGroupBox->setVisible(assetType == "MLDeformer");
-	DzBridgeDialog::HandleAssetTypeComboChange(assetType);
-}
+	animationSettingsGroupBox->setVisible(assetType == "Animation" || assetType == "Pose");
 
+	// DB 2023-Aug-10: Override default Base class behavior which hides Animation options behind Experimental Options mode
+	//DzBridgeDialog::HandleAssetTypeComboChange(assetType);
+}
 
 #include "moc_DzUnrealDialog.cpp"
