@@ -405,10 +405,7 @@ or Ignore this error and install the plugin anyway."),
 		msgBox.setText(tr("<h4>Unreal Plugin was successfully installed to:</h4>") +
 			"<h4><center>" + sPluginsPath + "</center></h4>" +
 			tr("<h4>If the Unreal Editor is open, please quit and restart Unreal to continue \
-the Bridge Export process.</h4>") +
-			tr("<h4><b>NOTE:</b> In order to Package a Project, you will also need \
-to download and install the PackageProject-Dependencies file from the \
-<a href=\"https://github.com/daz3d/DazToUnreal/releases\">DazToUnreal Github Releases</a> page.</h4>"));
+the Bridge Export process.</h4>") );
 		msgBox.setStandardButtons(QMessageBox::Ok);
 		msgBox.exec();
 	}
