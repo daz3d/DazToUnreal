@@ -37,12 +37,15 @@ DzUnrealAction::DzUnrealAction() :
 	 m_nPort = 0;
      m_nNonInteractiveMode = 0;
 	 m_sAssetType = QString("SkeletalMesh");
+
 	 //Setup Icon
+#ifndef VODS_LOCAL_BUILD // getEmbeddedImage specifically won't link for me locally
 	 QString iconName = "icon";
 	 QPixmap basePixmap = QPixmap::fromImage(getEmbeddedImage(iconName.toLatin1()));
 	 QIcon icon;
 	 icon.addPixmap(basePixmap, QIcon::Normal, QIcon::Off);
 	 QAction::setIcon(icon);
+#endif
 
 	 m_bGenerateNormalMaps = true;
 	 m_bPostProcessFbx = true;
