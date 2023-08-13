@@ -5,3 +5,9 @@ CMakeSettings.json
 Test/Results/temp_log.txt
 Intermediate
 Binaries
+x64/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+moc_*.cpp
