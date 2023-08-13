@@ -40,13 +40,13 @@ protected slots:
 protected:
 	Q_INVOKABLE bool loadSavedSettings();
 
-	QLineEdit* portEdit;
-	QLineEdit* intermediateFolderEdit;
-	QPushButton* intermediateFolderButton;
+	QLineEdit* portEdit = nullptr;
+	QLineEdit* intermediateFolderEdit = nullptr;
+	QPushButton* intermediateFolderButton = nullptr;
 
 	// MLDeformer settings
-	QGroupBox* mlDeformerSettingsGroupBox;
-	QLineEdit* mlDeformerPoseCountEdit;
+	QGroupBox* mlDeformerSettingsGroupBox = nullptr;
+	QLineEdit* mlDeformerPoseCountEdit = nullptr;
 
 #ifdef UNITTEST_DZBRIDGE
 	friend class UnitTest_DzUnrealDialog;
