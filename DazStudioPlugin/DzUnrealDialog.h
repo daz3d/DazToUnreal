@@ -27,6 +27,12 @@ public:
 	/** Destructor **/
 	virtual ~DzUnrealDialog() {}
 
+	//
+	bool getUniqueSkeletonPerCharacter() { 
+		return skeletalMeshUniqueSkeletonPerCharacterCheckBox ? skeletalMeshUniqueSkeletonPerCharacterCheckBox->isChecked() : false;
+	}
+
+	// Settings
 	Q_INVOKABLE void resetToDefaults() override;
 	Q_INVOKABLE void saveSettings() override;
 
@@ -47,6 +53,10 @@ protected:
 	// MLDeformer settings
 	QGroupBox* mlDeformerSettingsGroupBox = nullptr;
 	QLineEdit* mlDeformerPoseCountEdit = nullptr;
+
+	// SkeletalMesh settings
+	QGroupBox* skeletalMeshSettingsGroupBox = nullptr;
+	QCheckBox* skeletalMeshUniqueSkeletonPerCharacterCheckBox = nullptr;
 
 #ifdef UNITTEST_DZBRIDGE
 	friend class UnitTest_DzUnrealDialog;

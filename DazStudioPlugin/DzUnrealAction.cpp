@@ -193,6 +193,8 @@ void DzUnrealAction::writeConfiguration()
 	if (m_pSelectedNode == nullptr)
 		return;
 
+	DzUnrealDialog* DazToUnrealDialog = qobject_cast<DzUnrealDialog*>(m_bridgeDialog);
+
 	QTextStream* pCSVStream = nullptr;
 	QFile *pCSVfile = nullptr;
 
@@ -203,6 +205,11 @@ void DzUnrealAction::writeConfiguration()
 	 writer.startObject(true);
 
 	 writeDTUHeader(writer);
+
+	 if (m_sAssetType == "SkeletalMesh")
+	 {
+		 writer.addMember("CreateUniqueSkeleton", DazToUnrealDialog->getUniqueSkeletonPerCharacter());
+	 }
 
 	 if (m_sAssetType.toLower().contains("mesh") || m_sAssetType == "Animation")
 	 {

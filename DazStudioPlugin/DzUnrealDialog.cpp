@@ -86,7 +86,7 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	// add new asset type to assetTypeCombo widget ("MLDeformer")
 	assetTypeCombo->addItem("MLDeformer");
 
-	// Morph Settings
+	// MLDeformer Settings
 	mlDeformerSettingsGroupBox = new QGroupBox("MLDeformer Settings", this);
 	QFormLayout* mlDeformerSettingsLayout = new QFormLayout();
 	mlDeformerSettingsGroupBox->setLayout(mlDeformerSettingsLayout);
@@ -97,6 +97,19 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 
 	// Add ML Deformer settings to the mainLayout as a new row without header
 	mainLayout->addRow(mlDeformerSettingsGroupBox);
+
+	// SkeletalMesh Settings
+	skeletalMeshSettingsGroupBox = new QGroupBox("Skeletal Mesh Settings", this);
+	QFormLayout* skeletalMeshSettingsLayout = new QFormLayout();
+	skeletalMeshSettingsGroupBox->setLayout(skeletalMeshSettingsLayout);
+	skeletalMeshUniqueSkeletonPerCharacterCheckBox = new QCheckBox("", skeletalMeshSettingsGroupBox);
+	skeletalMeshUniqueSkeletonPerCharacterCheckBox->setChecked(false);
+	skeletalMeshUniqueSkeletonPerCharacterCheckBox->setWhatsThis("If checked, a new skeleton will be created for this character instead of sharing a skeleton with related characters.");
+	skeletalMeshSettingsLayout->addRow("Unique Skeleton", skeletalMeshUniqueSkeletonPerCharacterCheckBox);
+	mlDeformerSettingsGroupBox->setVisible(false);
+
+	// Add SkeletalMesh settings to the mainLayout as a new row without header
+	mainLayout->addRow(skeletalMeshSettingsGroupBox);
 
 	// Intermediate Folder
 	QHBoxLayout* intermediateFolderLayout = new QHBoxLayout();
@@ -171,10 +184,16 @@ bool DzUnrealDialog::loadSavedSettings()
 		portEdit->setText(settings->value("Port").toString());
 	}
 
-	// Animation settings
+	// MLDeformer settings
 	if (!settings->value("MLDeformerPoseCount").isNull())
 	{
 		mlDeformerPoseCountEdit->setText(settings->value("MLDeformerPoseCount").toString());
+	}
+
+	// SkeletalMesh settings
+	if (!settings->value("SkeletalMeshUniqueSkeletonPerCharacter").isNull())
+	{
+		skeletalMeshUniqueSkeletonPerCharacterCheckBox->setChecked(settings->value("SkeletalMeshUniqueSkeletonPerCharacter").toBool());
 	}
 
 	return true;
@@ -186,8 +205,11 @@ void DzUnrealDialog::saveSettings()
 
 	DzBridgeDialog::saveSettings();
 
-	// Animation settings
+	// MLDeformer settings
 	settings->setValue("MLDeformerPoseCount", mlDeformerPoseCountEdit->text().toInt());
+
+	// SkeletalMesh settings
+	settings->setValue("SkeletalMeshUniqueSkeletonPerCharacter", skeletalMeshUniqueSkeletonPerCharacterCheckBox->isChecked());
 }
 
 void DzUnrealDialog::resetToDefaults()
@@ -447,6 +469,7 @@ void DzUnrealDialog::HandleOpenIntermediateFolderButton(QString sFolderPath)
 void DzUnrealDialog::HandleAssetTypeComboChange(const QString& assetType)
 {
 	mlDeformerSettingsGroupBox->setVisible(assetType == "MLDeformer");
+	skeletalMeshSettingsGroupBox->setVisible(assetType == "Skeletal Mesh");
 	DzBridgeDialog::HandleAssetTypeComboChange(assetType);
 }
 

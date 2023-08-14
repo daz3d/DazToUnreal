@@ -33,6 +33,17 @@ struct TextureLookupInfo
 	bool bIsCutOut;
 };
 
+struct DazToUnrealImportData
+{
+	FString SourcePath;
+	FString ImportLocation;
+	DazAssetType AssetType;
+	DazCharacterType CharacterType;
+	FString CharacterTypeName;
+	bool bSetPostProcessAnimation = true;
+	bool bCreateUniqueSkeleton = false;
+};
+
 class FDazToUnrealModule : public IModuleInterface
 {
 public:
@@ -124,7 +135,7 @@ private:
 	bool ImportTextureAssets(TArray<FString>& SourcePaths, FString& ImportLocation);
 
 	/** Imports the modified FBX file*/
-	UObject* ImportFBXAsset(const FString& SourcePath, const FString& ImportLocation, const DazAssetType& AssetType, const DazCharacterType& CharacterType, const FString& CharacterTypeName, const bool bSetPostProcessAnimation);
+	UObject* ImportFBXAsset(const DazToUnrealImportData& DazImportData);
 
 	/** Function for creating the Material Instances for the model*/
 	//bool CreateMaterials(const FString CharacterMaterialFolder, const FString CharacterTexturesFolder, const TArray<FString>& MaterialNames, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties, const DazCharacterType CharacterType);
