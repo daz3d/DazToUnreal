@@ -1,12 +1,12 @@
 #pragma once
 #include "dzbasicdialog.h"
 #include <QtGui/qcombobox.h>
+#include <QtGui/qcheckbox.h>
 #include <QtCore/qsettings.h>
 #include "DzBridgeDialog.h"
 
 class QPushButton;
 class QLineEdit;
-class QCheckBox;
 class QComboBox;
 class QGroupBox;
 
