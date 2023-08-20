@@ -36,6 +36,17 @@ protected:
 	 virtual void exportNodeAnimation(DzNode* Bone, QMap<DzNode*, FbxNode*>& BoneMap, FbxAnimLayer* AnimBaseLayer, float FigureScale) override;
 	 virtual bool postProcessFbx(QString fbxFilePath) override;
 
+	 enum ELodMethod {
+		 Undefined = -1,
+		 PreGenerated = 0,
+		 Decimator = 1,
+		 Unreal_Builtin = 2,
+	 };
+	 virtual int getELodMethodMin() override { return 0; } 
+	 virtual int getELodMethodMax() override { return 2; } 
+	 //ELodMethod m_eLodMethod = ELodMethod::Unreal_Builtin; // 
+	 virtual DzBridgeAction::ELodMethod getLodMethod() const override { return (DzBridgeAction::ELodMethod) m_eLodMethod; }
+
 #ifdef UNITTEST_DZBRIDGE
 	 friend class UnitTest_DzUnrealAction;
 #endif

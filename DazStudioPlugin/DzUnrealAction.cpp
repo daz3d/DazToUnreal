@@ -89,6 +89,7 @@ void DzUnrealAction::executeAction()
 	if (m_bridgeDialog == nullptr)
 	{
 		m_bridgeDialog = new DzUnrealDialog(mw);
+		m_bridgeDialog->setBridgeActionObject(this);
 	}
 	else
 	{
@@ -228,6 +229,8 @@ void DzUnrealAction::writeConfiguration()
 
 		 writeAllSubdivisions(writer);
 		 writeAllDforceInfo(m_pSelectedNode, writer);
+
+		 writeAllLodSettings(writer);
 	 }
 
 	 if (m_sAssetType == "Pose")
@@ -284,6 +287,7 @@ void DzUnrealAction::resetToDefaults()
 	{
 		DzMainWindow* mw = dzApp->getInterface();
 		m_bridgeDialog = new DzUnrealDialog(mw);
+		m_bridgeDialog->setBridgeActionObject(this);
 	}
 	m_bridgeDialog->resetToDefaults();
 

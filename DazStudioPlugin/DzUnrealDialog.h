@@ -12,6 +12,8 @@ class QGroupBox;
 
 #include "dzbridge.h"
 
+class DZ_BRIDGE_NAMESPACE::DzBridgeAction;
+
 class DzUnrealDialog : public DZ_BRIDGE_NAMESPACE::DzBridgeDialog {
 	Q_OBJECT
 	Q_PROPERTY(QWidget* wIntermediateFolderEdit READ getIntermediateFolderEdit)
