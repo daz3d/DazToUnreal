@@ -47,8 +47,8 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 
 	// Set the dialog title
 	int revision = PLUGIN_REV % 1000;
-#ifdef _DEBUG
-	setWindowTitle(tr("Daz To Unreal %1 v%2.%3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD));
+#if 1
+	setWindowTitle(tr("ALPHA BUILD: Daz To Unreal %1 v%2.%3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD));
 #else
 	setWindowTitle(tr("Daz To Unreal %1 v%2.%3").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision));
 #endif
