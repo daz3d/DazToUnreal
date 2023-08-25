@@ -147,6 +147,10 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings)
 		TMap<FString, FSoftObjectPath> OtherSkeletons;
 
+	/** Used to save the skeleton to use for other character types when twist bones are taken out of line */
+	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings)
+		TMap<FString, FSoftObjectPath> SkeletonsWithTwistFix;
+
 	/** A mapping of default post process animations for different skeletons */
 	UPROPERTY(config, EditAnywhere, Category = SkeletonSettings)
 		TMap<FSoftObjectPath, FSoftClassPath> SkeletonPostProcessAnimation;

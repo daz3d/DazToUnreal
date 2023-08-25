@@ -197,6 +197,7 @@ void FDazToUnrealModule::StartupModule()
 	}
 
 	AddCreateRetargeterMenu();
+	AddCreateFullBodyIKControlRigMenu();
 
 	/*FGlobalTabmanager::Get()->RegisterNomadTabSpawner(DazToUnrealTabName, FOnSpawnTab::CreateRaw(this, &FDazToUnrealModule::OnSpawnPluginTab))
 		.SetDisplayName(LOCTEXT("FDazToUnrealTabTitle", "DazToUnreal"))
@@ -542,6 +543,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 ImportData.AssetType = AssetType;
 	 ImportData.CharacterTypeName = AssetID;
 	 JsonObject->TryGetBoolField(TEXT("CreateUniqueSkeleton"), ImportData.bCreateUniqueSkeleton);
+	 JsonObject->TryGetBoolField(TEXT("FixTwistBones"), ImportData.bFixTwistBones);
 
 	 if (AssetType == DazAssetType::Environment)
 	 {
@@ -996,6 +998,12 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 if (AssetType == DazAssetType::SkeletalMesh)
 	 {
 		 FDazToUnrealFbx::ParentAdditionalSkeletalMeshes(Scene);
+	 }
+	 
+	 // Take twist bones out of the chain
+	 if (AssetType == DazAssetType::SkeletalMesh && ImportData.bFixTwistBones)
+	 {
+		 FDazToUnrealFbx::FixTwistBones(RootBone);
 	 }
 
 	 // Daz Studio puts the base bone rotations in a different place than Unreal expects them.
@@ -1791,25 +1799,50 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImpo
 	 FSoftObjectPath SkeletonPath;
 	 if (!DazImportData.bCreateUniqueSkeleton)
 	 {
-		 if (DazImportData.CharacterType == DazCharacterType::Genesis1)
+		 if (DazImportData.bFixTwistBones)
 		 {
-			 Skeleton = (USkeleton*)CachedSettings->Genesis1Skeleton.TryLoad();
-			 SkeletonPath = CachedSettings->Genesis1Skeleton;
+			 if (CachedSettings->SkeletonsWithTwistFix.Contains(DazImportData.CharacterTypeName))
+			 {
+				 Skeleton = (USkeleton*)CachedSettings->SkeletonsWithTwistFix[DazImportData.CharacterTypeName].TryLoad();
+				 if (Skeleton)
+				 {
+					 SkeletonPath = CachedSettings->SkeletonsWithTwistFix[DazImportData.CharacterTypeName];
+				 }
+				 else
+				 {
+					 CachedSettings->SkeletonsWithTwistFix.Remove(DazImportData.CharacterTypeName);
+				 } 
+			 }
 		 }
-		 if (DazImportData.CharacterType == DazCharacterType::Genesis3Male || DazImportData.CharacterType == DazCharacterType::Genesis3Female)
+		 else
 		 {
-			 Skeleton = (USkeleton*)CachedSettings->Genesis3Skeleton.TryLoad();
-			 SkeletonPath = CachedSettings->Genesis3Skeleton;
-		 }
-		 if (DazImportData.CharacterType == DazCharacterType::Genesis8Male || DazImportData.CharacterType == DazCharacterType::Genesis8Female)
-		 {
-			 Skeleton = (USkeleton*)CachedSettings->Genesis8Skeleton.TryLoad();
-			 SkeletonPath = CachedSettings->Genesis8Skeleton;
-		 }
-		 if (DazImportData.CharacterType == DazCharacterType::Unknown && CachedSettings->OtherSkeletons.Contains(DazImportData.CharacterTypeName))
-		 {
-			 Skeleton = (USkeleton*)CachedSettings->OtherSkeletons[DazImportData.CharacterTypeName].TryLoad();
-			 SkeletonPath = CachedSettings->OtherSkeletons[DazImportData.CharacterTypeName];
+			 if (DazImportData.CharacterType == DazCharacterType::Genesis1)
+			 {
+				 Skeleton = (USkeleton*)CachedSettings->Genesis1Skeleton.TryLoad();
+				 SkeletonPath = CachedSettings->Genesis1Skeleton;
+			 }
+			 if (DazImportData.CharacterType == DazCharacterType::Genesis3Male || DazImportData.CharacterType == DazCharacterType::Genesis3Female)
+			 {
+				 Skeleton = (USkeleton*)CachedSettings->Genesis3Skeleton.TryLoad();
+				 SkeletonPath = CachedSettings->Genesis3Skeleton;
+			 }
+			 if (DazImportData.CharacterType == DazCharacterType::Genesis8Male || DazImportData.CharacterType == DazCharacterType::Genesis8Female)
+			 {
+				 Skeleton = (USkeleton*)CachedSettings->Genesis8Skeleton.TryLoad();
+				 SkeletonPath = CachedSettings->Genesis8Skeleton;
+			 }
+			 if (DazImportData.CharacterType == DazCharacterType::Unknown && CachedSettings->OtherSkeletons.Contains(DazImportData.CharacterTypeName))
+			 {
+				 Skeleton = (USkeleton*)CachedSettings->OtherSkeletons[DazImportData.CharacterTypeName].TryLoad();
+				 if (Skeleton)
+				 {
+					 SkeletonPath = CachedSettings->OtherSkeletons[DazImportData.CharacterTypeName];
+				 }
+				 else
+				 {
+					 CachedSettings->OtherSkeletons.Remove(DazImportData.CharacterTypeName);
+				 }
+			 }
 		 }
 	 }
 
@@ -1945,7 +1978,20 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImpo
 					 }
 					 
 					 // Add this skeleton as the default for this character type
-					 CachedSettings->OtherSkeletons.Add(DazImportData.CharacterTypeName, Skeleton);
+					 if (DazImportData.bFixTwistBones)
+					 {
+						 if (!CachedSettings->SkeletonsWithTwistFix.Contains(DazImportData.CharacterTypeName))
+						 {
+							 CachedSettings->SkeletonsWithTwistFix.Add(DazImportData.CharacterTypeName, Skeleton);
+						 }
+					 }
+					 else
+					 {
+						 if (!CachedSettings->OtherSkeletons.Contains(DazImportData.CharacterTypeName))
+						 {
+							 CachedSettings->OtherSkeletons.Add(DazImportData.CharacterTypeName, Skeleton);
+						 }
+					 }
 					 CachedSettings->SaveConfig(CPF_Config, *CachedSettings->GetDefaultConfigFilename());
 				}
 		  }
@@ -2080,6 +2126,51 @@ UIKRigDefinition* FDazToUnrealModule::FindIKRigForSkeletalMesh(USkeletalMesh* Sk
 	}
 #endif
 	return nullptr;
+}
+
+void FDazToUnrealModule::AddCreateFullBodyIKControlRigMenu()
+{
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 0
+	// Create a new context menu item for Skeletal Meshes
+	UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("ContentBrowser.AssetContextMenu.SkeletalMesh");
+	FToolMenuSection& Section = Menu->FindOrAddSection("GetAssetActions");
+
+	//USkeletalMesh* TargetSkeletalMesh = nullptr;
+	//if (const UContentBrowserAssetContextMenuContext* CBContext = Menu->Context.FindContext<UContentBrowserAssetContextMenuContext>())
+	//{
+	//	TargetSkeletalMesh = CBContext->LoadFirstSelectedObject<USkeletalMesh>();
+	//}
+
+	Section.AddDynamicEntry("CreateFBIKControlRig", FNewToolMenuSectionDelegate::CreateLambda(
+		[this](FToolMenuSection& Section)
+		{
+
+			if (UContentBrowserAssetContextMenuContext* Context = Section.FindContext<UContentBrowserAssetContextMenuContext>())
+			{
+				if (Context->SelectedAssets.Num() > 0)
+				{
+					Section.AddMenuEntry(
+						FName(TEXT("CreateFullBodyIKControlRigMenu")),
+						LOCTEXT("CreateFullBodyIKControlRigLabel", "Create FBIK Control Rig"),
+						LOCTEXT("CreateFullBodyIKControlRigLabelTip", "Creates a Control Rig based around a Full Body IK Node"),
+						FSlateIcon(),
+						FUIAction(FExecuteAction::CreateRaw(this, &FDazToUnrealModule::OnCreateFullBodyIKControlRigClicked, Context->SelectedAssets[0].GetSoftObjectPath()))
+					);
+				}
+			}
+		}
+	));
+
+#endif
+}
+
+void FDazToUnrealModule::OnCreateFullBodyIKControlRigClicked(FSoftObjectPath SourceObjectPath)
+{
+	FString SkeletalMeshPackagePath = SourceObjectPath.ToString();//SourceSkeletalMesh->GetOutermost()->GetPathName() + TEXT(".") + SourceSkeletalMesh->GetName();
+	FString DTUPath = FDazToUnrealUtils::GetDTUPathForModel(SourceObjectPath);
+	FString CreateControlRigCommand = FString::Format(TEXT("py CreateControlRig.py --skeletalMesh={0} --dtuFile=\"{1}\""), { SkeletalMeshPackagePath, DTUPath });
+	UE_LOG(LogDazToUnreal, Log, TEXT("Creating FBIK Control Rig with command: %s"), *CreateControlRigCommand);
+	GEngine->Exec(NULL, *CreateControlRigCommand);
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -100,16 +100,22 @@ def create_control(bone_name):
     unreal.EulerTransform(scale=[1, 1, 1]))
 
     key = unreal.RigElementKey(type=unreal.RigElementType.BONE, name=bone_name)
-    try:
-        control_key = hierarchy_controller.add_control(control_name, unreal.RigElementKey(), default_setting, default_value, True, True)
-    except:
-        control_key = hierarchy_controller.add_control(control_name, unreal.RigElementKey(), default_setting, default_value, True)
+    rig_control_element = hierarchy.find_control(unreal.RigElementKey(type=unreal.RigElementType.CONTROL, name=control_name))
+    control_key = rig_control_element.get_editor_property('key')
+    print(rig_control_element)
+    if control_key.get_editor_property('name') != "":
+        control_key = rig_control_element.get_editor_property('key')
+    else:
+        try:
+            control_key = hierarchy_controller.add_control(control_name, unreal.RigElementKey(), default_setting, default_value, True, True)
+        except:
+            control_key = hierarchy_controller.add_control(control_name, unreal.RigElementKey(), default_setting, default_value, True)
     transform = hierarchy.get_global_transform(key, True)
     hierarchy.set_control_offset_transform(control_key, transform, True)
 
     if bone_name in control_list:
         create_direct_control(bone_name)
-    else:
+    elif bone_name in effector_list:
         create_effector(bone_name)
     create_construction(bone_name)
     create_backward_solver(bone_name)
@@ -152,6 +158,44 @@ def create_direct_control(bone_name):
             print("ERROR: CreateControlRig.py: rig_controller.add_Link(): " + str(e))
     rig_controller.add_link(next_forward_execute, set_bone_transform_node_name + '.ExecuteContext')
     next_forward_execute = set_bone_transform_node_name + '.ExecuteContext'
+
+# def create_preferred_angle_control(bone_name):
+#     global next_forward_execute
+#     global effector_get_transform_widget_height
+#     #effector_get_transform_widget_height += 250
+#     control_name = bone_name + '_ctrl'
+#     get_control_transform_node_name = "RigUnit_PreferredAngle_GetTransform_" + bone_name
+#     set_bone_transform_node_name = "RigtUnit_PreferredAngle_SetTransform_" + control_name
+#     rig_controller.add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_GetTransform', 'Execute', unreal.Vector2D(101.499447, -244.500249), get_control_transform_node_name)
+#     rig_controller.set_pin_default_value(get_control_transform_node_name + '.Item', '(Type=Bone)')
+#     rig_controller.set_pin_expansion(get_control_transform_node_name + '.Item', True)
+#     rig_controller.set_pin_default_value(get_control_transform_node_name + '.Space', 'GlobalSpace')
+#     rig_controller.set_pin_default_value(get_control_transform_node_name + '.Item.Name', control_name, True)
+#     rig_controller.set_pin_default_value(get_control_transform_node_name + '.Item.Type', 'Control', True)
+
+#     try:
+#         rig_controller.add_template_node('Set Transform::Execute(in Item,in Space,in bInitial,in Value,in Weight,in bPropagateToChildren,io ExecuteContext)', unreal.Vector2D(542.832780, -257.833582), set_bone_transform_node_name)
+#     except:
+#         set_transform_scriptstruct = get_scriptstruct_by_node_name("SetTransform")
+#         rig_controller.add_unit_node(set_transform_scriptstruct, 'Execute', unreal.Vector2D(542.832780, -257.833582), set_bone_transform_node_name)
+#     rig_controller.set_pin_default_value(set_bone_transform_node_name + '.Item', '(Type=Bone,Name="None")')
+#     rig_controller.set_pin_expansion(set_bone_transform_node_name + '.Item', False)
+#     rig_controller.set_pin_default_value(set_bone_transform_node_name + '.Space', 'GlobalSpace')
+#     rig_controller.set_pin_default_value(set_bone_transform_node_name + '.bInitial', 'False')
+#     rig_controller.set_pin_default_value(set_bone_transform_node_name + '.Weight', '1.000000')
+#     rig_controller.set_pin_default_value(set_bone_transform_node_name + '.bPropagateToChildren', 'True')
+#     rig_controller.set_pin_default_value(set_bone_transform_node_name + '.Item.Name', bone_name, True)
+#     rig_controller.set_pin_default_value(set_bone_transform_node_name + '.Item.Type', 'Bone', True)
+
+#     try:
+#         rig_controller.add_link(get_control_transform_node_name + '.Transform', set_bone_transform_node_name + '.Value')
+#     except:
+#         try:
+#             rig_controller.add_link(get_control_transform_node_name + '.Transform', set_bone_transform_node_name + '.Transform')
+#         except Exception as e:
+#             print("ERROR: CreateControlRig.py: rig_controller.add_Link(): " + str(e))
+#     rig_controller.add_link(next_forward_execute, set_bone_transform_node_name + '.ExecuteContext')
+#     next_forward_execute = set_bone_transform_node_name + '.ExecuteContext'
    
 def create_effector(bone_name):
     global effector_get_transform_widget_height
@@ -204,8 +248,15 @@ if blueprint:
     if rig_controller is None:
         rig_controller = blueprint.get_controller()
 
-    rig_controller.set_node_selection(['RigUnit_BeginExecution'])
-    hierarchy_controller.import_bones_from_asset(args.skeletalMesh, 'None', False, False, True)
+    #rig_controller.set_node_selection(['RigUnit_BeginExecution'])
+    hierarchy_controller.import_bones_from_asset(args.skeletalMesh, 'None', True, False, True)
+
+    # Remove Existing Nodes
+    graph = rig_controller.get_graph()
+    node_count = len(graph.get_nodes())
+    while node_count > 0:
+        rig_controller.remove_node(graph.get_nodes()[-1])
+        node_count = node_count - 1
 
     # Create Full Body IK Node
     rig_controller.add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_BeginExecution', 'Execute', unreal.Vector2D(22.229613, 60.424645), 'BeginExecution')
@@ -232,19 +283,24 @@ if blueprint:
     bones_in_dtu = ['root']
     for bone_limits in limits.values():
         bone_limit_name = bone_limits[0]
-        print(bone_limit_name)
+        #print(bone_limit_name)
         bones_in_dtu.append(bone_limit_name)
 
     # Create Effectors, order matters.  Child controls should be after Parent Control
     effector_list = ['pelvis', 'l_foot', 'r_foot', 'spine4', 'l_hand', 'r_hand'] # G9
     effector_list+= ['chestUpper', 'head', 'lFoot', 'rFoot', 'lHand', 'rHand'] #G8
     effector_list = [bone for bone in effector_list if bone in bones_in_dtu]
-    print(effector_list)
+    #print(effector_list)
 
     # These controls are mid chain and don't have full weight
     guide_list = ['l_shin', 'r_shin', 'l_forearm', 'r_forearm'] # G9
     guide_list+= ['lShin', 'rShin', 'lForearmBend', 'rForearmBend'] # G8
     guide_list = [bone for bone in guide_list if bone in bones_in_dtu]
+
+    # These controls are for bones that shouldn't move much on their own, but user can rotate them
+    suggested_rotation_list = ['l_shoulder', 'r_shoulder'] # G9
+    suggested_rotation_list+= ['lCollar', 'rCollar'] # G8
+    suggested_rotation_list = [bone for bone in suggested_rotation_list if bone in bones_in_dtu]
 
     # This is for controls outside of Full Body IK
     control_list = ['root', 'hip']
@@ -365,25 +421,42 @@ if blueprint:
             z_max_rotate = max(abs(bone_limit_z_min), abs(bone_limit_z_max))
             #print(bone_limit_name, x_max_rotate, y_max_rotate, z_max_rotate)
 
-            
-            limit_divider = 1.0
-            if x_max_rotate > y_max_rotate and x_max_rotate > z_max_rotate:
-                if abs(bone_limit_x_min) > abs(bone_limit_x_max):
-                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.X', str(bone_limit_x_min / limit_divider), False)
-                else:
-                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.X', str(bone_limit_x_max / limit_divider), False)
+            if bone_limit_name in suggested_rotation_list:
+                rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.X', "0.0", False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Y', "0.0", False)
+                rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Z', "0.0", False)
+                create_control(bone_limit_name)
+                to_euler_name = "Preferred_Angles_To_Euler_" + bone_limit_name
+                get_transform_name = "Preferred_Angles_GetRotator_" + bone_limit_name
+                rig_controller.add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_GetControlRotator', 'Execute', unreal.Vector2D(-344.784477, 4040.400172), get_transform_name)
+                rig_controller.set_pin_default_value(get_transform_name + '.Space', 'GlobalSpace')
+                #rig_controller.set_pin_default_value(get_transform_name + '.bInitial', 'False')
+                rig_controller.set_pin_default_value(get_transform_name + '.Control', bone_limit_name + '_ctrl', True)
+                #rig_controller.set_pin_default_value(get_transform_name + '.Item.Type', 'Control', True)
+                #rig_controller.add_unit_node_from_struct_path('/Script/RigVM.RigVMFunction_MathQuaternionToEuler', 'Execute', unreal.Vector2D(9.501237, 4176.400172), to_euler_name)
+                #rig_controller.add_link(get_transform_name + '.Transform.Rotation', to_euler_name + '.Value')
+                rig_controller.add_link(get_transform_name + '.Rotator.Roll', limit_bone_settings + '.PreferredAngles.X')
+                rig_controller.add_link(get_transform_name + '.Rotator.Pitch', limit_bone_settings + '.PreferredAngles.Y')
+                rig_controller.add_link(get_transform_name + '.Rotator.Yaw', limit_bone_settings + '.PreferredAngles.Z')
+            else:
+                limit_divider = 1.0
+                if x_max_rotate > y_max_rotate and x_max_rotate > z_max_rotate:
+                    if abs(bone_limit_x_min) > abs(bone_limit_x_max):
+                        rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.X', str(bone_limit_x_min / limit_divider), False)
+                    else:
+                        rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.X', str(bone_limit_x_max / limit_divider), False)
 
-            if y_max_rotate > x_max_rotate and y_max_rotate > z_max_rotate:
-                if abs(bone_limit_y_min) > abs(bone_limit_y_max):
-                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Y', str(bone_limit_y_min / limit_divider), False)
-                else:
-                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Y', str(bone_limit_y_max / limit_divider), False)
-        
-            if z_max_rotate > x_max_rotate and z_max_rotate > y_max_rotate:
-                if abs(bone_limit_z_min) > abs(bone_limit_z_max):
-                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Z', str(bone_limit_z_min / limit_divider), False)
-                else:
-                    rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Z', str(bone_limit_z_max / limit_divider), False)
+                if y_max_rotate > x_max_rotate and y_max_rotate > z_max_rotate:
+                    if abs(bone_limit_y_min) > abs(bone_limit_y_max):
+                        rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Y', str(bone_limit_y_min / limit_divider), False)
+                    else:
+                        rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Y', str(bone_limit_y_max / limit_divider), False)
+            
+                if z_max_rotate > x_max_rotate and z_max_rotate > y_max_rotate:
+                    if abs(bone_limit_z_min) > abs(bone_limit_z_max):
+                        rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Z', str(bone_limit_z_min / limit_divider), False)
+                    else:
+                        rig_controller.set_pin_default_value(limit_bone_settings + '.PreferredAngles.Z', str(bone_limit_z_max / limit_divider), False)
             # rig_controller.set_pin_default_value('PBIK.BoneSettings.0.Bone', 'pelvis', False)
             # rig_controller.set_pin_default_value('PBIK.BoneSettings.0.RotationStiffness', '0.900000', False)
             # rig_controller.set_pin_default_value('PBIK.BoneSettings.0.PositionStiffness', '0.900000', False)

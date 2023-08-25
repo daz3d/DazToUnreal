@@ -102,10 +102,17 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	skeletalMeshSettingsGroupBox = new QGroupBox("Skeletal Mesh Settings", this);
 	QFormLayout* skeletalMeshSettingsLayout = new QFormLayout();
 	skeletalMeshSettingsGroupBox->setLayout(skeletalMeshSettingsLayout);
+
 	skeletalMeshUniqueSkeletonPerCharacterCheckBox = new QCheckBox("", skeletalMeshSettingsGroupBox);
 	skeletalMeshUniqueSkeletonPerCharacterCheckBox->setChecked(false);
 	skeletalMeshUniqueSkeletonPerCharacterCheckBox->setWhatsThis("If checked, a new skeleton will be created for this character instead of sharing a skeleton with related characters.");
 	skeletalMeshSettingsLayout->addRow("Unique Skeleton", skeletalMeshUniqueSkeletonPerCharacterCheckBox);
+
+	skeletalMeshFixTwistBonesCheckBox = new QCheckBox("", skeletalMeshSettingsGroupBox);
+	skeletalMeshFixTwistBonesCheckBox->setChecked(false);
+	skeletalMeshFixTwistBonesCheckBox->setWhatsThis("If checked, twist bones will be taken out of line.");
+	skeletalMeshSettingsLayout->addRow("Fix Twist Bones", skeletalMeshFixTwistBonesCheckBox);
+
 	mlDeformerSettingsGroupBox->setVisible(false);
 
 	// Add SkeletalMesh settings to the mainLayout as a new row without header
@@ -196,6 +203,11 @@ bool DzUnrealDialog::loadSavedSettings()
 		skeletalMeshUniqueSkeletonPerCharacterCheckBox->setChecked(settings->value("SkeletalMeshUniqueSkeletonPerCharacter").toBool());
 	}
 
+	if (!settings->value("SkeletalMeshFixTwistBones").isNull())
+	{
+		skeletalMeshFixTwistBonesCheckBox->setChecked(settings->value("SkeletalMeshFixTwistBones").toBool());
+	}
+
 	return true;
 }
 
@@ -210,6 +222,7 @@ void DzUnrealDialog::saveSettings()
 
 	// SkeletalMesh settings
 	settings->setValue("SkeletalMeshUniqueSkeletonPerCharacter", skeletalMeshUniqueSkeletonPerCharacterCheckBox->isChecked());
+	settings->setValue("SkeletalMeshFixTwistBones", skeletalMeshFixTwistBonesCheckBox->isChecked());
 }
 
 void DzUnrealDialog::resetToDefaults()

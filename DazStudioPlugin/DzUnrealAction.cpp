@@ -209,6 +209,7 @@ void DzUnrealAction::writeConfiguration()
 	 if (m_sAssetType == "SkeletalMesh")
 	 {
 		 writer.addMember("CreateUniqueSkeleton", DazToUnrealDialog->getUniqueSkeletonPerCharacter());
+		 writer.addMember("FixTwistBones", DazToUnrealDialog->getFixTwistBones());
 	 }
 
 	 if (m_sAssetType.toLower().contains("mesh") || m_sAssetType == "Animation")

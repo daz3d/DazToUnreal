@@ -32,6 +32,10 @@ public:
 		return skeletalMeshUniqueSkeletonPerCharacterCheckBox ? skeletalMeshUniqueSkeletonPerCharacterCheckBox->isChecked() : false;
 	}
 
+	bool getFixTwistBones() {
+		return skeletalMeshFixTwistBonesCheckBox ? skeletalMeshFixTwistBonesCheckBox->isChecked() : false;
+	}
+
 	// Settings
 	Q_INVOKABLE void resetToDefaults() override;
 	Q_INVOKABLE void saveSettings() override;
@@ -57,6 +61,7 @@ protected:
 	// SkeletalMesh settings
 	QGroupBox* skeletalMeshSettingsGroupBox = nullptr;
 	QCheckBox* skeletalMeshUniqueSkeletonPerCharacterCheckBox = nullptr;
+	QCheckBox* skeletalMeshFixTwistBonesCheckBox = nullptr;
 
 #ifdef UNITTEST_DZBRIDGE
 	friend class UnitTest_DzUnrealDialog;

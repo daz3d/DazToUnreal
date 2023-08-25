@@ -42,9 +42,10 @@ struct DazToUnrealImportData
 	FString CharacterTypeName;
 	bool bSetPostProcessAnimation = true;
 	bool bCreateUniqueSkeleton = false;
+	bool bFixTwistBones = false;
 };
 
-class FDazToUnrealModule : public IModuleInterface
+class FDazToUnrealModule : public IModuleInterface//, TSharedFromThis<FDazToUnrealModule>
 {
 public:
 	static int BatchConversionMode;
@@ -100,6 +101,15 @@ private:
 	
 	// Find a control rig for the skeletal mesh
 	class UIKRigDefinition* FindIKRigForSkeletalMesh(class USkeletalMesh* SkeletalMesh);
+
+private:
+
+	// Create the menu for generating a Full Body IK Control Rig
+	void AddCreateFullBodyIKControlRigMenu();
+
+	// Create the Full Body IK Control Rig
+	void OnCreateFullBodyIKControlRigClicked(FSoftObjectPath SourceObjectPath);
+
 private:
 	TSharedPtr<class FUICommandList> PluginCommands;
 
