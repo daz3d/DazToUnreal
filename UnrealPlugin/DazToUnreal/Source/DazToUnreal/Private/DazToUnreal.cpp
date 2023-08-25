@@ -2130,7 +2130,7 @@ UIKRigDefinition* FDazToUnrealModule::FindIKRigForSkeletalMesh(USkeletalMesh* Sk
 
 void FDazToUnrealModule::AddCreateFullBodyIKControlRigMenu()
 {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 0
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
 	// Create a new context menu item for Skeletal Meshes
 	UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("ContentBrowser.AssetContextMenu.SkeletalMesh");
 	FToolMenuSection& Section = Menu->FindOrAddSection("GetAssetActions");
