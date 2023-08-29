@@ -48,6 +48,9 @@ DzUnrealAction::DzUnrealAction() :
 	 m_bPostProcessFbx = true;
 	 m_bRemoveDuplicateGeografts = true;
 
+	 // DB, 2022-Aug-29: Force LOD method to Unreal Built-in
+	 m_eLodMethod = (DzBridgeAction::ELodMethod) ELodMethod::Unreal_Builtin;
+
 }
 
 void DzUnrealAction::executeAction()

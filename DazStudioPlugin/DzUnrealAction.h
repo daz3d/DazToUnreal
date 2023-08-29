@@ -41,10 +41,10 @@ protected:
 		 PreGenerated = 0,
 		 Decimator = 1,
 		 Unreal_Builtin = 2,
-	 };
+	 } override;
 	 virtual int getELodMethodMin() override { return 0; } 
 	 virtual int getELodMethodMax() override { return 2; } 
-	 //ELodMethod m_eLodMethod = ELodMethod::Unreal_Builtin; // 
+	 // ELodMethod m_eLodMethod = ELodMethod::Unreal_Builtin; // WARNING: Do NOT Use this line, only here to prevent people from using it. This will hide the base class member instead of over-riding it.
 	 virtual DzBridgeAction::ELodMethod getLodMethod() const override { return (DzBridgeAction::ELodMethod) m_eLodMethod; }
 
 #ifdef UNITTEST_DZBRIDGE
