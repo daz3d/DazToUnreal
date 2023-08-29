@@ -98,6 +98,8 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	mlDeformerSettingsLayout->addRow("Pose Count", mlDeformerPoseCountEdit);
 	mlDeformerSettingsGroupBox->setVisible(false);
 
+	this->showLodRow(true);
+
 	// Add ML Deformer settings to the mainLayout as a new row without header
 	mainLayout->addRow(mlDeformerSettingsGroupBox);
 

@@ -56,6 +56,8 @@
 #include "Async/Async.h"
 #include "Animation/AnimBlueprint.h"
 #include "Animation/AnimBlueprintGeneratedClass.h"
+#include "Animation/PoseAsset.h"
+#include "Rendering/SkeletalMeshModel.h"
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
 #include "LevelEditorSubsystem.h"
@@ -64,6 +66,8 @@
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
 #include "LevelEditorSubsystem.h"
 #endif
+
+#include "IMeshReductionInterfaces.h"
 
 DEFINE_LOG_CATEGORY(LogDazToUnreal);
 //#include "ISkeletonEditorModule.h"
@@ -1589,9 +1593,108 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 		 ContentBrowserModule.Get().SyncBrowserToAssets(AssetsToSelect);
 	 }
 
+	 // DB 2023-Aug-15: Auto-generate LOD meshes
+#define LOD_METHOD_UNREAL_BUILTIN 2
+	 TSharedPtr<FJsonObject> LodSettingsObject = JsonObject->GetObjectField(TEXT("LOD Settings"));
+	 bool bGenerateLODs = LodSettingsObject->GetBoolField("Generate LODs");
+	 int nLodMethod = LodSettingsObject->GetIntegerField("LOD Method");
+	 int targetNumLODs = LodSettingsObject->GetIntegerField("Number of LODs");
+
+	 if (bGenerateLODs == true && nLodMethod == LOD_METHOD_UNREAL_BUILTIN)
+	 {
+		 Progress.EnterProgressFrame(0.1, LOCTEXT("GeneratingLODs", "Generating LOD Meshes..."));
+		 if (USkeletalMesh* SkeletalMeshAsset = Cast<USkeletalMesh>(NewObject))
+		 {
+			 int numLOD = SkeletalMeshAsset->GetLODNum();
+			 if (numLOD > 1)
+			 {
+				 // remove all LODs above base (lod 0)
+				 SkeletalMeshAsset->GetImportedModel()->LODModels.RemoveAt(1, numLOD-1);
+				 for (int i = numLOD-1; i > 0; i--)
+				 {
+					 SkeletalMeshAsset->RemoveLODInfo(i);
+				 }
+				 SkeletalMeshAsset->PostEditChange();
+				 numLOD = SkeletalMeshAsset->GetLODNum();
+			 }
+			 UE_LOG(LogTemp, Warning, TEXT(">> LOD Num: %d"), numLOD);
+
+			 IMeshReductionModule* meshReducer = (IMeshReductionModule*)FModuleManager::Get().LoadModule(TEXT("MeshReductionInterface"));
+			 IMeshReduction* skMeshReducer = meshReducer->GetSkeletalMeshReductionInterface();
+			 if (skMeshReducer != nullptr)
+			 {
+				 bool isSupported = skMeshReducer->IsSupported();
+				 FString versionString = skMeshReducer->GetVersionString();
+				 if (isSupported)
+				 {
+					 ITargetPlatform* pcPlatform = nullptr;
+#if PLATFORM_WINDOWS
+					 pcPlatform = GetTargetPlatformManager()->FindTargetPlatform(TEXT("Windows"));
+#elif PLATFORM_MAC
+					 pcPlatform = GetTargetPlatformManager()->FindTargetPlatform(TEXT("Mac"));
+#endif
+					 if (pcPlatform == nullptr)
+					 {
+						 // Handle the case where the target platform was not found
+						 UE_LOG(LogTemp, Warning, TEXT("Target platform not found!"));
+					 }
+
+					 TArray<TSharedPtr<FJsonValue>> LodInfoArray = LodSettingsObject->GetArrayField(TEXT("LOD Info Array"));
+					 while (numLOD < targetNumLODs)
+					 {
+
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION >= 26
+						 if (LodInfoArray.Num() > numLOD)
+						 {
+							 TSharedPtr<FJsonObject> lodInfo = LodInfoArray[numLOD]->AsObject();
+							 if (lodInfo)
+							 {
+								 int MaxNumOfVerts = 0;
+
+								 MaxNumOfVerts = SkeletalMeshAsset->GetImportedModel()->LODModels[0].NumVertices;
+
+								 float NewScreenSize = lodInfo->GetNumberField(TEXT("Threshold Screen Height"));
+								 float NewQualityPercent = lodInfo->GetNumberField(TEXT("Quality Percent"));
+								 int NewQualityVertex = (int) lodInfo->GetIntegerField(TEXT("Quality Vertex"));
+								 FSkeletalMeshLODInfo NewLODInfo;
+								 NewLODInfo.ReductionSettings.TerminationCriterion = SkeletalMeshTerminationCriterion::SMTC_NumOfVerts;
+								 NewLODInfo.ScreenSize = NewScreenSize;
+								 if (NewQualityPercent != -1)
+								 {
+									 NewLODInfo.ReductionSettings.NumOfVertPercentage = NewQualityPercent;
+								 }
+								 else if (NewQualityVertex > 0)
+								 {
+									 NewLODInfo.ReductionSettings.NumOfVertPercentage = (double) NewQualityVertex / MaxNumOfVerts;
+								 }
+								 if (NewQualityVertex > 0)
+								 {
+									 NewLODInfo.ReductionSettings.MaxNumOfVerts = NewQualityVertex;
+								 }
+								 SkeletalMeshAsset->AddLODInfo(NewLODInfo);
+							 }
+						 }
+#endif
+
+						 FText LodProgressText = FText::Format(LOCTEXT("GeneratingLOD_XofX", "Generating LOD Mesh: {numLOD} of {targetNumLODs}"),
+							 FText::AsNumber(numLOD),
+							 FText::AsNumber(targetNumLODs - 1));
+						 Progress.EnterProgressFrame(1.0 / targetNumLODs, LodProgressText);
+
+#if ENGINE_MAJOR_VERSION > 4 || ENGINE_MINOR_VERSION > 26
+						 skMeshReducer->ReduceSkeletalMesh(SkeletalMeshAsset, numLOD, pcPlatform);
+#else
+						 skMeshReducer->ReduceSkeletalMesh(SkeletalMeshAsset, numLOD);
+#endif
+						 numLOD++;
+					 }
+				 }
+			 }
+		 }
+	 }
+
 	 return NewObject;
 }
-
 
 // Modified from the FColor::FromHex function
 FLinearColor FDazToUnrealModule::FromHex(const FString& HexString)
