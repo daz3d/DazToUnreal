@@ -69,6 +69,10 @@
 
 #include "IMeshReductionInterfaces.h"
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+#include "Engine/SkinnedAssetCommon.h"
+#endif
+
 DEFINE_LOG_CATEGORY(LogDazToUnreal);
 //#include "ISkeletonEditorModule.h"
 //#include "IEditableSkeleton.h"
