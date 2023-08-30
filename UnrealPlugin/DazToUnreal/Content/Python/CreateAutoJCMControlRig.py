@@ -2,7 +2,6 @@ import unreal
 import argparse
 import json
 
-
 def get_scriptstruct_by_node_name(node_name):
     control_rig_blueprint = unreal.load_object(None, '/DazToUnreal/Python/ControlRig_Node_Library')
     rig_vm_graph = control_rig_blueprint.get_model()
@@ -33,6 +32,10 @@ blueprint = unreal.AssetToolsHelpers.get_asset_tools().create_asset(asset_name=a
 skeletal_mesh = unreal.load_object(name = args.skeletalMesh, outer = None)
 unreal.ControlRigBlueprintLibrary.set_preview_mesh(blueprint, skeletal_mesh)
 
+# Check if this is a forward or right facing model
+skeletal_mesh_import_data = skeletal_mesh.get_editor_property('asset_import_data')
+skeletal_mesh_force_front_x = skeletal_mesh_import_data.get_editor_property('force_front_x_axis')
+
 # Turn off notifications or each change will compile the RigVM
 blueprint.suspend_notifications(True)
 
@@ -62,7 +65,6 @@ hierarchy_controller.import_curves_from_asset(args.skeletalMesh, 'None', False)
 
 rig_controller.add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_BeginExecution', 'Execute', unreal.Vector2D(-97.954082, -704.318460), 'BeginExecution')
 
-
 # Get Bone list for character
 dtu_data = json.load(open(args.dtuFile.replace('\"', '')))
 joint_links = dtu_data['JointLinks']
@@ -71,12 +73,18 @@ joint_axis_list = {}
 for joint_link in joint_links:
     joint_link_bone_name = joint_link['Bone']
     daz_axis = joint_link['Axis']
-    if daz_axis == 'XRotate':
-        joint_link_axis = 'YRotate'
-    if daz_axis == 'YRotate':
-        joint_link_axis = 'ZRotate'
-    if daz_axis == 'ZRotate':
-        joint_link_axis = 'XRotate'
+    joint_link_axis = daz_axis
+
+    if not joint_link_axis in ['XRotate', 'YRotate', 'ZRotate']: continue
+
+    # Adjust the axis if right facing (front X)
+    if skeletal_mesh_force_front_x:
+        if daz_axis == 'XRotate':
+            joint_link_axis = 'YRotate'
+        if daz_axis == 'YRotate':
+            joint_link_axis = 'ZRotate'
+        if daz_axis == 'ZRotate':
+            joint_link_axis = 'XRotate'
 
     if not joint_link_bone_name in joint_axis_list.keys(): joint_axis_list[joint_link_bone_name] = []
     joint_axis_list[joint_link_bone_name].append(joint_link_axis)
@@ -88,6 +96,7 @@ node_spacing = 250
 execute_from = 'BeginExecution.ExecuteContext'
 for joint_link in joint_links:
     joint_link_bone_name = joint_link['Bone']
+    #if not 'forearm' in joint_link_bone_name: continue
     #if not ('Thigh' in joint_link_bone_name or 'Shin' in joint_link_bone_name): continue
     joint_link_morph = joint_link['Morph']
     joint_link_scalar = joint_link['Scalar']
@@ -97,12 +106,18 @@ for joint_link in joint_links:
 
     # Match Axis for Unreal
     daz_axis = joint_link['Axis']
-    if daz_axis == 'XRotate':
-        joint_link_primary_axis = 'YRotate'
-    if daz_axis == 'YRotate':
-        joint_link_primary_axis = 'ZRotate'
-    if daz_axis == 'ZRotate':
-        joint_link_primary_axis = 'XRotate'
+    joint_link_primary_axis = daz_axis
+
+    if not joint_link_primary_axis in ['XRotate', 'YRotate', 'ZRotate']: continue
+
+    # Adjust the axis if right facing (front X)
+    if skeletal_mesh_force_front_x:
+        if daz_axis == 'XRotate':
+            joint_link_primary_axis = 'YRotate'
+        if daz_axis == 'YRotate':
+            joint_link_primary_axis = 'ZRotate'
+        if daz_axis == 'ZRotate':
+            joint_link_primary_axis = 'XRotate'
     
     if joint_link_primary_axis in ['XRotate', 'ZRotate']:
         joint_link_scalar = joint_link_scalar * -1.0
@@ -135,8 +150,9 @@ for joint_link in joint_links:
         for key_data in joint_link_keys:
             if key_data['Angle'] > 0.0: rotation_direction = 1.0
             if key_data['Angle'] < 0.0: rotation_direction = -1.0
-            if joint_link_primary_axis in ['XRotate', 'ZRotate']:
-                rotation_direction = rotation_direction * -1.0
+
+        if joint_link_primary_axis in ['XRotate', 'ZRotate']:
+            rotation_direction = rotation_direction * -1.0
 
         angles = [ abs(item['Angle']) for item in joint_link_keys ]
         angles.sort()
@@ -208,12 +224,8 @@ for joint_link in joint_links:
 
         # To Euler
         to_euler_node_name = 'To_Euler_' + link_name
-        try:
-            rig_controller.add_unit_node_from_struct_path('/Script/RigVM.RigVMFunction_MathQuaternionToEuler', 'Execute', unreal.Vector2D(276.703686, node_height), to_euler_node_name)
-        except:
-            #to_euler_scriptstruct = get_scriptstruct_by_node_name("MathQuaternionToEuler")
-            #rig_controller.add_unit_node(to_euler_scriptstruct, 'Execute', unreal.Vector2D(276.703686, node_height), to_euler_node_name)
-            rig_controller.add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_MathQuaternionToEuler', 'Execute', unreal.Vector2D(276.703686, node_height), to_euler_node_name)
+        #rig_controller.add_unit_node_from_struct_path('/Script/ControlRig.RigUnit_MathQuaternionToEuler', 'Execute', unreal.Vector2D(276.703686, node_height), to_euler_node_name)
+        rig_controller.add_unit_node_from_struct_path('/Script/RigVM.RigVMFunction_MathQuaternionToEuler', 'Execute', unreal.Vector2D(276.0, node_height), to_euler_node_name)
         rig_controller.set_pin_default_value(to_euler_node_name + '.Value', '(X=0.000000,Y=0.000000,Z=0.000000,W=1.000000)', False, False)
         rig_controller.set_pin_expansion(to_euler_node_name + '.Value', False, False)
         rig_controller.set_pin_default_value(to_euler_node_name + '.RotationOrder', rotation_order, False, False)
@@ -226,9 +238,11 @@ for joint_link in joint_links:
         remap_node_name = 'Remap_' + link_name
         try:
             rig_controller.add_template_node('Remap::Execute(in Value,in SourceMinimum,in SourceMaximum,in TargetMinimum,in TargetMaximum,in bClamp,out Result)', unreal.Vector2D(759.666641, node_height), remap_node_name)
+            #rig_controller.add_template_node('Remap::Execute(in Value,in SourceMinimum,in SourceMaximum,in TargetMinimum,in TargetMaximum,in bClamp,out Result)', unreal.Vector2D(473.000031, 415.845032), 'Remap')
         except:
             remap_script_struct = get_scriptstruct_by_node_name("MathFloatRemap")
             rig_controller.add_unit_node(remap_script_struct, 'Execute', unreal.Vector2D(759.666641, node_height), remap_node_name)
+        #print(to_euler_node_name + '.Result.' + joint_link_primary_axis[0], remap_node_name +'.Value')
         rig_controller.add_link(to_euler_node_name + '.Result.' + joint_link_primary_axis[0], remap_node_name +'.Value')
         rig_controller.set_pin_default_value(remap_node_name +'.SourceMinimum', str(joint_min), False, False)
         rig_controller.set_pin_default_value(remap_node_name +'.SourceMaximum', str(joint_max), False, False)
@@ -244,3 +258,4 @@ for joint_link in joint_links:
         node_height += node_spacing
 
 blueprint.suspend_notifications(False)
+unreal.ControlRigBlueprintLibrary.recompile_vm(blueprint)

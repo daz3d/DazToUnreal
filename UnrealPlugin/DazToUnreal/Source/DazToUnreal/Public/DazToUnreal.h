@@ -33,7 +33,19 @@ struct TextureLookupInfo
 	bool bIsCutOut;
 };
 
-class FDazToUnrealModule : public IModuleInterface
+struct DazToUnrealImportData
+{
+	FString SourcePath;
+	FString ImportLocation;
+	DazAssetType AssetType;
+	DazCharacterType CharacterType;
+	FString CharacterTypeName;
+	bool bSetPostProcessAnimation = true;
+	bool bCreateUniqueSkeleton = false;
+	bool bFixTwistBones = false;
+};
+
+class FDazToUnrealModule : public IModuleInterface//, TSharedFromThis<FDazToUnrealModule>
 {
 public:
 	static int BatchConversionMode;
@@ -75,6 +87,29 @@ private:
 
 	//TSharedRef<class SDockTab> OnSpawnPluginTab(const class FSpawnTabArgs& SpawnTabArgs);
 
+	// Section for IKRetargeter creation menus
+private:
+
+	// Create the menu for ik retargeter creation
+	void AddCreateRetargeterMenu();
+
+	// Create the per skeletal mesh menu
+	void AddCreateRetargeterSubMenu(UToolMenu* Menu);
+
+	// Create an IK Retargeter and IKRigs if needed for retargeting between two skeletal meshes
+	void OnCreateRetargeterClicked(FSoftObjectPath SourceObjectPath, class USkeletalMesh* TargetSkeletalMesh);
+	
+	// Find a control rig for the skeletal mesh
+	class UIKRigDefinition* FindIKRigForSkeletalMesh(class USkeletalMesh* SkeletalMesh);
+
+private:
+
+	// Create the menu for generating a Full Body IK Control Rig
+	void AddCreateFullBodyIKControlRigMenu();
+
+	// Create the Full Body IK Control Rig
+	void OnCreateFullBodyIKControlRigClicked(FSoftObjectPath SourceObjectPath);
+
 private:
 	TSharedPtr<class FUICommandList> PluginCommands;
 
@@ -110,7 +145,7 @@ private:
 	bool ImportTextureAssets(TArray<FString>& SourcePaths, FString& ImportLocation);
 
 	/** Imports the modified FBX file*/
-	UObject* ImportFBXAsset(const FString& SourcePath, const FString& ImportLocation, const DazAssetType& AssetType, const DazCharacterType& CharacterType, const FString& CharacterTypeName, const bool bSetPostProcessAnimation);
+	UObject* ImportFBXAsset(const DazToUnrealImportData& DazImportData);
 
 	/** Function for creating the Material Instances for the model*/
 	//bool CreateMaterials(const FString CharacterMaterialFolder, const FString CharacterTexturesFolder, const TArray<FString>& MaterialNames, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties, const DazCharacterType CharacterType);

@@ -58,19 +58,26 @@
 #include "Animation/AnimBlueprintGeneratedClass.h"
 #include "Animation/PoseAsset.h"
 #include "Rendering/SkeletalMeshModel.h"
+#include "ToolMenuSection.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "ContentBrowserMenuContexts.h"
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION > 0
 #include "LevelEditorSubsystem.h"
 #endif
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
-#include "LevelEditorSubsystem.h"
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION == 2
+#include "IKRigDefinition.h"
 #endif
 
 #include "IMeshReductionInterfaces.h"
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
 #include "Engine/SkinnedAssetCommon.h"
+#endif
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION > 2
+#include "Rig/IKRigDefinition.h"
 #endif
 
 DEFINE_LOG_CATEGORY(LogDazToUnreal);
@@ -195,6 +202,9 @@ void FDazToUnrealModule::StartupModule()
 			LevelEditorModule.GetToolBarExtensibilityManager()->AddExtender(ToolbarExtender);
 		}
 	}
+
+	AddCreateRetargeterMenu();
+	AddCreateFullBodyIKControlRigMenu();
 
 	/*FGlobalTabmanager::Get()->RegisterNomadTabSpawner(DazToUnrealTabName, FOnSpawnTab::CreateRaw(this, &FDazToUnrealModule::OnSpawnPluginTab))
 		.SetDisplayName(LOCTEXT("FDazToUnrealTabTitle", "DazToUnreal"))
@@ -408,12 +418,12 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 					}
 					else
 					{
-						UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: Unable to parse DTU File: %s"), *FileName);
+						UE_LOG(LogDazToUnreal, Warning, TEXT("DazToUnreal: ERROR: Unable to parse DTU File: %s"), *FileName);
 					}
 				}
 				else
 				{
-					UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: Unable to find DTU file: %s"), *FileName);
+					UE_LOG(LogDazToUnreal, Warning, TEXT("DazToUnreal: ERROR: Unable to find DTU file: %s"), *FileName);
 				}
 			}
 		}
@@ -527,6 +537,21 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterMaterialFolder)) return nullptr;
 #endif
 
+	 // If there's an HD FBX File, that's the source
+	 if (FPaths::FileExists(HDFBXFile))
+	 {
+		 FBXFile = HDFBXFile;
+	 }
+
+	 // Setup Import Data
+	 DazToUnrealImportData ImportData;
+	 ImportData.SourcePath = FPaths::GetPath(FBXFile) / TEXT("UpdatedFBX") / FPaths::GetCleanFilename(FBXPath);
+	 ImportData.ImportLocation = CharacterFolder;
+	 ImportData.AssetType = AssetType;
+	 ImportData.CharacterTypeName = AssetID;
+	 JsonObject->TryGetBoolField(TEXT("CreateUniqueSkeleton"), ImportData.bCreateUniqueSkeleton);
+	 JsonObject->TryGetBoolField(TEXT("FixTwistBones"), ImportData.bFixTwistBones);
+
 	 if (AssetType == DazAssetType::Environment)
 	 {
 		 FString LevelPath = CharacterFolder / AssetName + FString("_Level");
@@ -588,8 +613,10 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 		 {
 			 CharacterType = DazCharacterType::Genesis1;
 		 }
-
-		 UObject* NewAnimation = ImportFBXAsset(FBXPath, DAZAnimationImportFolder, DazAssetType::Animation, CharacterType, AssetID, false);
+		 ImportData.SourcePath = FBXPath;
+		 ImportData.ImportLocation = DAZAnimationImportFolder;
+		 ImportData.CharacterType = CharacterType;
+		 UObject* NewAnimation = ImportFBXAsset(ImportData);
 
 		 // If this is a Pose transfer, an AnimSequence was created.  Make a PoseAsset from it.
 		 if (AssetType == DazAssetType::Pose)
@@ -630,16 +657,10 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 		 return nullptr;
 	 }
 
-	 // If there's an HD FBX File, that's the source
-	 if (FPaths::FileExists(HDFBXFile))
-	 {
-		 FBXFile = HDFBXFile;
-	 }
-
 	 // If there isn't an FBX file, stop
 	 if (!FPaths::FileExists(FBXFile))
 	 {
-		 	UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: Unable to load FBXFile: %s"), *FBXFile);
+		 	UE_LOG(LogDazToUnreal, Warning, TEXT("DazToUnreal: ERROR: Unable to load FBXFile: %s"), *FBXFile);
 		  return nullptr;
 	 }
 
@@ -985,6 +1006,12 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 {
 		 FDazToUnrealFbx::ParentAdditionalSkeletalMeshes(Scene);
 	 }
+	 
+	 // Take twist bones out of the chain
+	 if (AssetType == DazAssetType::SkeletalMesh && ImportData.bFixTwistBones)
+	 {
+		 FDazToUnrealFbx::FixTwistBones(RootBone);
+	 }
 
 	 // Daz Studio puts the base bone rotations in a different place than Unreal expects them.
 	 if (CachedSettings->FixBoneRotationsOnImport && AssetType == DazAssetType::SkeletalMesh && RootBone)
@@ -1049,7 +1076,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 					 }
 					 else
 					 {
-						 UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: leaving prop geometry (%s) attached to bone: %s"), ANSI_TO_TCHAR(SceneNode->GetName()), ANSI_TO_TCHAR(SceneNode->GetParent()->GetName()));
+						 UE_LOG(LogDazToUnreal, Warning, TEXT("DazToUnreal: leaving prop geometry (%s) attached to bone: %s"), ANSI_TO_TCHAR(SceneNode->GetName()), ANSI_TO_TCHAR(SceneNode->GetParent()->GetName()));
 					 }
 				}
 		  }
@@ -1348,7 +1375,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 						FbxNode* GeometryNode = Geometry->GetNode();
 						if (GeometryNode->GetMaterialIndex(TCHAR_TO_UTF8(*NewMaterialName)) != -1)
 						{
-							UE_LOG(LogTemp, Warning, TEXT("Material %s not found in material properties, removing geometry..."), *NewMaterialName);
+							UE_LOG(LogDazToUnreal, Warning, TEXT("Material %s not found in material properties, removing geometry..."), *NewMaterialName);
 							Scene->RemoveGeometry(Geometry);
 						}
 					}
@@ -1413,6 +1440,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 {
 		  CharacterType = DazCharacterType::Genesis1;
 	 }
+	 ImportData.CharacterType = CharacterType;
+	 ImportData.CharacterTypeName = CharacterTypeName;
 
 	 // Import Textures
 	 Progress.EnterProgressFrame(1, LOCTEXT("ImportingTextures", "Importing Textures"));
@@ -1531,7 +1560,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 // Import FBX
 	 Progress.EnterProgressFrame(1, LOCTEXT("ImportingFBX", "Importing the FBX"));
 	 bool bSetPostProcessAnimation = !FDazToUnrealMorphs::IsAutoJCMImport(JsonObject);
-	 UObject* NewObject = ImportFBXAsset(UpdatedFBXFile, CharacterFolder, AssetType, CharacterType, CharacterTypeName, bSetPostProcessAnimation);
+	 ImportData.bSetPostProcessAnimation = bSetPostProcessAnimation;
+	 UObject* NewObject = ImportFBXAsset(ImportData);
 
 	 // If this is a Pose transfer, an AnimSequence was created.  Make a PoseAsset from it.
 	 if (AssetType == DazAssetType::Pose)
@@ -1567,6 +1597,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 					 FString SkeletalMeshPackagePath = NewObject->GetOutermost()->GetPathName() + TEXT(".") + NewObject->GetName();
 					 FString PostProcessAnimPackagePath = JointControlAnimBlueprint->GetOutermost()->GetPathName() + TEXT(".") + JointControlAnimBlueprint->GetName();
 					 FString CreateJCMControlRigCommand = FString::Format(TEXT("py CreateAutoJCMControlRig.py --skeletalMesh={0} --animBlueprint={1} --dtuFile=\"{2}\""), { SkeletalMeshPackagePath, PostProcessAnimPackagePath, FileName });
+					 UE_LOG(LogDazToUnreal, Log, TEXT("Creating AutoJCM Control Rig with command: %s"), *CreateJCMControlRigCommand);
 					 GEngine->Exec(NULL, *CreateJCMControlRigCommand);
 				 }
 #if ENGINE_MAJOR_VERSION > 4
@@ -1585,6 +1616,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 {
 		 FString SkeletalMeshPackagePath = NewObject->GetOutermost()->GetPathName() + TEXT(".") + NewObject->GetName();
 		 FString CreateControlRigCommand = FString::Format(TEXT("py CreateControlRig.py --skeletalMesh={0} --dtuFile=\"{1}\""), { SkeletalMeshPackagePath, FileName });
+		 UE_LOG(LogDazToUnreal, Log, TEXT("Creating Control Rig with command: %s"), *CreateControlRigCommand);
 		 GEngine->Exec(NULL, *CreateControlRigCommand);
 	 }
 #endif
@@ -1819,7 +1851,7 @@ bool FDazToUnrealModule::ImportTextureAssets(TArray<FString>& SourcePaths, FStri
 #else
 	if (ImportedAssets.Num() != SourcePaths.Num())
 	 {
-		 UE_LOG(LogTemp, Error, TEXT("DazToUnreal: ImportTextureAssets() ERROR: ImportedAssets count is not equal to SourcePaths count. Texture Lookup Correction will likely fail..."));
+		 UE_LOG(LogDazToUnreal, Error, TEXT("DazToUnreal: ImportTextureAssets() ERROR: ImportedAssets count is not equal to SourcePaths count. Texture Lookup Correction will likely fail..."));
 	 }
 	 else
 	 {
@@ -1834,7 +1866,7 @@ bool FDazToUnrealModule::ImportTextureAssets(TArray<FString>& SourcePaths, FStri
 				 {
 					 if (textureIndex >= ImportedAssets.Num())
 					 {
-						 UE_LOG(LogTemp, Warning, TEXT("DazToUnreal: ERROR: sRGB-corection texture-index lookup procedure returned invalid texture index. Skipping..."));
+						 UE_LOG(LogDazToUnreal, Warning, TEXT("DazToUnreal: ERROR: sRGB-corection texture-index lookup procedure returned invalid texture index. Skipping..."));
 					 }
 					 else
 					 {
@@ -1857,12 +1889,12 @@ bool FDazToUnrealModule::ImportTextureAssets(TArray<FString>& SourcePaths, FStri
 	 return false;
 }
 
-UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FString& ImportLocation, const DazAssetType& AssetType, const DazCharacterType& CharacterType, const FString& CharacterTypeName, const bool bSetPostProcessAnimation)
+UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImportData)
 {
 	 static FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
 	 UDazToUnrealSettings* CachedSettings = GetMutableDefault<UDazToUnrealSettings>();
 
-	 FString NewFBXPath = SourcePath;
+	 FString NewFBXPath = DazImportData.SourcePath;
 	 TArray<FString> FileNames;
 	 FileNames.Add(NewFBXPath);
 
@@ -1871,25 +1903,53 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 
 	 USkeleton* Skeleton = nullptr;
 	 FSoftObjectPath SkeletonPath;
-	 if (CharacterType == DazCharacterType::Genesis1)
+	 if (!DazImportData.bCreateUniqueSkeleton)
 	 {
-		  Skeleton = (USkeleton*)CachedSettings->Genesis1Skeleton.TryLoad();
-		  SkeletonPath = CachedSettings->Genesis1Skeleton;
-	 }
-	 if (CharacterType == DazCharacterType::Genesis3Male || CharacterType == DazCharacterType::Genesis3Female)
-	 {
-		  Skeleton = (USkeleton*)CachedSettings->Genesis3Skeleton.TryLoad();
-		  SkeletonPath = CachedSettings->Genesis3Skeleton;
-	 }
-	 if (CharacterType == DazCharacterType::Genesis8Male || CharacterType == DazCharacterType::Genesis8Female)
-	 {
-		  Skeleton = (USkeleton*)CachedSettings->Genesis8Skeleton.TryLoad();
-		  SkeletonPath = CachedSettings->Genesis8Skeleton;
-	 }
-	 if (CharacterType == DazCharacterType::Unknown && CachedSettings->OtherSkeletons.Contains(CharacterTypeName))
-	 {
-		  Skeleton = (USkeleton*)CachedSettings->OtherSkeletons[CharacterTypeName].TryLoad();
-		  SkeletonPath = CachedSettings->OtherSkeletons[CharacterTypeName];
+		 if (DazImportData.bFixTwistBones)
+		 {
+			 if (CachedSettings->SkeletonsWithTwistFix.Contains(DazImportData.CharacterTypeName))
+			 {
+				 Skeleton = (USkeleton*)CachedSettings->SkeletonsWithTwistFix[DazImportData.CharacterTypeName].TryLoad();
+				 if (Skeleton)
+				 {
+					 SkeletonPath = CachedSettings->SkeletonsWithTwistFix[DazImportData.CharacterTypeName];
+				 }
+				 else
+				 {
+					 CachedSettings->SkeletonsWithTwistFix.Remove(DazImportData.CharacterTypeName);
+				 } 
+			 }
+		 }
+		 else
+		 {
+			 if (DazImportData.CharacterType == DazCharacterType::Genesis1)
+			 {
+				 Skeleton = (USkeleton*)CachedSettings->Genesis1Skeleton.TryLoad();
+				 SkeletonPath = CachedSettings->Genesis1Skeleton;
+			 }
+			 if (DazImportData.CharacterType == DazCharacterType::Genesis3Male || DazImportData.CharacterType == DazCharacterType::Genesis3Female)
+			 {
+				 Skeleton = (USkeleton*)CachedSettings->Genesis3Skeleton.TryLoad();
+				 SkeletonPath = CachedSettings->Genesis3Skeleton;
+			 }
+			 if (DazImportData.CharacterType == DazCharacterType::Genesis8Male || DazImportData.CharacterType == DazCharacterType::Genesis8Female)
+			 {
+				 Skeleton = (USkeleton*)CachedSettings->Genesis8Skeleton.TryLoad();
+				 SkeletonPath = CachedSettings->Genesis8Skeleton;
+			 }
+			 if (DazImportData.CharacterType == DazCharacterType::Unknown && CachedSettings->OtherSkeletons.Contains(DazImportData.CharacterTypeName))
+			 {
+				 Skeleton = (USkeleton*)CachedSettings->OtherSkeletons[DazImportData.CharacterTypeName].TryLoad();
+				 if (Skeleton)
+				 {
+					 SkeletonPath = CachedSettings->OtherSkeletons[DazImportData.CharacterTypeName];
+				 }
+				 else
+				 {
+					 CachedSettings->OtherSkeletons.Remove(DazImportData.CharacterTypeName);
+				 }
+			 }
+		 }
 	 }
 
 	 UFbxImportUI* ImportUI = NewObject<UFbxImportUI>();
@@ -1898,7 +1958,7 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 	 FbxFactory->ImportUI->bImportMaterials = false;
 	 FbxFactory->ImportUI->bImportTextures = false;
 
-	 if (AssetType == DazAssetType::SkeletalMesh)
+	 if (DazImportData.AssetType == DazAssetType::SkeletalMesh)
 	 {
 		  FbxFactory->ImportUI->bImportAsSkeletal = true;
 		  FbxFactory->ImportUI->Skeleton = Skeleton;
@@ -1911,14 +1971,14 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 	 	  FbxFactory->ImportUI->SkeletalMeshImportData->bImportMeshesInBoneHierarchy = true;
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_SkeletalMesh;
 	 }
-	 if (AssetType == DazAssetType::StaticMesh)
+	 if (DazImportData.AssetType == DazAssetType::StaticMesh)
 	 {
 		  FbxFactory->ImportUI->bImportAsSkeletal = false;
 		  FbxFactory->ImportUI->bImportMaterials = true;
 		  FbxFactory->ImportUI->StaticMeshImportData->bForceFrontXAxis = false;
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_StaticMesh;
 	 }
-	 if (AssetType == DazAssetType::Animation || AssetType == DazAssetType::Pose || AssetType == DazAssetType::MLDeformer)
+	 if (DazImportData.AssetType == DazAssetType::Animation || DazImportData.AssetType == DazAssetType::Pose || DazImportData.AssetType == DazAssetType::MLDeformer)
 	 {
 		  FbxFactory->ImportUI->bImportAsSkeletal = true;
 		  FbxFactory->ImportUI->Skeleton = Skeleton;
@@ -1931,26 +1991,26 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_Animation;
 	 }
 	 //UFbxFactory::EnableShowOption();
-	 UAutomatedAssetImportData* ImportData = NewObject<UAutomatedAssetImportData>(UAutomatedAssetImportData::StaticClass());
-	 ImportData->FactoryName = TEXT("FbxFactory");
-	 ImportData->Factory = FbxFactory;
-	 ImportData->Filenames = FileNames;
-	 ImportData->DestinationPath = ImportLocation;
+	 UAutomatedAssetImportData* FbxImportData = NewObject<UAutomatedAssetImportData>(UAutomatedAssetImportData::StaticClass());
+	 FbxImportData->FactoryName = TEXT("FbxFactory");
+	 FbxImportData->Factory = FbxFactory;
+	 FbxImportData->Filenames = FileNames;
+	 FbxImportData->DestinationPath = DazImportData.ImportLocation;
 	 if (BatchConversionMode != 0)
-		 ImportData->bReplaceExisting = false;
+		 FbxImportData->bReplaceExisting = false;
 	 else
-		ImportData->bReplaceExisting = true;
-	 if (AssetType == DazAssetType::Animation || AssetType == DazAssetType::Pose)
+		 FbxImportData->bReplaceExisting = true;
+	 if (DazImportData.AssetType == DazAssetType::Animation || DazImportData.AssetType == DazAssetType::Pose)
 	 {
-		  ImportData->DestinationPath = CachedSettings->AnimationImportDirectory.Path;
+		 FbxImportData->DestinationPath = CachedSettings->AnimationImportDirectory.Path;
 	 }
 
 	 TArray<UObject*> ImportedAssets;
 	 if (CachedSettings->ShowFBXImportDialog)
 	 {
 		  UAssetImportTask* AssetImportTask = NewObject<UAssetImportTask>();
-		  AssetImportTask->Filename = ImportData->Filenames[0];
-		  AssetImportTask->DestinationPath = ImportData->DestinationPath;
+		  AssetImportTask->Filename = FbxImportData->Filenames[0];
+		  AssetImportTask->DestinationPath = FbxImportData->DestinationPath;
 		  AssetImportTask->Options = FbxFactory->ImportUI;
 		  AssetImportTask->Factory = FbxFactory;
 		  TArray< UAssetImportTask* > ImportTasks;
@@ -1964,7 +2024,7 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 	 }
 	 else
 	 {
-		  ImportedAssets = AssetToolsModule.Get().ImportAssetsAutomated(ImportData);
+		  ImportedAssets = AssetToolsModule.Get().ImportAssetsAutomated(FbxImportData);
 	 }
 
 	 FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
@@ -1974,7 +2034,7 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 	 {
 		  if (USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(ImportedAsset))
 		  {
-				if (bSetPostProcessAnimation && CachedSettings->SkeletonPostProcessAnimation.Contains(SkeletonPath))
+				if (DazImportData.bSetPostProcessAnimation && CachedSettings->SkeletonPostProcessAnimation.Contains(SkeletonPath))
 				{
 #if ENGINE_MAJOR_VERSION > 4
 					SkeletalMesh->SetPostProcessAnimBlueprint(CachedSettings->SkeletonPostProcessAnimation[SkeletonPath].TryLoadClass<UAnimInstance>());
@@ -2024,7 +2084,20 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const FString& SourcePath, const FSt
 					 }
 					 
 					 // Add this skeleton as the default for this character type
-					 CachedSettings->OtherSkeletons.Add(CharacterTypeName, Skeleton);
+					 if (DazImportData.bFixTwistBones)
+					 {
+						 if (!CachedSettings->SkeletonsWithTwistFix.Contains(DazImportData.CharacterTypeName))
+						 {
+							 CachedSettings->SkeletonsWithTwistFix.Add(DazImportData.CharacterTypeName, Skeleton);
+						 }
+					 }
+					 else
+					 {
+						 if (!CachedSettings->OtherSkeletons.Contains(DazImportData.CharacterTypeName))
+						 {
+							 CachedSettings->OtherSkeletons.Add(DazImportData.CharacterTypeName, Skeleton);
+						 }
+					 }
 					 CachedSettings->SaveConfig(CPF_Config, *CachedSettings->GetDefaultConfigFilename());
 				}
 		  }
@@ -2042,6 +2115,168 @@ void FDazToUnrealModule::InstallDazStudioPlugin()
 	 FString InstallerPath = IPluginManager::Get().FindPlugin("DazToUnreal")->GetBaseDir() / TEXT("Resources") / TEXT("DazToUnrealSetup.exe");
 	 FString InstallerAbsolutePath = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*InstallerPath);
 	 FPlatformProcess::LaunchFileInDefaultExternalApplication(*InstallerAbsolutePath, NULL, ELaunchVerb::Open);
+}
+
+void FDazToUnrealModule::AddCreateRetargeterMenu()
+{
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+	// Create a new context menu item for Skeletal Meshes
+	UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("ContentBrowser.AssetContextMenu.SkeletalMesh");
+	FToolMenuSection& Section = Menu->FindOrAddSection("GetAssetActions");
+
+	Section.AddSubMenu(
+		"CreateIKRetargeterSubMenu",
+		LOCTEXT("CreateIKRetargeterSubMenu_Label", "Create IK Retargeter"),
+		LOCTEXT("CreateIKRetargeterSubMenu_ ToolTip", "Create or update and IKRetargeter for this mesh."),
+		FNewToolMenuDelegate::CreateRaw(this, &FDazToUnrealModule::AddCreateRetargeterSubMenu),
+		false);
+#endif
+}
+
+void FDazToUnrealModule::AddCreateRetargeterSubMenu(UToolMenu* Menu)
+{
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+	// Get selected SkeletalMesh
+	USkeletalMesh* TargetSkeletalMesh = nullptr;
+	if (const UContentBrowserAssetContextMenuContext* CBContext = Menu->Context.FindContext<UContentBrowserAssetContextMenuContext>())
+	{
+		TargetSkeletalMesh = CBContext->LoadFirstSelectedObject<USkeletalMesh>();
+	}
+
+
+	FToolMenuSection& Section = Menu->AddSection("SourceMesh", LOCTEXT("SourceMesh_Label", "Source Mesh"));
+
+	// Find all SkeletalMeshes
+	TArray<FAssetData> Assets;
+	IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+	AssetRegistry.GetAssetsByClass(USkeletalMesh::StaticClass()->GetClassPathName(), Assets);
+
+	// Add a menu entry for each SkeletalMesh
+	for (FAssetData Asset : Assets)
+	{
+		const TAttribute<FText> Label = FText::FromString(Asset.AssetName.ToString());
+		FName Name = FName(Asset.AssetName.ToString());
+
+		Section.AddMenuEntry(
+			Name,
+			Label,
+		LOCTEXT("CreateSkeletalMeshToolSubMenuItemTip", "Choose this as the source asset for creating a retargeter."),
+		FSlateIcon(),
+		FUIAction(FExecuteAction::CreateRaw(this, &FDazToUnrealModule::OnCreateRetargeterClicked, Asset.GetSoftObjectPath(), TargetSkeletalMesh))
+		);
+ 
+	}
+#endif
+}
+
+void FDazToUnrealModule::OnCreateRetargeterClicked(FSoftObjectPath SourceObjectPath, USkeletalMesh* TargetSkeletalMesh)
+{
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+	USkeletalMesh* SourceSkeletalMesh = Cast<USkeletalMesh>(SourceObjectPath.TryLoad());
+	if (!SourceSkeletalMesh || !TargetSkeletalMesh) return;
+
+	// Find or Create the Source IKRig
+	UIKRigDefinition* SourceIKRig = FindIKRigForSkeletalMesh(SourceSkeletalMesh);
+	if (!SourceIKRig)
+	{
+		FString SkeletalMeshPackagePath = SourceSkeletalMesh->GetOutermost()->GetPathName() + TEXT(".") + SourceSkeletalMesh->GetName();
+		FString CreateIKRigCommand = FString::Format(TEXT("py CreateIKRig.py --skeletalMesh={0}"), { SkeletalMeshPackagePath });
+		UE_LOG(LogDazToUnreal, Log, TEXT("Creating Source IK Rig with command: %s"), *CreateIKRigCommand);
+		GEngine->Exec(NULL, *CreateIKRigCommand);
+		SourceIKRig = FindIKRigForSkeletalMesh(SourceSkeletalMesh);
+	}
+
+	// Find or Create the Target IKRig
+	UIKRigDefinition* TargetIKRig = FindIKRigForSkeletalMesh(TargetSkeletalMesh);
+	if (!TargetIKRig)
+	{
+		FString SkeletalMeshPackagePath = TargetSkeletalMesh->GetOutermost()->GetPathName() + TEXT(".") + TargetSkeletalMesh->GetName();
+		FString CreateIKRigCommand = FString::Format(TEXT("py CreateIKRig.py --skeletalMesh={0}"), { SkeletalMeshPackagePath });
+		UE_LOG(LogDazToUnreal, Log, TEXT("Creating Source IK Rig with command: %s"), *CreateIKRigCommand);
+		GEngine->Exec(NULL, *CreateIKRigCommand);
+		TargetIKRig = FindIKRigForSkeletalMesh(TargetSkeletalMesh);
+	}
+
+	// Create or Update the IKRetargeter
+	if (SourceIKRig && TargetIKRig)
+	{
+		TargetSkeletalMesh->GetSkeleton()->UpdateReferencePoseFromMesh(TargetSkeletalMesh);
+		FString SourceIKRigPackagePath = SourceIKRig->GetOutermost()->GetPathName() + TEXT(".") + SourceIKRig->GetName();
+		FString TargetIKRigPackagePath = TargetIKRig->GetOutermost()->GetPathName() + TEXT(".") + TargetIKRig->GetName();
+		FString CreateIKRetargeterCommand = FString::Format(TEXT("py CreateIKRetargeter.py --sourceIKRig={0} --targetIKRig={1}"), { SourceIKRigPackagePath, TargetIKRigPackagePath });
+		UE_LOG(LogDazToUnreal, Log, TEXT("Creating IK Retargeter with command: %s"), *CreateIKRetargeterCommand);
+		GEngine->Exec(NULL, *CreateIKRetargeterCommand);
+	}
+#endif
+}
+
+UIKRigDefinition* FDazToUnrealModule::FindIKRigForSkeletalMesh(USkeletalMesh* SkeletalMesh)
+{
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 2
+	TArray<FAssetData> Assets;
+	IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+	AssetRegistry.GetAssetsByClass(UIKRigDefinition::StaticClass()->GetClassPathName(), Assets);
+
+	UIKRigDefinition* SourceIKRig = nullptr;
+
+	// First try to find an IKRig that has this mesh as the preview.
+	for (FAssetData Asset : Assets)
+	{
+		if (UIKRigDefinition* IKRigDefinition = Cast<UIKRigDefinition>(Asset.GetAsset()))
+		{
+			if (IKRigDefinition->PreviewSkeletalMesh == SkeletalMesh)
+			{
+				return IKRigDefinition;
+			}
+		}
+	}
+#endif
+	return nullptr;
+}
+
+void FDazToUnrealModule::AddCreateFullBodyIKControlRigMenu()
+{
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+	// Create a new context menu item for Skeletal Meshes
+	UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("ContentBrowser.AssetContextMenu.SkeletalMesh");
+	FToolMenuSection& Section = Menu->FindOrAddSection("GetAssetActions");
+
+	//USkeletalMesh* TargetSkeletalMesh = nullptr;
+	//if (const UContentBrowserAssetContextMenuContext* CBContext = Menu->Context.FindContext<UContentBrowserAssetContextMenuContext>())
+	//{
+	//	TargetSkeletalMesh = CBContext->LoadFirstSelectedObject<USkeletalMesh>();
+	//}
+
+	Section.AddDynamicEntry("CreateFBIKControlRig", FNewToolMenuSectionDelegate::CreateLambda(
+		[this](FToolMenuSection& Section)
+		{
+
+			if (UContentBrowserAssetContextMenuContext* Context = Section.FindContext<UContentBrowserAssetContextMenuContext>())
+			{
+				if (Context->SelectedAssets.Num() > 0)
+				{
+					Section.AddMenuEntry(
+						FName(TEXT("CreateFullBodyIKControlRigMenu")),
+						LOCTEXT("CreateFullBodyIKControlRigLabel", "Create FBIK Control Rig"),
+						LOCTEXT("CreateFullBodyIKControlRigLabelTip", "Creates a Control Rig based around a Full Body IK Node"),
+						FSlateIcon(),
+						FUIAction(FExecuteAction::CreateRaw(this, &FDazToUnrealModule::OnCreateFullBodyIKControlRigClicked, Context->SelectedAssets[0].GetSoftObjectPath()))
+					);
+				}
+			}
+		}
+	));
+
+#endif
+}
+
+void FDazToUnrealModule::OnCreateFullBodyIKControlRigClicked(FSoftObjectPath SourceObjectPath)
+{
+	FString SkeletalMeshPackagePath = SourceObjectPath.ToString();//SourceSkeletalMesh->GetOutermost()->GetPathName() + TEXT(".") + SourceSkeletalMesh->GetName();
+	FString DTUPath = FDazToUnrealUtils::GetDTUPathForModel(SourceObjectPath);
+	FString CreateControlRigCommand = FString::Format(TEXT("py CreateControlRig.py --skeletalMesh={0} --dtuFile=\"{1}\""), { SkeletalMeshPackagePath, DTUPath });
+	UE_LOG(LogDazToUnreal, Log, TEXT("Creating FBIK Control Rig with command: %s"), *CreateControlRigCommand);
+	GEngine->Exec(NULL, *CreateControlRigCommand);
 }
 
 #undef LOCTEXT_NAMESPACE

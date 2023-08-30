@@ -1,12 +1,12 @@
 #pragma once
 #include "dzbasicdialog.h"
 #include <QtGui/qcombobox.h>
+#include <QtGui/qcheckbox.h>
 #include <QtCore/qsettings.h>
 #include "DzBridgeDialog.h"
 
 class QPushButton;
 class QLineEdit;
-class QCheckBox;
 class QComboBox;
 class QGroupBox;
 
@@ -29,6 +29,16 @@ public:
 	/** Destructor **/
 	virtual ~DzUnrealDialog() {}
 
+	//
+	bool getUniqueSkeletonPerCharacter() { 
+		return skeletalMeshUniqueSkeletonPerCharacterCheckBox ? skeletalMeshUniqueSkeletonPerCharacterCheckBox->isChecked() : false;
+	}
+
+	bool getFixTwistBones() {
+		return skeletalMeshFixTwistBonesCheckBox ? skeletalMeshFixTwistBonesCheckBox->isChecked() : false;
+	}
+
+	// Settings
 	Q_INVOKABLE void resetToDefaults() override;
 	Q_INVOKABLE void saveSettings() override;
 
@@ -42,13 +52,18 @@ protected slots:
 protected:
 	Q_INVOKABLE bool loadSavedSettings() override;
 
-	QLineEdit* portEdit;
-	QLineEdit* intermediateFolderEdit;
-	QPushButton* intermediateFolderButton;
+	QLineEdit* portEdit = nullptr;
+	QLineEdit* intermediateFolderEdit = nullptr;
+	QPushButton* intermediateFolderButton = nullptr;
 
 	// MLDeformer settings
-	QGroupBox* mlDeformerSettingsGroupBox;
-	QLineEdit* mlDeformerPoseCountEdit;
+	QGroupBox* mlDeformerSettingsGroupBox = nullptr;
+	QLineEdit* mlDeformerPoseCountEdit = nullptr;
+
+	// SkeletalMesh settings
+	QGroupBox* skeletalMeshSettingsGroupBox = nullptr;
+	QCheckBox* skeletalMeshUniqueSkeletonPerCharacterCheckBox = nullptr;
+	QCheckBox* skeletalMeshFixTwistBonesCheckBox = nullptr;
 
 #ifdef UNITTEST_DZBRIDGE
 	friend class UnitTest_DzUnrealDialog;

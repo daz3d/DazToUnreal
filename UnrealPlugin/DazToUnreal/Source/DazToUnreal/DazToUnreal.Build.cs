@@ -38,6 +38,8 @@ public class DazToUnreal : ModuleRules
 				"SkeletalMeshUtilitiesCommon",
 				"ControlRig",
 				"ControlRigDeveloper",
+				"ToolMenus",
+				"ContentBrowser",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
@@ -51,6 +53,14 @@ public class DazToUnreal : ModuleRules
 		PrivateDependencyModuleNames.Add("AlembicImporter");
 		PrivateDependencyModuleNames.Add("MLDeformerFramework");
 		PrivateDependencyModuleNames.Add("NeuralNetworkInference");
+#endif
+
+#if UE_5_2_OR_LATER
+		PrivateDependencyModuleNames.Add("IKRig");
+#endif
+
+#if UE_5_3_OR_LATER
+		PrivateDependencyModuleNames.Remove("NeuralNetworkInference");
 #endif
 
 		DynamicallyLoadedModuleNames.AddRange(

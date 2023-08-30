@@ -70,3 +70,36 @@ bool FDazToUnrealUtils::IsModelFacingX(UObject* MeshObject)
 	}
 	return false;
 }
+
+FString FDazToUnrealUtils::GetDTUPathForModel(FSoftObjectPath MeshObjectPath)
+{
+	if (USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(MeshObjectPath.TryLoad()))
+	{
+#if ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION < 27
+		if (UAssetImportData* AssetImportData = SkeletalMesh->AssetImportData)
+#else
+		if (UAssetImportData* AssetImportData = SkeletalMesh->GetAssetImportData())
+#endif
+		{
+			if (UFbxAssetImportData* FbxAssetImportData = Cast<UFbxAssetImportData>(AssetImportData))
+			{
+				for (FAssetImportInfo::FSourceFile SourceFile : FbxAssetImportData->GetSourceData().SourceFiles)
+				{
+					FString SourceFilePath = SourceFile.RelativeFilename;
+					TArray<FString> LikelyPaths;
+					LikelyPaths.Add(FPaths::ChangeExtension(SourceFilePath, TEXT("dtu")));
+					LikelyPaths.Add(FPaths::GetPath(SourceFilePath) + TEXT("/../") + FPaths::ChangeExtension(FPaths::GetCleanFilename(SourceFilePath), TEXT("dtu")));
+					for (FString PossiblePath : LikelyPaths)
+					{
+						if (FPaths::FileExists(PossiblePath))
+						{
+							return PossiblePath;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return FString();
+}

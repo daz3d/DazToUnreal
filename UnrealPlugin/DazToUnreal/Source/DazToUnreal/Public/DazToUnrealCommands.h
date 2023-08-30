@@ -21,4 +21,5 @@ public:
 	TSharedPtr< FUICommandInfo > InstallDazStudioPlugin;
 	TSharedPtr< FUICommandInfo > InstallSkeletonAssets;
 	TSharedPtr< FUICommandInfo > InstallMaterialAssets;
+	TSharedPtr< FUICommandInfo > CreateRetargeter;
 };

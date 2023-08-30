@@ -144,6 +144,20 @@ void MLDeformer::ExportTrainingData(DzNode* Node, QString FileName)
         Alembic::AbcGeom::OPolyMesh MeshObj(AbcArchive.getTop(), MeshName, TimeSampling);
         Alembic::AbcGeom::OPolyMeshSchema& MeshSchema = MeshObj.getSchema();
 
+        // Get Geograft hidden faces
+        DzFigure* Figure = qobject_cast<DzFigure*>(FigureNode);
+        std::vector<int> hiddenFaces;
+        for (int GraftFigureIndex = 0; GraftFigureIndex < Figure->getNumGraftFigures(); GraftFigureIndex++)
+        {
+            DzFigure* GraftFigure = Figure->getGraftFigure(GraftFigureIndex);
+            int GeograftHiddenFaceCount = GraftFigure->getNumFollowTargetHiddenFaces();
+
+            for (int hiddenFace = 0; hiddenFace < GeograftHiddenFaceCount; hiddenFace++)
+            {
+                hiddenFaces.push_back(GraftFigure->getFollowTargetHiddenFacesPtr()[hiddenFace]);
+            }
+        }
+
         // Tick through the poses exporting them
         DzTimeRange PlayRange = dzScene->getPlayRange();
         for (DzTime CurrentTime = PlayRange.getStart(); CurrentTime <= PlayRange.getEnd(); CurrentTime += dzScene->getTimeStep())
@@ -184,6 +198,9 @@ void MLDeformer::ExportTrainingData(DzNode* Node, QString FileName)
             std::vector<int> faceVertexCounts;
             for (int FacetIndex = 0; FacetIndex < FacetMesh->getNumFacets(); FacetIndex++)
             {
+                // Skip geograft hidden faces
+                if (std::find(hiddenFaces.begin(), hiddenFaces.end(), FacetIndex) != hiddenFaces.end()) continue;
+
                 // Add the vertex count for this face
                 DzFacet Facet = FacetMesh->getFacet(FacetIndex);
                 int FacetVertexCount = 3;

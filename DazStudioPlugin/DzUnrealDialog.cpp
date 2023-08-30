@@ -89,7 +89,7 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	// add new asset type to assetTypeCombo widget ("MLDeformer")
 	assetTypeCombo->addItem("MLDeformer");
 
-	// Morph Settings
+	// MLDeformer Settings
 	mlDeformerSettingsGroupBox = new QGroupBox("MLDeformer Settings", this);
 	QFormLayout* mlDeformerSettingsLayout = new QFormLayout();
 	mlDeformerSettingsGroupBox->setLayout(mlDeformerSettingsLayout);
@@ -102,6 +102,26 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 
 	// Add ML Deformer settings to the mainLayout as a new row without header
 	mainLayout->addRow(mlDeformerSettingsGroupBox);
+
+	// SkeletalMesh Settings
+	skeletalMeshSettingsGroupBox = new QGroupBox("Skeletal Mesh Settings", this);
+	QFormLayout* skeletalMeshSettingsLayout = new QFormLayout();
+	skeletalMeshSettingsGroupBox->setLayout(skeletalMeshSettingsLayout);
+
+	skeletalMeshUniqueSkeletonPerCharacterCheckBox = new QCheckBox("", skeletalMeshSettingsGroupBox);
+	skeletalMeshUniqueSkeletonPerCharacterCheckBox->setChecked(false);
+	skeletalMeshUniqueSkeletonPerCharacterCheckBox->setWhatsThis("If checked, a new skeleton will be created for this character instead of sharing a skeleton with related characters.");
+	skeletalMeshSettingsLayout->addRow("Unique Skeleton", skeletalMeshUniqueSkeletonPerCharacterCheckBox);
+
+	skeletalMeshFixTwistBonesCheckBox = new QCheckBox("", skeletalMeshSettingsGroupBox);
+	skeletalMeshFixTwistBonesCheckBox->setChecked(false);
+	skeletalMeshFixTwistBonesCheckBox->setWhatsThis("If checked, twist bones will be taken out of line.");
+	skeletalMeshSettingsLayout->addRow("Fix Twist Bones", skeletalMeshFixTwistBonesCheckBox);
+
+	mlDeformerSettingsGroupBox->setVisible(false);
+
+	// Add SkeletalMesh settings to the mainLayout as a new row without header
+	mainLayout->addRow(skeletalMeshSettingsGroupBox);
 
 	// Intermediate Folder
 	QHBoxLayout* intermediateFolderLayout = new QHBoxLayout();
@@ -133,22 +153,28 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	}
 
 	// Configure Target Plugin Installer
-	renameTargetPluginInstaller("Unreal Plugin Installer");
-	m_TargetSoftwareVersionCombo->clear();
-	m_TargetSoftwareVersionCombo->addItem("Select Unreal Version");
-	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.25");
-	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.26");
-	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.27");
-	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.0");
-	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.1");
-	m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.2");
-	showTargetPluginInstaller(true);
+	if (m_TargetSoftwareVersionCombo)
+	{
+		renameTargetPluginInstaller("Unreal Plugin Installer");
+		m_TargetSoftwareVersionCombo->clear();
+		m_TargetSoftwareVersionCombo->addItem("Select Unreal Version");
+		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.25");
+		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.26");
+		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.27");
+		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.0");
+		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.1");
+		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.2");
+		showTargetPluginInstaller(true);
+	}
 
 	// Help pop-ups
 	intermediateFolderEdit->setWhatsThis("DazToUnreal will collect the assets in a subfolder under this folder.  Unreal will import them from here.");
 	intermediateFolderButton->setWhatsThis("DazToUnreal will collect the assets in a subfolder under this folder.  Unreal will import them from here.");
 	portEdit->setWhatsThis("The UDP port used to talk to the DazToUnreal Unreal plugin.\nThis needs to match the port set in the Project Settings in Unreal.\nDefault is 32345.");
-	m_wTargetPluginInstaller->setWhatsThis("You can install the Unreal Plugin by selecting the desired Unreal Engine version and the selecting either the Unreal Engine folder or an Unreal Project folder.");
+	if (m_wTargetPluginInstaller)
+	{
+		m_wTargetPluginInstaller->setWhatsThis("You can install the Unreal Plugin by selecting the desired Unreal Engine version and the selecting either the Unreal Engine folder or an Unreal Project folder.");
+	}
 
 	// Set Defaults
 	resetToDefaults();
@@ -176,10 +202,21 @@ bool DzUnrealDialog::loadSavedSettings()
 		portEdit->setText(settings->value("Port").toString());
 	}
 
-	// Animation settings
+	// MLDeformer settings
 	if (!settings->value("MLDeformerPoseCount").isNull())
 	{
 		mlDeformerPoseCountEdit->setText(settings->value("MLDeformerPoseCount").toString());
+	}
+
+	// SkeletalMesh settings
+	if (!settings->value("SkeletalMeshUniqueSkeletonPerCharacter").isNull())
+	{
+		skeletalMeshUniqueSkeletonPerCharacterCheckBox->setChecked(settings->value("SkeletalMeshUniqueSkeletonPerCharacter").toBool());
+	}
+
+	if (!settings->value("SkeletalMeshFixTwistBones").isNull())
+	{
+		skeletalMeshFixTwistBonesCheckBox->setChecked(settings->value("SkeletalMeshFixTwistBones").toBool());
 	}
 
 	return true;
@@ -191,8 +228,12 @@ void DzUnrealDialog::saveSettings()
 
 	DzBridgeDialog::saveSettings();
 
-	// Animation settings
+	// MLDeformer settings
 	settings->setValue("MLDeformerPoseCount", mlDeformerPoseCountEdit->text().toInt());
+
+	// SkeletalMesh settings
+	settings->setValue("SkeletalMeshUniqueSkeletonPerCharacter", skeletalMeshUniqueSkeletonPerCharacterCheckBox->isChecked());
+	settings->setValue("SkeletalMeshFixTwistBones", skeletalMeshFixTwistBonesCheckBox->isChecked());
 }
 
 void DzUnrealDialog::resetToDefaults()
@@ -450,7 +491,7 @@ void DzUnrealDialog::HandleAssetTypeComboChange(const QString& assetType)
 {
 	mlDeformerSettingsGroupBox->setVisible(assetType == "MLDeformer");
 	animationSettingsGroupBox->setVisible(assetType == "Animation" || assetType == "Pose");
-
+	skeletalMeshSettingsGroupBox->setVisible(assetType == "Skeletal Mesh");
 	// DB 2023-Aug-10: Override default Base class behavior which hides Animation options behind Experimental Options mode
 	//DzBridgeDialog::HandleAssetTypeComboChange(assetType);
 }
