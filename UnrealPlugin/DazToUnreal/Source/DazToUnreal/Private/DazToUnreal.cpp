@@ -59,8 +59,11 @@
 #include "Animation/PoseAsset.h"
 #include "Rendering/SkeletalMeshModel.h"
 #include "ToolMenuSection.h"
-#include "AssetRegistry/AssetRegistryModule.h"
 #include "ContentBrowserMenuContexts.h"
+
+#if !(ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION <= 25)
+#include "AssetRegistry/AssetRegistryModule.h"
+#endif
 
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION > 0
 #include "LevelEditorSubsystem.h"
