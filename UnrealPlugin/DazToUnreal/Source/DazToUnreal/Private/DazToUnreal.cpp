@@ -969,6 +969,10 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 		  }
 	 }
 
+	 ///////////////////////////////////////////////////////////////////////////////
+	 //// Start of FBX preprocessing before actual import
+	 ///////////////////////////////////////////////////////////////////////////////
+
 	 // Load the FBX file
 	 FbxManager* SdkManager = FbxManager::Create();
 
@@ -1414,11 +1418,44 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 		  return nullptr;
 	 }
 
+	 // DB 2023-Sep-1: Re-Import Crash Prevention
+	 // 1. Obtain number of bones in the UpdatedFBX
+	 // 2. Check if skeletal mesh destination asset path exists
+	 // 3. Check if number of bones in existing skeletal mesh exactly matches number of bones in UpdatedFBX
+	 // 4. If not equal, then fail gracefully
+	 int FbxBoneCount = FDazToUnrealFbx::CountBonesInFbxNode(RootBone);
+	 int ExistingBoneCount = -1;
+	 FString DestinationPath = ImportData.ImportLocation + "/" + AssetName;
+	 UObject* ExistingMesh = StaticLoadObject(UObject::StaticClass(), nullptr, *DestinationPath);
+	 if (ExistingMesh) {
+		 USkeletalMesh* ExistingSkeletalMesh = Cast<USkeletalMesh>(ExistingMesh);
+		 if (ExistingSkeletalMesh) {
+			 ExistingBoneCount = ExistingSkeletalMesh->RefSkeleton.GetNum();
+		 }
+	 }
+	 if (ExistingBoneCount != -1 && ExistingBoneCount != FbxBoneCount)
+	 {
+		 const FString ErrorMessage = TEXT("The number of bones in the existing skeletal mesh does not match the number of \
+bones in the new import. Aborting import.\n\n\
+Please make sure the number of bones match, or change the Asset Name in the DazToUnreal Bridge to something different from \
+the existing skeletal mesh in Unreal.");
+		 UE_LOG(LogDazToUnreal, Error, TEXT("%s"), *ErrorMessage);
+		 FText DialogText = FText::FromString(ErrorMessage);
+		 FText DialogTitle = FText::FromString(TEXT("DazToUnreal Import Error"));
+		 FMessageDialog::Open(EAppMsgType::Ok, DialogText, &DialogTitle);
+		 Exporter->Destroy();
+		 return nullptr;
+	 }
+
 	 // Export the scene.
 	 bool Status = Exporter->Export(Scene);
 
 	 // Destroy the exporter.
 	 Exporter->Destroy();
+
+	 ///////////////////////////////////////////////////////////////////////////////
+	 //// End of FBX preprocessing before actual import
+	 ///////////////////////////////////////////////////////////////////////////////
 
 	 // If this is a character, determine the type.
 	 DazCharacterType CharacterType = DazCharacterType::Unknown;

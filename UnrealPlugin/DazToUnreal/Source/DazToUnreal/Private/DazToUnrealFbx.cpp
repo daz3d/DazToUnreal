@@ -213,3 +213,17 @@ void FDazToUnrealFbx::RemoveNodeAndReparent(FbxNode* NodeToRemove)
 		ParentNode->RemoveChild(NodeToRemove);
 	}
 }
+
+// Recursive Function to count bones in an FbxNode
+int FDazToUnrealFbx::CountBonesInFbxNode(FbxNode* Node) {
+	if (!Node) return 0;
+
+	int boneCount = 0;
+	if (Node->GetNodeAttribute() && Node->GetNodeAttribute()->GetAttributeType() == FbxNodeAttribute::eSkeleton) {
+		boneCount++;
+	}
+	for (int i = 0; i < Node->GetChildCount(); i++) {
+		boneCount += CountBonesInFbxNode(Node->GetChild(i));
+	}
+	return boneCount;
+}
