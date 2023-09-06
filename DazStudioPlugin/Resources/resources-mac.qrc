@@ -9,5 +9,6 @@
         <file alias="UE5.0.zip">UE5.0-mac.zip</file>
         <file alias="UE5.1.zip">UE5.1-mac.zip</file>
         <file alias="UE5.2.zip">UE5.2-mac.zip</file>
+        <file alias="UE5.3.zip">UE5.3-mac.zip</file>
     </qresource>
 </RCC>

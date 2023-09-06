@@ -164,6 +164,7 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.0");
 		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.1");
 		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.2");
+		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.3");
 		showTargetPluginInstaller(true);
 	}
 
@@ -303,6 +304,10 @@ void DzUnrealDialog::HandleTargetPluginInstallerButton()
 	else if (softwareVersion.contains("5.2"))
 	{
 		sBinariesFile = "/UE5.2.zip";
+	}
+	else if (softwareVersion.contains("5.3"))
+	{
+		sBinariesFile = "/UE5.3.zip";
 	}
 	else
 	{
