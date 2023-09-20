@@ -25,18 +25,122 @@ if(APPLE)
 	endif()
 endif(APPLE)
 
+###################################################
+# Check Build Type. If empty, default to Release
+#  Note: Visual Studio may ignore CMAKE_BUILD_TYPE
+###################################################
+if (NOT CMAKE_BUILD_TYPE)
+    message(STATUS "No build type selected, defaulting to Release")
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build Type" FORCE)
+endif()
+
 project("DzBridge-Unreal")
-set(FBX_SDK_DIR "" CACHE PATH "Path to FBX SDK" )
-set(OPENSUBDIV_DIR "" CACHE PATH "Path to Opensubdiv folder" )
-set(ALEMBIC_DIR "" CACHE PATH "Path to Alembic folder" )
-set(IMATH_DIR "" CACHE PATH "Path to Imath folder" )
 #set(DZBRIDGE_DIR "" CACHE PATH "Path to DzBridge folder" )
 set(USE_DZBRIDGE_SUBMODULE "ON")
 set(USE_DZBRIDGE_STATIC "ON")
 
+# Set paths for WIN32 platforms
+if (WIN32)
+# DAZ Studio EXE
+	set (DAZ_STUDIO_DEFAULT "C:/Daz 3D/Applications/64-bit/DAZ 3D/DAZStudio4")
+	# If empty, check default paths
+	if(NOT DAZ_STUDIO_EXE_DIR)
+		if (EXISTS "${DAZ_STUDIO_DEFAULT}")
+			set(DAZ_STUDIO_EXE_DIR "${DAZ_STUDIO_DEFAULT}" CACHE PATH "Path to DAZ Studio, needs to be installed to a writeable location. Example: ${DAZ_STUDIO_DEFAULT}")
+		else()
+			set(DAZ_STUDIO_EXE_DIR "" CACHE PATH "Path to DAZ Studio, needs to be installed to a writeable location. Example: ${DAZ_STUDIO_DEFAULT}")
+		endif()
+	endif()
+# DAZ Studio SDK
+	set (DAZ_SDK_DEFAULT "C:/Daz 3D/Applications/Data/DAZ 3D/My DAZ 3D Library/DAZStudio4.5+ SDK")
+	# If empty, check default paths
+	if (NOT DAZ_SDK_DIR)
+		if (EXISTS "${DAZ_SDK_DEFAULT}")
+			set(DAZ_SDK_DIR ${DAZ_SDK_DEFAULT} CACHE PATH "Path to root of the DAZ Studio SDK. Example: ${DAZ_SDK_DEFAULT}" FORCE)
+		# If default doesn't exist, check C:/dev just in case
+		elseif(EXISTS "C:/dev/DAZStudio4.5+ SDK")
+			set(DAZ_SDK_DIR "C:/dev/DAZStudio4.5+ SDK" CACHE PATH "Path to root of the DAZ Studio SDK. Example: ${DAZ_SDK_DEFAULT}" FORCE)
+		else()
+			set(DAZ_SDK_DIR "" CACHE PATH "Path to root of the DAZ Studio SDK. Example: ${DAZ_SDK_DEFAULT}" FORCE)
+		endif()
+	endif()
+# Alembic
+	set (ALEMBIC_DIR_DEFAULT "C:/Program Files/Alembic")
+	# If empty, check default paths
+	if (NOT ALEMBIC_DIR)
+		if (EXISTS "${ALEMBIC_DIR_DEFAULT}")
+			set(ALEMBIC_DIR "${ALEMBIC_DIR_DEFAULT}" CACHE PATH "Path to Alembic folder. Example: ${ALEMBIC_DIR_DEFAULT}" FORCE)
+		# If default doesn't exist, check C:/dev just in case
+		elseif(EXISTS "C:/dev/Alembic")
+			set(ALEMBIC_DIR "C:/dev/Alembic" CACHE PATH "Path to Alembic folder. Example: ${ALEMBIC_DIR_DEFAULT}" FORCE)
+		else()
+			set(ALEMBIC_DIR "" CACHE PATH "Path to Alembic folder. Example: ${ALEMBIC_DIR_DEFAULT}" FORCE)
+		endif()
+	endif()
+# FBX SDK
+	set (FBX_SDK_DIR_DEFAULT "C:/Program Files (x86)/Autodesk/FBX SDK/2020.0.1")
+	# If empty, check default paths
+	if (NOT FBX_SDK_DIR)
+		if(EXISTS "${FBX_SDK_DIR_DEFAULT}")
+			set( FBX_SDK_DIR "${FBX_SDK_DIR_DEFAULT}" CACHE PATH "Path to FBX SDK. Example: ${FBX_SDK_DIR_DEFAULT}" FORCE)
+		# If default doesn't exist, check C:/dev just in case
+		elseif(EXISTS "C:/dev/Autodesk/FBX SDK/2020.0.1")
+			set(FBX_SDK_DIR "C:/dev/Autodesk/FBX SDK/2020.0.1" CACHE PATH "Path to FBX SDK. Example: ${FBX_SDK_DIR_DEFAULT}" FORCE)
+		else()
+			set(FBX_SDK_DIR "" CACHE PATH "Path to FBX SDK. Example: ${FBX_SDK_DIR_DEFAULT}" FORCE)
+		endif()
+	endif()
+# Imath
+	# If empty, check default paths
+	set (IMATH_DIR_DEFAULT "C:/Program Files/Imath")
+	if (NOT IMATH_DIR)
+		if (EXISTS "${IMATH_DIR_DEFAULT}")
+			set(IMATH_DIR "${IMATH_DIR_DEFAULT}" CACHE PATH "Path to Imath folder. Example: ${IMATH_DIR_DEFAULT}" FORCE)
+		# If default doesn't exist, check C:/dev just in case
+		elseif(EXISTS "C:/dev/Imath")
+			set(IMATH_DIR "C:/dev/Imath" CACHE PATH "Path to Imath folder. Example: ${IMATH_DIR_DEFAULT}" FORCE)
+		else()
+			set(IMATH_DIR "" CACHE PATH "Path to Imath folder. Example: ${IMATH_DIR_DEFAULT}" FORCE)
+		endif()
+	endif()
+# OpenSubdiv
+	# If empty, check default paths
+	set (OPENSUBDIV_DIR_DEFAULT "C:/Program Files/OpenSubdiv")
+	if (NOT OPENSUBDIV_DIR)
+		if (EXISTS "${OPENSUBDIV_DIR_DEFAULT}")
+			set(OPENSUBDIV_DIR "${OPENSUBDIV_DIR_DEFAULT}" CACHE PATH "Path to Opensubdiv folder. Example: ${OPENSUBDIV_DIR_DEFAULT}" FORCE)
+		# If default doesn't exist, check C:/dev just in case
+		elseif(EXISTS "C:/dev/OpenSubDiv")
+			set(OPENSUBDIV_DIR "C:/dev/OpenSubdiv" CACHE PATH "Path to Opensubdiv folder. Example: C:/Program Files/OpenSubDiv" FORCE)
+		else()
+			set(OPENSUBDIV_DIR "" CACHE PATH "Path to Opensubdiv folder. Example: C:/Program Files/OpenSubDiv" FORCE)
+		endif()
+	endif()
+# Set paths for non-WIN32 platforms
+else()
+	if (NOT DAZ_STUDIO_EXE_DIR)
+		set(DAZ_STUDIO_EXE_DIR "" CACHE PATH "Path to DAZ Studio, needs to be installed to a writeable location.")
+	endif()
+	if (NOT DAZ_SDK_DIR)
+		set(DAZ_SDK_DIR "" CACHE PATH "Path to root of the DAZ Studio SDK." )
+	endif()
+	if (NOT ALEMBIC_DIR)
+		set(ALEMBIC_DIR "" CACHE PATH "Path to Alembic folder." )
+	endif()
+	if (NOT FBX_SDK_DIR)
+		set(FBX_SDK_DIR "" CACHE PATH "Path to FBX SDK." )
+	endif()
+	if (NOT IMATH_DIR)
+		set(IMATH_DIR "" CACHE PATH "Path to Imath folder." )
+	endif()
+	if (NOT OPENSUBDIV_DIR)
+		set(OPENSUBDIV_DIR "" CACHE PATH "Path to Opensubdiv folder." )
+	endif()
+endif()
+
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-set(DAZ_STUDIO_EXE_DIR "" CACHE PATH "Path to DAZ Studio, needs to be installed to a writeable location" )
 if(NOT DAZ_STUDIO_EXE_DIR )
 	message("Location to DAZ Studio not provided. Projects will build locally.")
 endif()
@@ -80,15 +184,14 @@ else()
 	message(FATAL_ERROR "Unknown architecture")
 endif(WIN32)
 
-set(DAZ_SDK_DIR_DEFAULT "")
 set(DAZ_SDK_CORE_RELATIVE_PATH "lib/${DZ_MIXED_PLATFORM}/${DZ_LIB_PREFIX}dzcore${DZ_LIB_SUFFIX}")
+
+# If DAZ_SDK_DIR is still empty at this point, try an alternative check.
 if(NOT DAZ_SDK_DIR)
 	if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/DAZStudio4.5+ SDK/${DAZ_SDK_CORE_RELATIVE_PATH}")
-		set( DAZ_SDK_DIR_DEFAULT "${CMAKE_CURRENT_LIST_DIR}/DAZStudio4.5+ SDK" )
+		set(DAZ_SDK_DIR "${CMAKE_CURRENT_LIST_DIR}/DAZStudio4.5+ SDK" CACHE PATH "Path to root of the DAZ Studio SDK." )
 	endif()
 endif()
-
-set(DAZ_SDK_DIR ${DAZ_SDK_DIR_DEFAULT} CACHE PATH "Path to root of the DAZ Studio SDK" )
 
 if(NOT DAZ_SDK_DIR)
 	message(FATAL_ERROR "Missing path to DAZ Studio SDK")
@@ -100,10 +203,11 @@ if (APPLE)
     set(CMAKE_XCODE_ATTRIBUTE_EXPORTED_SYMBOLS_FILE "${DZ_PLUGIN_EXPORT_SYMBOLS}")
 endif()
 
-set(QT_BINARY_DIR_DEFAULT "" CACHE PATH "Path to directory with QT binaries")
 if(NOT QT_BINARY_DIR_DEFAULT)
 	if(EXISTS "${DAZ_SDK_DIR}/bin/${DZ_MIXED_PLATFORM}/qmake${UTIL_EXT}")
-		set( QT_BINARY_DIR_DEFAULT "${DAZ_SDK_DIR}/bin/${DZ_MIXED_PLATFORM}" )
+		set( QT_BINARY_DIR_DEFAULT "${DAZ_SDK_DIR}/bin/${DZ_MIXED_PLATFORM}" CACHE PATH "Path to directory with DAZ SDKs QT binaries")
+	else()
+		set( QT_BINARY_DIR_DEFAULT "" CACHE PATH "Path to directory with DAZ SDKs QT binaries")
 	endif()
 endif()
 
@@ -173,6 +277,15 @@ set(DZSDK_QT_NETWORK_TARGET Qt4::QtNetwork)
 set(DZSDK_QT_SQL_TARGET	Qt4::QtSql)
 set(DZSDK_QT_XML_TARGET	Qt4::QtXml)
 
+if(QT_BINARY_DIR_DEFAULT)
+	# DazToUnreal does not use QT_IMPORTS_DIR so let's pre-set it to prevent confusion
+	set(QT_IMPORTS_DIR "NOT IN USE by DazToUnreal" CACHE STRING "Not in use by DazToUnreal" FORCE)
+	# Path fixed for QT_DOC_DIR
+	set(QT_DOC_DIR "${DAZ_SDK_DIR}/docs/qt" CACHE PATH "The location of the Qt docs" FORCE)
+	# Hide QT_IMPORTS_DIR from the normal view
+	mark_as_advanced(QT_IMPORTS_DIR)
+endif()
+
 ############################
 # FBX SETTINGS
 ############################
@@ -230,11 +343,11 @@ if(NOT OPENSUBDIV_DIR)
 	message(FATAL_ERROR "Missing path to Opensubdiv folder")
 	return()
 endif()
-set(OPENSUBDIV_INCLUDE "${OPENSUBDIV_DIR}" CACHE PATH "Path to Opensubdiv include folder (usually same as root folder)" )
+set(OPENSUBDIV_INCLUDE "${OPENSUBDIV_DIR}/include" CACHE PATH "Path to Opensubdiv include folder (usually same as root folder)" )
 if(WIN32)
-	set(OPENSUBDIV_LIB "${OPENSUBDIV_DIR}/build/lib/Release/osdCPU.lib" CACHE FILEPATH "Path to Opensubdiv CPU static library (osdCPU.lib)" )
+	set(OPENSUBDIV_LIB "${OPENSUBDIV_DIR}/lib/osdCPU.lib" CACHE FILEPATH "Path to Opensubdiv CPU static library (osdCPU.lib)" )
 elseif(APPLE)
-	set(OPENSUBDIV_LIB "${OPENSUBDIV_DIR}/build/lib/Release/libosdCPU.a" CACHE FILEPATH "Path to Opensubdiv CPU static library (libosdCPU.a)" )
+	set(OPENSUBDIV_LIB "${OPENSUBDIV_DIR}/lib/libosdCPU.a" CACHE FILEPATH "Path to Opensubdiv CPU static library (libosdCPU.a)" )
 endif()
 
 ############################
