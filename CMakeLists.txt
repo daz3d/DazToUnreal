@@ -41,6 +41,10 @@ set(USE_DZBRIDGE_STATIC "ON")
 
 # Set paths for WIN32 platforms
 if (WIN32)
+# Setting up Windows folder vars
+	set(WIN_PROGRAM_FILES "C:/Program Files")
+	set(WIN_PROGRAM_FILES_X86 "C:/Program Files (x86)")
+	set(WIN_DEV_FOLDER "C:/dev")
 # DAZ Studio EXE
 	set (DAZ_STUDIO_DEFAULT "C:/Daz 3D/Applications/64-bit/DAZ 3D/DAZStudio4")
 	# If empty, check default paths
@@ -65,56 +69,56 @@ if (WIN32)
 		endif()
 	endif()
 # Alembic
-	set (ALEMBIC_DIR_DEFAULT "C:/Program Files/Alembic")
 	# If empty, check default paths
 	if (NOT ALEMBIC_DIR)
-		if (EXISTS "${ALEMBIC_DIR_DEFAULT}")
-			set(ALEMBIC_DIR "${ALEMBIC_DIR_DEFAULT}" CACHE PATH "Path to Alembic folder. Example: ${ALEMBIC_DIR_DEFAULT}" FORCE)
-		# If default doesn't exist, check C:/dev just in case
-		elseif(EXISTS "C:/dev/Alembic")
-			set(ALEMBIC_DIR "C:/dev/Alembic" CACHE PATH "Path to Alembic folder. Example: ${ALEMBIC_DIR_DEFAULT}" FORCE)
-		else()
-			set(ALEMBIC_DIR "" CACHE PATH "Path to Alembic folder. Example: ${ALEMBIC_DIR_DEFAULT}" FORCE)
-		endif()
+		# Set the default value first.
+		set(ALEMBIC_DIR "" CACHE PATH "Path to Alembic folder. Example: C:/Program Files/Alembic" FORCE)
+		# Search and override if found.
+		foreach(X IN LISTS WIN_PROGRAM_FILES WIN_PROGRAM_FILES_X86 WIN_DEV_FOLDER)
+			if (EXISTS "${X}/Alembic")
+				set(ALEMBIC_DIR "${X}/Alembic" CACHE PATH "Path to the Alembic folder. Example: ${X}/Alembic" FORCE)
+				break()
+			endif()
+		endforeach()
 	endif()
 # FBX SDK
-	set (FBX_SDK_DIR_DEFAULT "C:/Program Files (x86)/Autodesk/FBX SDK/2020.0.1")
 	# If empty, check default paths
 	if (NOT FBX_SDK_DIR)
-		if(EXISTS "${FBX_SDK_DIR_DEFAULT}")
-			set( FBX_SDK_DIR "${FBX_SDK_DIR_DEFAULT}" CACHE PATH "Path to FBX SDK. Example: ${FBX_SDK_DIR_DEFAULT}" FORCE)
-		# If default doesn't exist, check C:/dev just in case
-		elseif(EXISTS "C:/dev/Autodesk/FBX SDK/2020.0.1")
-			set(FBX_SDK_DIR "C:/dev/Autodesk/FBX SDK/2020.0.1" CACHE PATH "Path to FBX SDK. Example: ${FBX_SDK_DIR_DEFAULT}" FORCE)
-		else()
-			set(FBX_SDK_DIR "" CACHE PATH "Path to FBX SDK. Example: ${FBX_SDK_DIR_DEFAULT}" FORCE)
-		endif()
+		# Set the default value first.
+		set(FBX_SDK_DIR "" CACHE PATH "Path to the FBX SDK folder. Example: C:/Program Files (x86)/Autodesk/FBX SDK/2020.0.1" FORCE)
+		# Search and override if found.
+		foreach(X IN LISTS WIN_PROGRAM_FILES WIN_PROGRAM_FILES_X86 WIN_DEV_FOLDER)
+			if (EXISTS "${X}/Autodesk/FBX SDK/2020.0.1")
+				set(FBX_SDK_DIR "${X}/Autodesk/FBX SDK/2020.0.1" CACHE PATH "Path to the FBX folder. Example: ${X}/Autodesk/FBX SDK/2020.0.1" FORCE)
+				break()
+			endif()
+		endforeach()
 	endif()
 # Imath
 	# If empty, check default paths
-	set (IMATH_DIR_DEFAULT "C:/Program Files/Imath")
 	if (NOT IMATH_DIR)
-		if (EXISTS "${IMATH_DIR_DEFAULT}")
-			set(IMATH_DIR "${IMATH_DIR_DEFAULT}" CACHE PATH "Path to Imath folder. Example: ${IMATH_DIR_DEFAULT}" FORCE)
-		# If default doesn't exist, check C:/dev just in case
-		elseif(EXISTS "C:/dev/Imath")
-			set(IMATH_DIR "C:/dev/Imath" CACHE PATH "Path to Imath folder. Example: ${IMATH_DIR_DEFAULT}" FORCE)
-		else()
-			set(IMATH_DIR "" CACHE PATH "Path to Imath folder. Example: ${IMATH_DIR_DEFAULT}" FORCE)
-		endif()
+		# Set the default value first.
+		set(IMATH_DIR "" CACHE PATH "Path to the Imath folder. Example: C:/Program Files/Imath" FORCE)
+		# Search and override if found.
+		foreach(X IN LISTS WIN_PROGRAM_FILES WIN_PROGRAM_FILES_X86 WIN_DEV_FOLDER)
+			if (EXISTS "${X}/Imath")
+				set(IMATH_DIR "${X}/Imath" CACHE PATH "Path to the Imath folder. Example: ${X}/Imath" FORCE)
+				break()
+			endif()
+		endforeach()
 	endif()
 # OpenSubdiv
 	# If empty, check default paths
-	set (OPENSUBDIV_DIR_DEFAULT "C:/Program Files/OpenSubdiv")
 	if (NOT OPENSUBDIV_DIR)
-		if (EXISTS "${OPENSUBDIV_DIR_DEFAULT}")
-			set(OPENSUBDIV_DIR "${OPENSUBDIV_DIR_DEFAULT}" CACHE PATH "Path to Opensubdiv folder. Example: ${OPENSUBDIV_DIR_DEFAULT}" FORCE)
-		# If default doesn't exist, check C:/dev just in case
-		elseif(EXISTS "C:/dev/OpenSubDiv")
-			set(OPENSUBDIV_DIR "C:/dev/OpenSubdiv" CACHE PATH "Path to Opensubdiv folder. Example: C:/Program Files/OpenSubDiv" FORCE)
-		else()
-			set(OPENSUBDIV_DIR "" CACHE PATH "Path to Opensubdiv folder. Example: C:/Program Files/OpenSubDiv" FORCE)
-		endif()
+		# Set the default value first.
+		set(OPENSUBDIV_DIR "" CACHE PATH "Path to the OpenSubdiv folder. Example: C:/Program Files (x86)/OpenSubdiv" FORCE)
+		# Search and override if found.
+		foreach(X IN LISTS WIN_PROGRAM_FILES WIN_PROGRAM_FILES_X86 WIN_DEV_FOLDER)
+			if (EXISTS "${X}/OpenSubdiv")
+				set(OPENSUBDIV_DIR "${X}/OpenSubdiv" CACHE PATH "Path to the OpenSubdiv folder. Example: ${X}/OpenSubdiv" FORCE)
+				break()
+			endif()
+		endforeach()
 	endif()
 # Set paths for non-WIN32 platforms
 else()
