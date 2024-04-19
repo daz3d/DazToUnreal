@@ -363,12 +363,18 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 	return true;
 }
 
+// DB 2024-04-17: Moved here from DzBridgeAction.cpp
+void DzUnrealAction::writeMLDeformerData(DzJsonWriter& writer)
+{
+	writer.addMember("AlembicFile", m_sDestinationPath + m_sExportFilename + ".abc");
+}
+
 // DB 2023-05-18: Added support for MLDeformer
 // Overrides baseclass implementation with Unreal specific export
-void DzUnrealAction::exportNode(DzNode* Node)
+bool DzUnrealAction::exportNode(DzNode* Node)
 {
 	if (Node == nullptr)
-		return;
+		return false;
 
 	dzScene->selectAllNodes(false);
 	dzScene->setPrimarySelection(Node);
@@ -382,10 +388,11 @@ void DzUnrealAction::exportNode(DzNode* Node)
 		exportAnimation();
 		MLDeformer::ExportTrainingData(Node, m_sDestinationPath + m_sExportFilename + ".abc");
 		writeConfiguration();
-		return;
+		return true;
 	}
 
 	DzBridgeAction::exportNode(Node);
+	return true;
 
 }
 

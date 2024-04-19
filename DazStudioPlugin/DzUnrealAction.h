@@ -31,10 +31,13 @@ protected:
 	 Q_INVOKABLE void writeConfiguration();
 	 void setExportOptions(DzFileIOSettings& ExportOptions);
 
-	 virtual void exportNode(DzNode* Node) override;
+	 virtual bool exportNode(DzNode* Node) override;
 	 virtual void exportAnimation() override;
 	 virtual void exportNodeAnimation(DzNode* Bone, QMap<DzNode*, FbxNode*>& BoneMap, FbxAnimLayer* AnimBaseLayer, float FigureScale) override;
 	 virtual bool postProcessFbx(QString fbxFilePath) override;
+
+	 // DB 2024-04-17: Moved here from DzBridgeAction.h
+	 Q_INVOKABLE virtual void writeMLDeformerData(DzJsonWriter& writer);
 
 	 enum ELodMethod {
 		 Undefined = -1,
