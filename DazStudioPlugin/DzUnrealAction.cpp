@@ -32,7 +32,7 @@
 #include "MLDeformer.h"
 
 DzUnrealAction::DzUnrealAction() :
-	 DzBridgeAction(tr("&Daz to Unreal"), tr("Send the selected node to Unreal."))
+	 DzBridgeAction(tr("Send to &Unreal..."), tr("Send the selected node to Unreal."))
 {
 	 m_nPort = 0;
      m_nNonInteractiveMode = 0;

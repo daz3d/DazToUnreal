@@ -183,6 +183,10 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	// Load Settings
 	loadSavedSettings();
 
+	// Daz Ultra
+	m_WelcomeLabel->hide();
+	setWindowTitle(tr("Unreal Export Options"));
+
 }
 
 bool DzUnrealDialog::loadSavedSettings()
