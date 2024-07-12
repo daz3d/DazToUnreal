@@ -45,6 +45,11 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	intermediateFolderEdit = nullptr;
 	intermediateFolderButton = nullptr;
 
+	// Declarations
+	int margin = style()->pixelMetric(DZ_PM_GeneralMargin);
+	int wgtHeight = style()->pixelMetric(DZ_PM_ButtonHeight);
+	int btnMinWidth = style()->pixelMetric(DZ_PM_ButtonMinWidth);
+
 	// Set the dialog title
 	int revision = PLUGIN_REV % 1000;
 #if 0
@@ -84,16 +89,17 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	settings = new QSettings("Daz 3D", "DazToUnreal");
 
 	// Rename Animation Options Box
-	animationSettingsGroupBox->setTitle("Animation Settings");
+	animationSettingsGroupBox->setTitle(tr("Animation Options : "));
 
 	// add new asset type to assetTypeCombo widget ("MLDeformer")
 	assetTypeCombo->addItem("MLDeformer");
 
 	// MLDeformer Settings
-	mlDeformerSettingsGroupBox = new QGroupBox("MLDeformer Settings", this);
+	mlDeformerSettingsGroupBox = new QGroupBox(tr("MLDeformer Options : "), this);
 	QFormLayout* mlDeformerSettingsLayout = new QFormLayout();
 	mlDeformerSettingsGroupBox->setLayout(mlDeformerSettingsLayout);
 	mlDeformerPoseCountEdit = new QLineEdit("500", mlDeformerSettingsGroupBox);
+	mlDeformerPoseCountEdit->setFixedHeight(wgtHeight);
 	mlDeformerPoseCountEdit->setValidator(new QIntValidator());
 	mlDeformerSettingsLayout->addRow("Pose Count", mlDeformerPoseCountEdit);
 	mlDeformerSettingsGroupBox->setVisible(false);
@@ -104,7 +110,7 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	mainLayout->addRow(mlDeformerSettingsGroupBox);
 
 	// SkeletalMesh Settings
-	skeletalMeshSettingsGroupBox = new QGroupBox("Skeletal Mesh Settings", this);
+	skeletalMeshSettingsGroupBox = new QGroupBox(tr("Skeletal Mesh Options : "), this);
 	QFormLayout* skeletalMeshSettingsLayout = new QFormLayout();
 	skeletalMeshSettingsGroupBox->setLayout(skeletalMeshSettingsLayout);
 
@@ -125,18 +131,24 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 
 	// Intermediate Folder
 	QHBoxLayout* intermediateFolderLayout = new QHBoxLayout();
+//	intermediateFolderLayout->setContentsMargins(margin, margin, margin, margin);
+	intermediateFolderLayout->setContentsMargins(0,0,0,0);
+	intermediateFolderLayout->setSpacing(0);
 	intermediateFolderEdit = new QLineEdit(this);
-	intermediateFolderButton = new QPushButton("...", this);
+	intermediateFolderEdit->setFixedHeight(wgtHeight);
+	//intermediateFolderButton = new QPushButton("...", this);
+	intermediateFolderButton = new DzBridgeBrowseButton(this);
 	intermediateFolderLayout->addWidget(intermediateFolderEdit);
 	intermediateFolderLayout->addWidget(intermediateFolderButton);
 	connect(intermediateFolderButton, SIGNAL(released()), this, SLOT(HandleSelectIntermediateFolderButton()));
 
 	// Ports
 	portEdit = new QLineEdit("32345");
+	portEdit->setFixedHeight(wgtHeight);
 	connect(portEdit, SIGNAL(textChanged(const QString &)), this, SLOT(HandlePortChanged(const QString &)));
 
 	// Add Port and Intermediate Folder to Advanced Settings container as a new row with specific headers
-	QFormLayout* advancedLayout = qobject_cast<QFormLayout*>(advancedWidget->layout());
+//	QFormLayout* advancedLayout = qobject_cast<QFormLayout*>(advancedWidget->layout());
 	if (advancedLayout)
 	{
 		advancedLayout->addRow("Port", portEdit);
@@ -186,6 +198,10 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	// Daz Ultra
 	m_WelcomeLabel->hide();
 	setWindowTitle(tr("Unreal Export Options"));
+	this->m_wPdfButton->show();
+	this->m_wSupportButton->show();
+	this->m_wYoutubeButton->show();
+
 
 }
 
@@ -503,6 +519,34 @@ void DzUnrealDialog::HandleAssetTypeComboChange(const QString& assetType)
 	skeletalMeshSettingsGroupBox->setVisible(assetType == "Skeletal Mesh");
 	// DB 2023-Aug-10: Override default Base class behavior which hides Animation options behind Experimental Options mode
 	//DzBridgeDialog::HandleAssetTypeComboChange(assetType);
+}
+
+#include <QDesktopServices>
+#include <QUrl>
+void DzUnrealDialog::HandlePdfButton()
+{
+	QString sDazAppDir = dzApp->getHomePath().replace("\\", "/");
+	QString sPdfPath = sDazAppDir + "/docs/Plugins" + "/Daz to Unreal/Daz to Unreal.pdf";
+	QDesktopServices::openUrl(QUrl(sPdfPath));
+}
+
+void DzUnrealDialog::HandleYoutubeButton()
+{
+	QString url = "https://youtu.be/1dzB2BCYmgY";
+	QDesktopServices::openUrl(QUrl(url));
+}
+
+void DzUnrealDialog::HandleSupportButton()
+{
+	QString url = "https://bugs.daz3d.com/hc/en-us/requests/new";
+	QDesktopServices::openUrl(QUrl(url));
+}
+
+void DzUnrealDialog::whatsThis()
+{
+	// toggle welcome text
+	// m_WelcomeLabel->setVisible(!m_WelcomeLabel->isVisible());
+	DzBasicDialog::whatsThis();
 }
 
 #include "moc_DzUnrealDialog.cpp"

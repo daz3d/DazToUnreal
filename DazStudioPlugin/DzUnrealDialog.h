@@ -48,8 +48,14 @@ protected slots:
 	void HandleTargetPluginInstallerButton() override;
 	void HandleOpenIntermediateFolderButton(QString sFolderPath = "") override;
 	void HandleAssetTypeComboChange(const QString& assetType) override;
+	void HandlePdfButton() override;
+	void HandleYoutubeButton() override;
+	void HandleSupportButton() override;
+
 
 protected:
+	virtual void whatsThis() override;
+
 	Q_INVOKABLE bool loadSavedSettings() override;
 
 	QLineEdit* portEdit = nullptr;
