@@ -76,7 +76,7 @@ void DzUnrealAction::executeAction()
 	 // input from the user.
     if (dzScene->getNumSelectedNodes() != 1)
     {
-		DzNodeList rootNodes = buildRootNodeList();
+		DzNodeList rootNodes = BuildRootNodeList();
 		if (rootNodes.length() == 1)
 		{
 			dzScene->setPrimarySelection(rootNodes[0]);
