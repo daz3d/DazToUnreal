@@ -50,6 +50,7 @@ add_library( ${DZ_PLUGIN_TGT_NAME} SHARED
 	DzUnrealDialog.h
 	pluginmain.cpp
 	version.h
+	real_version.h
 	${MLD_SOURCES}
 	${DPC_IMAGES_CPP}
 	${OS_SOURCES}
