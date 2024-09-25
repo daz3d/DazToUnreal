@@ -1988,7 +1988,7 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImpo
 		  FbxFactory->ImportUI->bImportAnimations = true;
 		  FbxFactory->ImportUI->AnimSequenceImportData->bConvertScene = true;
 		  FbxFactory->ImportUI->AnimSequenceImportData->bForceFrontXAxis = DazImportData.bFaceCharacterRight;
-#if UE_VERSION_NEWER_THAN(5,2,0)
+#if UE_VERSION_NEWER_THAN(5,2,99)
 		  FbxFactory->ImportUI->AnimSequenceImportData->bAddCurveMetadataToSkeleton = true;
 #endif
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_Animation;
