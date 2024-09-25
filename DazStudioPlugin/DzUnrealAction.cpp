@@ -71,25 +71,10 @@ void DzUnrealAction::executeAction()
 		 return;
 	 }
 
-	 // Create and show the dialog. If the user cancels, exit early,
-	 // otherwise continue on and do the thing that required modal
-	 // input from the user.
-    if (dzScene->getNumSelectedNodes() != 1)
-    {
-		DzNodeList rootNodes = BuildRootNodeList();
-		if (rootNodes.length() == 1)
-		{
-			dzScene->setPrimarySelection(rootNodes[0]);
-		}
-		else if (rootNodes.length() > 1)
-		{
-			if (m_nNonInteractiveMode == 0)
-			{
-				QMessageBox::warning(0, tr("Error"),
-					tr("Please select one Character or Prop to send."), QMessageBox::Ok);
-			}
-		}
-    }
+	 bool bDefaultToEnvironment = false;
+	 if (SelectBestRootNodeForTransfer() == DZ_BRIDGE_NAMESPACE::EAssetType::Other) {
+		 bDefaultToEnvironment = true;
+	 }
 
     // Create the dialog
 	if (m_bridgeDialog == nullptr)
@@ -144,6 +129,11 @@ void DzUnrealAction::executeAction()
 			m_MorphNamesToExport.clear();
 		}
 
+	}
+
+	if (bDefaultToEnvironment) {
+		int nEnvIndex = m_bridgeDialog->getAssetTypeCombo()->findText("Environment");
+		m_bridgeDialog->getAssetTypeCombo()->setCurrentIndex(nEnvIndex);
 	}
 
     // If the Accept button was pressed, start the export
