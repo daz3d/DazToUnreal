@@ -395,7 +395,7 @@ bool DzUnrealAction::exportNode(DzNode* Node)
 			unrealBridgeDialog->getMLDeformerIncludeToes());
 		if (m_bEnableMorphs)
 		{
-			MLDeformer::GenerateMorphs(Node, m_mMorphNameToLabel.keys());
+			MLDeformer::GenerateMorphs(Node, m_MorphNamesToExport);
 			m_bAnimationExportActiveCurves = true;
 		}
 		exportAnimation();
@@ -404,7 +404,7 @@ bool DzUnrealAction::exportNode(DzNode* Node)
 		return true;
 	}
 
-	DzBridgeAction::exportNode(Node);
+	return DzBridgeAction::exportNode(Node);
 }
 
 void DzUnrealAction::exportAnimation()
