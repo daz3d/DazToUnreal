@@ -1,14 +1,14 @@
 {
 	"FileVersion": 3,
 	"Version": 2024,
-	"VersionName": "2024 (vodhanel-5.4.0)",
+	"VersionName": "2024 v2.1.7 (vodhanel-5.4.0)",
 	"FriendlyName": "DazToUnreal",
 	"Description": "",
 	"Category": "Other",
-	"CreatedBy": "David Vodhanel",
+	"CreatedBy": "Daz 3D, Inc",
 	"CreatedByURL": "",
-	"DocsURL": "https://davidvodhanel.com/",
-	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/content/070a312bc04c48bcb1a4d193aaddf73e",
+	"DocsURL": "https://github.com/daz3d/DazToUnreal#readme",
+	"MarketplaceURL": "",
 	"SupportURL": "https://github.com/daz3d/DazToUnreal/issues",
 	"EngineVersion": "5.4.0",
 	"CanContainContent": true,
@@ -20,7 +20,7 @@
 			"Type": "Editor",
 			"LoadingPhase": "Default",
 			"PlatformAllowList": [
-				"Win64"
+				"Win64", "Mac"
 			]
 		}
 	],
@@ -46,7 +46,7 @@
 		{
 			"Name": "MLDeformerFramework",
 			"Enabled": true,
-			"Optional": true
+			"Optional": false
 		},
 		{
 			"Name": "NNI",
