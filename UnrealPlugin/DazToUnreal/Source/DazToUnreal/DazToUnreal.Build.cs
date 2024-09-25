@@ -8,6 +8,7 @@ public class DazToUnreal : ModuleRules
 	public DazToUnreal(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+		
 
 		PublicDependencyModuleNames.AddRange(
 			new string[]
@@ -52,7 +53,9 @@ public class DazToUnreal : ModuleRules
 		PrivateDependencyModuleNames.Add("AlembicLibrary");
 		PrivateDependencyModuleNames.Add("AlembicImporter");
 		PrivateDependencyModuleNames.Add("MLDeformerFramework");
+		PrivateDependencyModuleNames.Add("MLDeformerFrameworkEditor");
 		PrivateDependencyModuleNames.Add("NeuralNetworkInference");
+		PrivateDependencyModuleNames.Add("GeometryCache");
 #endif
 
 #if UE_5_2_OR_LATER
@@ -78,6 +81,9 @@ public class DazToUnreal : ModuleRules
 #if UE_5_0_OR_LATER
 		VersionSpecificFilterIni = Path.Combine(PluginDirectory, "Resources", "UE5_FilterPlugin.ini");
 #endif
+#if UE_5_4_OR_LATER
+		VersionSpecificFilterIni = Path.Combine(PluginDirectory, "Resources", "UE5_4_FilterPlugin.ini");
+#endif
 		string TargetFilterIni = Path.Combine(PluginDirectory, "Config", "FilterPlugin.ini");
 		if (File.Exists(VersionSpecificFilterIni))
 		{
@@ -89,5 +95,26 @@ public class DazToUnreal : ModuleRules
 			}
 			catch{}
 		}
+
+#if UE_5_4_OR_LATER
+		// MLDeformerFramework can't be optional in 5.4 or the plugin will fail to load.
+		string PluginFilePath = Path.Combine(PluginDirectory, "DazToUnreal.uplugin");
+		PluginDescriptor Descriptor = PluginDescriptor.FromFile(EpicGames.Core.FileReference.FromString(PluginFilePath));
+		foreach(var RequestedPlugin in Descriptor.Plugins)
+		{
+			if((RequestedPlugin.Name == "MLDeformerFramework" || 
+				RequestedPlugin.Name == "NeuralMorphModel") && 
+				RequestedPlugin.bOptional == true)
+			{
+				RequestedPlugin.bOptional = false;
+				try
+				{
+					Descriptor.Save2(PluginFilePath);
+					break;
+				}
+				catch { }
+			}
+		}
+#endif
 	}
 }

@@ -204,6 +204,13 @@ void DzUnrealAction::writeConfiguration()
 	 {
 		 writer.addMember("CreateUniqueSkeleton", DazToUnrealDialog->getUniqueSkeletonPerCharacter());
 		 writer.addMember("FixTwistBones", DazToUnrealDialog->getFixTwistBones());
+		 writer.addMember("FaceCharacterRight", DazToUnrealDialog->getFaceCharacterRight());
+	 }
+
+	 if (m_sAssetType == "Animation")
+	 {
+		 writer.addMember("FixTwistBones", DazToUnrealDialog->getFixTwistBones());
+		 writer.addMember("FaceCharacterRight", DazToUnrealDialog->getFaceCharacterRight());
 	 }
 
 	 if (m_sAssetType.toLower().contains("mesh") || m_sAssetType == "Animation")
@@ -239,6 +246,8 @@ void DzUnrealAction::writeConfiguration()
 
 	 if (m_sAssetType == "Pose")
 	 {
+		 writer.addMember("FixTwistBones", DazToUnrealDialog->getFixTwistBones());
+		 writer.addMember("FaceCharacterRight", DazToUnrealDialog->getFaceCharacterRight());
 		writeAllPoses(writer);
 	 }
 
@@ -249,6 +258,8 @@ void DzUnrealAction::writeConfiguration()
 
 	 if (m_sAssetType == "MLDeformer")
 	 {
+		 writer.addMember("FixTwistBones", DazToUnrealDialog->getFixTwistBones());
+		 writer.addMember("FaceCharacterRight", DazToUnrealDialog->getFaceCharacterRight());
 		 writeMLDeformerData(writer);
 	 }
 
@@ -366,6 +377,10 @@ bool DzUnrealAction::exportNode(DzNode* Node)
 	if (Node == nullptr)
 		return false;
 
+	DzUnrealDialog* DazToUnrealDialog = qobject_cast<DzUnrealDialog*>(m_bridgeDialog);
+	m_bFixTwistBones = DazToUnrealDialog->getFixTwistBones();
+	m_bMLDeformerExportFace = DazToUnrealDialog->getMLDeformerIncludeFace();
+
 	dzScene->selectAllNodes(false);
 	dzScene->setPrimarySelection(Node);
 
@@ -374,7 +389,15 @@ bool DzUnrealAction::exportNode(DzNode* Node)
 		QDir dir;
 		dir.mkpath(m_sDestinationPath);
 		DzUnrealDialog* unrealBridgeDialog = qobject_cast<DzUnrealDialog*>(m_bridgeDialog);
-		MLDeformer::GeneratePoses(Node, unrealBridgeDialog->getMLDeformerPoseCountEdit()->text().toInt());
+		MLDeformer::GeneratePoses(Node, 
+			unrealBridgeDialog->getMLDeformerPoseCountEdit()->text().toInt(),
+			unrealBridgeDialog->getMLDeformerIncludeFingers(),
+			unrealBridgeDialog->getMLDeformerIncludeToes());
+		if (m_bEnableMorphs)
+		{
+			MLDeformer::GenerateMorphs(Node, m_mMorphNameToLabel.keys());
+			m_bAnimationExportActiveCurves = true;
+		}
 		exportAnimation();
 		MLDeformer::ExportTrainingData(Node, m_sDestinationPath + m_sExportFilename + ".abc");
 		writeConfiguration();
@@ -382,8 +405,6 @@ bool DzUnrealAction::exportNode(DzNode* Node)
 	}
 
 	DzBridgeAction::exportNode(Node);
-	return true;
-
 }
 
 void DzUnrealAction::exportAnimation()

@@ -15,9 +15,9 @@
 #include <dzfloatproperty.h>
 #include <dzintproperty.h>
 #include <dzprogress.h>
+#include <dzmorph.h>
 
-
-void MLDeformer::GeneratePoses(DzNode* Node, int PoseCount)
+void MLDeformer::GeneratePoses(DzNode* Node, int PoseCount, bool IncludeFingers, bool IncludeToes)
 {
     DzProgress exportProgress = DzProgress("DazBridge: MLDeformer Creating Poses", PoseCount, false, true);
     exportProgress.setCloseOnFinish(true);
@@ -31,13 +31,20 @@ void MLDeformer::GeneratePoses(DzNode* Node, int PoseCount)
 
     // Get the list of bones. There will be duplicates from clothing items in the list so it's a map
     QMap<QString, QList<DzNode*>> Bones;
-    GetBoneList(Node, Bones);
+    GetBoneList(Node, Bones, IncludeFingers, IncludeToes);
+
+    // Get a tick size for the progress bar
+    int progressTickSize = (PoseCount + 50) / 50;
 
     // Start at frame 1.  Leave frame 0 as the reference pose.
     for (int Frame = 1; Frame < PoseCount; Frame++)
     {
-        exportProgress.step();
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+        // Need this for the UI to update, but it's very slow, so run every 100th frame.
+        if (Frame % progressTickSize == 0)
+        {
+            exportProgress.update(Frame);
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+        }
 
         for (QMap<QString, QList<DzNode*>>::iterator BoneNameIter = Bones.begin(); BoneNameIter != Bones.end(); ++BoneNameIter)
         {
@@ -68,6 +75,82 @@ void MLDeformer::GeneratePoses(DzNode* Node, int PoseCount)
     exportProgress.finish();
 }
 
+void MLDeformer::GenerateMorphs(DzNode* Node, QList<QString> MorphList)
+{
+    DzTime EndTime = dzScene->getPlayRange().getEnd();
+    DzTime MorphStartFrame = EndTime + dzScene->getTimeStep();
+    EndTime = EndTime + MorphList.count() * dzScene->getTimeStep();
+    dzScene->setAnimRange(DzTimeRange(0, EndTime));
+    dzScene->setPlayRange(DzTimeRange(0, EndTime));
+
+    QMap<QString, DzNumericProperty*> PropertyMap;
+
+    DzObject* Object = Node->getObject();
+    if (Object)
+    {
+        for (int index = 0; index < Object->getNumModifiers(); index++)
+        {
+            DzModifier* modifier = Object->getModifier(index);
+            QString modName = modifier->getName();
+
+                QString modLabel = modifier->getLabel();
+
+                
+                DzMorph* mod = qobject_cast<DzMorph*>(modifier);
+                if (mod)
+                {
+                    for (int propindex = 0; propindex < modifier->getNumProperties(); propindex++)
+                    {
+                        DzProperty* property = modifier->getProperty(propindex);
+                        DzNumericProperty* numericProp = qobject_cast<DzNumericProperty*>(property);
+                        if (numericProp)
+                        {
+                            if (MorphList.contains(modLabel))
+                            {
+                                qDebug() << modLabel << "  " << modName;
+                                PropertyMap.insert(modLabel, numericProp);
+                            }
+                        }
+                    }
+                }
+            
+        }
+    }
+
+    DzTime MorphFrame = MorphStartFrame;
+    // Set all the morphs to 0 for the first morph frameframe
+    for (QString MorphNameToZero : MorphList)
+    {
+        DzNumericProperty* Property = PropertyMap[MorphNameToZero];
+        if (Property)
+        {
+            Property->setDoubleValue(MorphFrame, 0.0f);
+        }
+    }
+
+    for (QString MorphName : MorphList)
+    {
+        // Set all the morphs to 0 for the frame, one will be set to 1 after
+        for (QString MorphNameToZero : MorphList)
+        {
+            DzNumericProperty* Property = PropertyMap[MorphNameToZero];
+            if (Property)
+            {
+                Property->setDoubleValue(MorphFrame, 0.0f);
+            }
+        }
+
+        // Set the morph for this frame to 1
+        DzNumericProperty* Property = PropertyMap[MorphName];
+        if (Property)
+        {
+            Property->setDoubleValue(MorphFrame, 1.0f);
+        }
+
+        MorphFrame += dzScene->getTimeStep();
+    }
+}
+
 float MLDeformer::RandomInRange(float Min, float Max)
 {
     float Random = rand() / double(RAND_MAX);
@@ -76,7 +159,7 @@ float MLDeformer::RandomInRange(float Min, float Max)
     return Random;
 }
 
-void MLDeformer::GetBoneList(DzNode* Node, QMap<QString, QList<DzNode*>>& Bones)
+void MLDeformer::GetBoneList(DzNode* Node, QMap<QString, QList<DzNode*>>& Bones, bool IncludeFingers, bool IncludeToes)
 {
     if (DzBone* Bone = qobject_cast<DzBone*>(Node))
     {
@@ -96,16 +179,27 @@ void MLDeformer::GetBoneList(DzNode* Node, QMap<QString, QList<DzNode*>>& Bones)
 
         // Not doing face bones yet
         if (Node->getName() == "head") return;
+
     }
 
+    // Don't drill down if we're skipping specific sets
+    if (!IncludeFingers && Node->getName() == "l_hand") return;
+    if (!IncludeFingers && Node->getName() == "r_hand") return;
+    if (!IncludeFingers && Node->getName() == "lHand") return;
+    if (!IncludeFingers && Node->getName() == "rHand") return;
 
+    if (!IncludeToes && Node->getName() == "l_foot") return;
+    if (!IncludeToes && Node->getName() == "r_foot") return;
+    if (!IncludeToes && Node->getName() == "lFoot") return;
+    if (!IncludeToes && Node->getName() == "rFoot") return;
+    
     // Looks through the child nodes for more bones
     for (int ChildIndex = 0; ChildIndex < Node->getNumNodeChildren(); ChildIndex++)
     {
         DzNode* ChildNode = Node->getNodeChild(ChildIndex);
         if (DzBone* ChildBone = qobject_cast<DzBone*>(ChildNode))
         {
-            GetBoneList(ChildNode, Bones);
+            GetBoneList(ChildNode, Bones, IncludeFingers, IncludeToes);
         }
     }
 }
@@ -144,31 +238,59 @@ void MLDeformer::ExportTrainingData(DzNode* Node, QString FileName)
         Alembic::AbcGeom::OPolyMesh MeshObj(AbcArchive.getTop(), MeshName, TimeSampling);
         Alembic::AbcGeom::OPolyMeshSchema& MeshSchema = MeshObj.getSchema();
 
-        // Get Geograft hidden faces
-        DzFigure* Figure = qobject_cast<DzFigure*>(FigureNode);
-        std::vector<int> hiddenFaces;
-        for (int GraftFigureIndex = 0; GraftFigureIndex < Figure->getNumGraftFigures(); GraftFigureIndex++)
+        std::map<int, int> OldVertexIndexToNewVertexIndex;
+        std::vector<int> uniqueVertexIndices;
+        // First pass to get vertex numbers and create a remapping
         {
-            DzFigure* GraftFigure = Figure->getGraftFigure(GraftFigureIndex);
-            int GeograftHiddenFaceCount = GraftFigure->getNumFollowTargetHiddenFaces();
+            DzVertexMesh* DualQuaternionMesh = Object->getCachedGeom();
+            DzFacetMesh* FacetMesh = dynamic_cast<DzFacetMesh*>(DualQuaternionMesh);
 
-            for (int hiddenFace = 0; hiddenFace < GeograftHiddenFaceCount; hiddenFace++)
+            for (int FacetIndex = 0; FacetIndex < FacetMesh->getNumFacets(); FacetIndex++)
             {
-                hiddenFaces.push_back(GraftFigure->getFollowTargetHiddenFacesPtr()[hiddenFace]);
+                // Add the vertex count for this face
+                DzFacet Facet = FacetMesh->getFacet(FacetIndex);
+                int FacetVertexCount = 3;
+                if (Facet.isQuad())
+                {
+                    FacetVertexCount = 4;
+                }
+
+                // Add the vertex indices for this face
+                for (int FacetVertexIndex = 0; FacetVertexIndex < FacetVertexCount; FacetVertexIndex++)
+                {
+                    if (std::find(uniqueVertexIndices.begin(), uniqueVertexIndices.end(), Facet.m_vertIdx[FacetVertexIndex]) == uniqueVertexIndices.end()) {
+                        uniqueVertexIndices.push_back(Facet.m_vertIdx[FacetVertexIndex]);
+                    }
+                }
             }
         }
+
+        int newIndex = 0;
+        std::sort(uniqueVertexIndices.begin(), uniqueVertexIndices.end());
+        for (auto iterator : uniqueVertexIndices)
+        {
+            int oldIndex = iterator;
+            OldVertexIndexToNewVertexIndex.insert(std::pair<int, int>(oldIndex, newIndex));
+            newIndex++;
+        }
+
+        // Get a tick size for the progress bar
+        int progressTickSize = (PoseCount + 50) / 50;
 
         // Tick through the poses exporting them
         DzTimeRange PlayRange = dzScene->getPlayRange();
         for (DzTime CurrentTime = PlayRange.getStart(); CurrentTime <= PlayRange.getEnd(); CurrentTime += dzScene->getTimeStep())
         {
-            // Update the progress bar
-            exportProgress.step();
-            QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
-
             // Update the frame
             DzTime Frame = CurrentTime / dzScene->getTimeStep();
             dzScene->setFrame(Frame);
+
+            // Need this for the UI to update, but it's very slow, so run every 100th frame.
+            if (Frame % progressTickSize == 0)
+            {
+                exportProgress.update(Frame);
+                QCoreApplication::processEvents(QEventLoop::AllEvents, 100);
+            }
 
             // Update the character and current figure mesh for the frame
             Node->update();
@@ -182,7 +304,8 @@ void MLDeformer::ExportTrainingData(DzNode* Node, QString FileName)
             // Get the vertex positions
             std::vector<Imath::V3f> AlembicVertices;
             float scaleFactor = 1.0f;
-            for (int vertexID = 0; vertexID < DualQuaternionMesh->getNumVertices(); vertexID++)
+            // At this point uniqueVertexIndices is a sorted list of just the used vertices.  So using this will update the indexes as they are exported
+            for (auto vertexID: uniqueVertexIndices)
             {
                 AlembicVertices.push_back(Imath::V3f(DualQuaternionMesh->getVertex(vertexID)[0] * scaleFactor, DualQuaternionMesh->getVertex(vertexID)[1] * scaleFactor, DualQuaternionMesh->getVertex(vertexID)[2] * scaleFactor));
             }
@@ -196,11 +319,9 @@ void MLDeformer::ExportTrainingData(DzNode* Node, QString FileName)
 
             std::vector<int> faceVertexIndices;
             std::vector<int> faceVertexCounts;
+            std::vector<int> uniqueVertexIndices;
             for (int FacetIndex = 0; FacetIndex < FacetMesh->getNumFacets(); FacetIndex++)
             {
-                // Skip geograft hidden faces
-                if (std::find(hiddenFaces.begin(), hiddenFaces.end(), FacetIndex) != hiddenFaces.end()) continue;
-
                 // Add the vertex count for this face
                 DzFacet Facet = FacetMesh->getFacet(FacetIndex);
                 int FacetVertexCount = 3;
@@ -213,7 +334,9 @@ void MLDeformer::ExportTrainingData(DzNode* Node, QString FileName)
                 // Add the vertex indices for this face
                 for (int FacetVertexIndex = 0; FacetVertexIndex < FacetVertexCount; FacetVertexIndex++)
                 {
-                    faceVertexIndices.push_back(Facet.m_vertIdx[FacetVertexIndex]);
+                    int vertexIndexInFace = Facet.m_vertIdx[FacetVertexIndex];
+                    int convertedIndex = OldVertexIndexToNewVertexIndex[vertexIndexInFace];
+                    faceVertexIndices.push_back(convertedIndex);
                 }
             }
 

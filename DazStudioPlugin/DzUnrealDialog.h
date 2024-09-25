@@ -29,13 +29,30 @@ public:
 	/** Destructor **/
 	virtual ~DzUnrealDialog() {}
 
-	//
+	// MLDeformer getters
+	bool getMLDeformerIncludeFingers() {
+		return mlDeformerIncludeFingersCheckBox ? mlDeformerIncludeFingersCheckBox->isChecked() : false;
+	}
+
+	bool getMLDeformerIncludeToes() {
+		return mlDeformerIncludeToesCheckBox ? mlDeformerIncludeToesCheckBox->isChecked() : false;
+	}
+
+	bool getMLDeformerIncludeFace() {
+		return mlDeformerIncludeFaceCheckBox ? mlDeformerIncludeFaceCheckBox->isChecked() : false;
+	}
+
+	// SkeletalMesh getters
 	bool getUniqueSkeletonPerCharacter() { 
 		return skeletalMeshUniqueSkeletonPerCharacterCheckBox ? skeletalMeshUniqueSkeletonPerCharacterCheckBox->isChecked() : false;
 	}
 
 	bool getFixTwistBones() {
 		return skeletalMeshFixTwistBonesCheckBox ? skeletalMeshFixTwistBonesCheckBox->isChecked() : false;
+	}
+
+	bool getFaceCharacterRight() {
+		return skeletalMeshFaceCharacterRightCheckBox ? skeletalMeshFaceCharacterRightCheckBox->isChecked() : false;
 	}
 
 	// Settings
@@ -65,11 +82,18 @@ protected:
 	// MLDeformer settings
 	QGroupBox* mlDeformerSettingsGroupBox = nullptr;
 	QLineEdit* mlDeformerPoseCountEdit = nullptr;
+	QCheckBox* mlDeformerIncludeFingersCheckBox = nullptr;
+	QCheckBox* mlDeformerIncludeToesCheckBox = nullptr;
+	QCheckBox* mlDeformerIncludeFaceCheckBox = nullptr;
 
 	// SkeletalMesh settings
 	QGroupBox* skeletalMeshSettingsGroupBox = nullptr;
 	QCheckBox* skeletalMeshUniqueSkeletonPerCharacterCheckBox = nullptr;
+
+	// Common settings
+	QGroupBox* commonSettingsGroupBox = nullptr;
 	QCheckBox* skeletalMeshFixTwistBonesCheckBox = nullptr;
+	QCheckBox* skeletalMeshFaceCharacterRightCheckBox = nullptr;
 
 #ifdef UNITTEST_DZBRIDGE
 	friend class UnitTest_DzUnrealDialog;

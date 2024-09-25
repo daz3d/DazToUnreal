@@ -14,18 +14,6 @@ DECLARE_LOG_CATEGORY_EXTERN(LogDazToUnreal, Log, All);
 class FToolBarBuilder;
 class FMenuBuilder;
 struct FDUFTextureProperty;
-//class FbxNode;
-
-
-enum DazAssetType
-{
-	SkeletalMesh,
-	StaticMesh,
-	Animation,
-	Environment,
-	Pose,
-	MLDeformer
-};
 
 struct TextureLookupInfo
 {
@@ -33,17 +21,6 @@ struct TextureLookupInfo
 	bool bIsCutOut;
 };
 
-struct DazToUnrealImportData
-{
-	FString SourcePath;
-	FString ImportLocation;
-	DazAssetType AssetType;
-	DazCharacterType CharacterType;
-	FString CharacterTypeName;
-	bool bSetPostProcessAnimation = true;
-	bool bCreateUniqueSkeleton = false;
-	bool bFixTwistBones = false;
-};
 
 class FDazToUnrealModule : public IModuleInterface//, TSharedFromThis<FDazToUnrealModule>
 {
@@ -109,6 +86,12 @@ private:
 
 	// Create the Full Body IK Control Rig
 	void OnCreateFullBodyIKControlRigClicked(FSoftObjectPath SourceObjectPath);
+
+	// Create the menu for generating an IK based Control Rig
+	void AddCreateIKLimbBasedControlRigMenu();
+
+	// Create the Full Body IK Control Rig
+	void OnCreateIKLimbBasedControlRigClicked(FSoftObjectPath SourceObjectPath);
 
 private:
 	TSharedPtr<class FUICommandList> PluginCommands;

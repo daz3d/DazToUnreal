@@ -60,6 +60,8 @@
 #include "Rendering/SkeletalMeshModel.h"
 #include "ToolMenuSection.h"
 #include "ContentBrowserMenuContexts.h"
+#include "Animation/PoseAsset.h"
+#include "Misc/EngineVersionComparison.h"
 
 #if !(ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION <= 25)
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -208,6 +210,7 @@ void FDazToUnrealModule::StartupModule()
 
 	AddCreateRetargeterMenu();
 	AddCreateFullBodyIKControlRigMenu();
+	AddCreateIKLimbBasedControlRigMenu();
 
 	/*FGlobalTabmanager::Get()->RegisterNomadTabSpawner(DazToUnrealTabName, FOnSpawnTab::CreateRaw(this, &FDazToUnrealModule::OnSpawnPluginTab))
 		.SetDisplayName(LOCTEXT("FDazToUnrealTabTitle", "DazToUnreal"))
@@ -554,6 +557,10 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 ImportData.CharacterTypeName = AssetID;
 	 JsonObject->TryGetBoolField(TEXT("CreateUniqueSkeleton"), ImportData.bCreateUniqueSkeleton);
 	 JsonObject->TryGetBoolField(TEXT("FixTwistBones"), ImportData.bFixTwistBones);
+	 if (!JsonObject->TryGetBoolField(TEXT("FaceCharacterRight"), ImportData.bFaceCharacterRight))
+	 {
+		 ImportData.bFaceCharacterRight = CachedSettings->ZeroRootRotationOnImport;
+	 }
 
 	 if (AssetType == DazAssetType::Environment)
 	 {
@@ -646,6 +653,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 if (AssetType == DazAssetType::MLDeformer)
 	 {
 		 DazToUnrealMLDeformerParams.JsonImportData = JsonObject;
+		 DazToUnrealMLDeformerParams.ImportData = ImportData;
 		 FDazToUnrealMLDeformer::ImportMLDeformerAssets(DazToUnrealMLDeformerParams);
 
 		 DazToUnrealMLDeformerParams.JsonImportData = JsonObject;
@@ -1941,56 +1949,8 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImpo
 	 UFbxFactory* FbxFactory = NewObject<UFbxFactory>(UFbxFactory::StaticClass());
 	 FbxFactory->AddToRoot();
 
-	 USkeleton* Skeleton = nullptr;
-	 FSoftObjectPath SkeletonPath;
-	 if (!DazImportData.bCreateUniqueSkeleton)
-	 {
-		 if (DazImportData.bFixTwistBones)
-		 {
-			 if (CachedSettings->SkeletonsWithTwistFix.Contains(DazImportData.CharacterTypeName))
-			 {
-				 Skeleton = (USkeleton*)CachedSettings->SkeletonsWithTwistFix[DazImportData.CharacterTypeName].TryLoad();
-				 if (Skeleton)
-				 {
-					 SkeletonPath = CachedSettings->SkeletonsWithTwistFix[DazImportData.CharacterTypeName];
-				 }
-				 else
-				 {
-					 CachedSettings->SkeletonsWithTwistFix.Remove(DazImportData.CharacterTypeName);
-				 } 
-			 }
-		 }
-		 else
-		 {
-			 if (DazImportData.CharacterType == DazCharacterType::Genesis1)
-			 {
-				 Skeleton = (USkeleton*)CachedSettings->Genesis1Skeleton.TryLoad();
-				 SkeletonPath = CachedSettings->Genesis1Skeleton;
-			 }
-			 if (DazImportData.CharacterType == DazCharacterType::Genesis3Male || DazImportData.CharacterType == DazCharacterType::Genesis3Female)
-			 {
-				 Skeleton = (USkeleton*)CachedSettings->Genesis3Skeleton.TryLoad();
-				 SkeletonPath = CachedSettings->Genesis3Skeleton;
-			 }
-			 if (DazImportData.CharacterType == DazCharacterType::Genesis8Male || DazImportData.CharacterType == DazCharacterType::Genesis8Female)
-			 {
-				 Skeleton = (USkeleton*)CachedSettings->Genesis8Skeleton.TryLoad();
-				 SkeletonPath = CachedSettings->Genesis8Skeleton;
-			 }
-			 if (DazImportData.CharacterType == DazCharacterType::Unknown && CachedSettings->OtherSkeletons.Contains(DazImportData.CharacterTypeName))
-			 {
-				 Skeleton = (USkeleton*)CachedSettings->OtherSkeletons[DazImportData.CharacterTypeName].TryLoad();
-				 if (Skeleton)
-				 {
-					 SkeletonPath = CachedSettings->OtherSkeletons[DazImportData.CharacterTypeName];
-				 }
-				 else
-				 {
-					 CachedSettings->OtherSkeletons.Remove(DazImportData.CharacterTypeName);
-				 }
-			 }
-		 }
-	 }
+	 FSoftObjectPath SkeletonPath = FDazToUnrealUtils::GetSkeletonForImport(DazImportData);
+	 USkeleton* Skeleton = Cast<USkeleton>(SkeletonPath.TryLoad());
 
 	 UFbxImportUI* ImportUI = NewObject<UFbxImportUI>();
 	 FbxFactory->SetDetectImportTypeOnImport(false);
@@ -2006,7 +1966,7 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImpo
 		  FbxFactory->ImportUI->bImportAnimations = false;
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bUseT0AsRefPose = CachedSettings->FrameZeroIsReferencePose;
 		  FbxFactory->ImportUI->SkeletalMeshImportData->bConvertScene = true;
-		  FbxFactory->ImportUI->SkeletalMeshImportData->bForceFrontXAxis = CachedSettings->ZeroRootRotationOnImport;
+		  FbxFactory->ImportUI->SkeletalMeshImportData->bForceFrontXAxis = DazImportData.bFaceCharacterRight;
 		  // DB 2023-May-26: ReEnabling to support bone attached props, until alternative is 100% working
 	 	  FbxFactory->ImportUI->SkeletalMeshImportData->bImportMeshesInBoneHierarchy = true;
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_SkeletalMesh;
@@ -2027,7 +1987,10 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImpo
 		  FbxFactory->ImportUI->bImportTextures = false;
 		  FbxFactory->ImportUI->bImportAnimations = true;
 		  FbxFactory->ImportUI->AnimSequenceImportData->bConvertScene = true;
-		  FbxFactory->ImportUI->AnimSequenceImportData->bForceFrontXAxis = CachedSettings->ZeroRootRotationOnImport;
+		  FbxFactory->ImportUI->AnimSequenceImportData->bForceFrontXAxis = DazImportData.bFaceCharacterRight;
+#if UE_VERSION_NEWER_THAN(5,2,0)
+		  FbxFactory->ImportUI->AnimSequenceImportData->bAddCurveMetadataToSkeleton = true;
+#endif
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_Animation;
 	 }
 	 //UFbxFactory::EnableShowOption();
@@ -2122,20 +2085,27 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImpo
 						 Skeleton->SetBoneTranslationRetargetingMode(HeadBoneIndex, EBoneTranslationRetargetingMode::AnimationRelative, true);
 						 Skeleton->SetBoneTranslationRetargetingMode(HeadBoneIndex, EBoneTranslationRetargetingMode::Skeleton, false);
 					 }
+
+					 // Some character types share a skeleton.  Get the mapped name.
+					 FString MappedSkeletonName = DazImportData.CharacterTypeName;
+					 if (CachedSettings->CharacterTypeMapping.Contains(DazImportData.CharacterTypeName))
+					 {
+						 MappedSkeletonName = CachedSettings->CharacterTypeMapping[DazImportData.CharacterTypeName];
+					 }
 					 
 					 // Add this skeleton as the default for this character type
 					 if (DazImportData.bFixTwistBones)
 					 {
-						 if (!CachedSettings->SkeletonsWithTwistFix.Contains(DazImportData.CharacterTypeName))
+						 if (!CachedSettings->SkeletonsWithTwistFix.Contains(MappedSkeletonName))
 						 {
-							 CachedSettings->SkeletonsWithTwistFix.Add(DazImportData.CharacterTypeName, Skeleton);
+							 CachedSettings->SkeletonsWithTwistFix.Add(MappedSkeletonName, Skeleton);
 						 }
 					 }
 					 else
 					 {
-						 if (!CachedSettings->OtherSkeletons.Contains(DazImportData.CharacterTypeName))
+						 if (!CachedSettings->OtherSkeletons.Contains(MappedSkeletonName))
 						 {
-							 CachedSettings->OtherSkeletons.Add(DazImportData.CharacterTypeName, Skeleton);
+							 CachedSettings->OtherSkeletons.Add(MappedSkeletonName, Skeleton);
 						 }
 					 }
 					 CachedSettings->SaveConfig(CPF_Config, *CachedSettings->GetDefaultConfigFilename());
@@ -2316,6 +2286,51 @@ void FDazToUnrealModule::OnCreateFullBodyIKControlRigClicked(FSoftObjectPath Sou
 	FString DTUPath = FDazToUnrealUtils::GetDTUPathForModel(SourceObjectPath);
 	FString CreateControlRigCommand = FString::Format(TEXT("py CreateControlRig.py --skeletalMesh={0} --dtuFile=\"{1}\""), { SkeletalMeshPackagePath, DTUPath });
 	UE_LOG(LogDazToUnreal, Log, TEXT("Creating FBIK Control Rig with command: %s"), *CreateControlRigCommand);
+	GEngine->Exec(NULL, *CreateControlRigCommand);
+}
+
+void FDazToUnrealModule::AddCreateIKLimbBasedControlRigMenu()
+{
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+	// Create a new context menu item for Skeletal Meshes
+	UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("ContentBrowser.AssetContextMenu.SkeletalMesh");
+	FToolMenuSection& Section = Menu->FindOrAddSection("GetAssetActions");
+
+	//USkeletalMesh* TargetSkeletalMesh = nullptr;
+	//if (const UContentBrowserAssetContextMenuContext* CBContext = Menu->Context.FindContext<UContentBrowserAssetContextMenuContext>())
+	//{
+	//	TargetSkeletalMesh = CBContext->LoadFirstSelectedObject<USkeletalMesh>();
+	//}
+
+	Section.AddDynamicEntry("CreateIKLimbBasedControlRig", FNewToolMenuSectionDelegate::CreateLambda(
+		[this](FToolMenuSection& Section)
+		{
+
+			if (UContentBrowserAssetContextMenuContext* Context = Section.FindContext<UContentBrowserAssetContextMenuContext>())
+			{
+				if (Context->SelectedAssets.Num() > 0)
+				{
+					Section.AddMenuEntry(
+						FName(TEXT("CreateIKLimbBasedControlRigMenu")),
+						LOCTEXT("CreateIKLimbBasedControlRigLabel", "Create IK Limb Based Control Rig"),
+						LOCTEXT("CreateIKLimbBasedControlRigLabelTip", "Creates a Control Rig with per limb IK"),
+						FSlateIcon(),
+						FUIAction(FExecuteAction::CreateRaw(this, &FDazToUnrealModule::OnCreateIKLimbBasedControlRigClicked, Context->SelectedAssets[0].GetSoftObjectPath()))
+					);
+				}
+			}
+		}
+	));
+
+#endif
+}
+
+void FDazToUnrealModule::OnCreateIKLimbBasedControlRigClicked(FSoftObjectPath SourceObjectPath)
+{
+	FString SkeletalMeshPackagePath = SourceObjectPath.ToString();//SourceSkeletalMesh->GetOutermost()->GetPathName() + TEXT(".") + SourceSkeletalMesh->GetName();
+	FString DTUPath = FDazToUnrealUtils::GetDTUPathForModel(SourceObjectPath);
+	FString CreateControlRigCommand = FString::Format(TEXT("py CreateIKLimbBasedControlRig.py --skeletalMesh={0} --dtuFile=\"{1}\""), { SkeletalMeshPackagePath, DTUPath });
+	UE_LOG(LogDazToUnreal, Log, TEXT("Creating IK Limb Based Control Rig with command: %s"), *CreateControlRigCommand);
 	GEngine->Exec(NULL, *CreateControlRigCommand);
 }
 

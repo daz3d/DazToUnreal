@@ -94,6 +94,28 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	// add new asset type to assetTypeCombo widget ("MLDeformer")
 	assetTypeCombo->addItem("MLDeformer");
 
+
+
+	// Common Settings
+	commonSettingsGroupBox = new QGroupBox("Common Settings", this);
+	QFormLayout* commonSettingsLayout = new QFormLayout();
+	commonSettingsGroupBox->setLayout(commonSettingsLayout);
+
+	skeletalMeshFixTwistBonesCheckBox = new QCheckBox("", commonSettingsGroupBox);
+	skeletalMeshFixTwistBonesCheckBox->setChecked(false);
+	skeletalMeshFixTwistBonesCheckBox->setWhatsThis("If checked, twist bones will be taken out of line.");
+	commonSettingsLayout->addRow("Fix Twist Bones", skeletalMeshFixTwistBonesCheckBox);
+
+	skeletalMeshFaceCharacterRightCheckBox = new QCheckBox("", commonSettingsGroupBox);
+	skeletalMeshFaceCharacterRightCheckBox->setChecked(false);
+	skeletalMeshFaceCharacterRightCheckBox->setWhatsThis("If checked, character will be imported facing right (X Forward) in Unreal.");
+	commonSettingsLayout->addRow("Import Facing Right", skeletalMeshFaceCharacterRightCheckBox);
+
+	commonSettingsGroupBox->setVisible(true);
+
+	// Add common settings to the mainLayout as a new row without header
+	mainLayout->addRow(commonSettingsGroupBox);
+
 	// MLDeformer Settings
 	mlDeformerSettingsGroupBox = new QGroupBox(tr("MLDeformer Options : "), this);
 	QFormLayout* mlDeformerSettingsLayout = new QFormLayout();
@@ -104,10 +126,25 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	mlDeformerSettingsLayout->addRow("Pose Count", mlDeformerPoseCountEdit);
 	mlDeformerSettingsGroupBox->setVisible(false);
 
-	this->showLodRow(true);
+	mlDeformerIncludeFingersCheckBox = new QCheckBox("", mlDeformerSettingsGroupBox);
+	mlDeformerIncludeFingersCheckBox->setChecked(false);
+	mlDeformerIncludeFingersCheckBox->setWhatsThis("If checked, finger poses will be added.");
+	mlDeformerSettingsLayout->addRow("Include Finger Poses", mlDeformerIncludeFingersCheckBox);
+
+	mlDeformerIncludeToesCheckBox = new QCheckBox("", mlDeformerSettingsGroupBox);
+	mlDeformerIncludeToesCheckBox->setChecked(false);
+	mlDeformerIncludeToesCheckBox->setWhatsThis("If checked, toe poses will be added.");
+	mlDeformerSettingsLayout->addRow("Include Toe Poses", mlDeformerIncludeToesCheckBox);
+
+	mlDeformerIncludeFaceCheckBox = new QCheckBox("", mlDeformerSettingsGroupBox);
+	mlDeformerIncludeFaceCheckBox->setChecked(false);
+	mlDeformerIncludeFaceCheckBox->setWhatsThis("If checked, face bones will be added to the animation.");
+	mlDeformerSettingsLayout->addRow("Include Face Bones", mlDeformerIncludeFaceCheckBox);
 
 	// Add ML Deformer settings to the mainLayout as a new row without header
 	mainLayout->addRow(mlDeformerSettingsGroupBox);
+
+	this->showLodRow(true);
 
 	// SkeletalMesh Settings
 	skeletalMeshSettingsGroupBox = new QGroupBox(tr("Skeletal Mesh Options : "), this);
@@ -118,11 +155,6 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	skeletalMeshUniqueSkeletonPerCharacterCheckBox->setChecked(false);
 	skeletalMeshUniqueSkeletonPerCharacterCheckBox->setWhatsThis("If checked, a new skeleton will be created for this character instead of sharing a skeleton with related characters.");
 	skeletalMeshSettingsLayout->addRow("Unique Skeleton", skeletalMeshUniqueSkeletonPerCharacterCheckBox);
-
-	skeletalMeshFixTwistBonesCheckBox = new QCheckBox("", skeletalMeshSettingsGroupBox);
-	skeletalMeshFixTwistBonesCheckBox->setChecked(false);
-	skeletalMeshFixTwistBonesCheckBox->setWhatsThis("If checked, twist bones will be taken out of line.");
-	skeletalMeshSettingsLayout->addRow("Fix Twist Bones", skeletalMeshFixTwistBonesCheckBox);
 
 	mlDeformerSettingsGroupBox->setVisible(false);
 
@@ -225,6 +257,18 @@ bool DzUnrealDialog::loadSavedSettings()
 	{
 		mlDeformerPoseCountEdit->setText(settings->value("MLDeformerPoseCount").toString());
 	}
+	if (!settings->value("MLDeformerIncludeFingers").isNull())
+	{
+		mlDeformerIncludeFingersCheckBox->setChecked(settings->value("MLDeformerIncludeFingers").toBool());
+	}
+	if (!settings->value("MLDeformerIncludeToes").isNull())
+	{
+		mlDeformerIncludeToesCheckBox->setChecked(settings->value("MLDeformerIncludeToes").toBool());
+	}
+	if (!settings->value("MLDeformerIncludeFace").isNull())
+	{
+		mlDeformerIncludeFaceCheckBox->setChecked(settings->value("MLDeformerIncludeFace").toBool());
+	}
 
 	// SkeletalMesh settings
 	if (!settings->value("SkeletalMeshUniqueSkeletonPerCharacter").isNull())
@@ -235,6 +279,11 @@ bool DzUnrealDialog::loadSavedSettings()
 	if (!settings->value("SkeletalMeshFixTwistBones").isNull())
 	{
 		skeletalMeshFixTwistBonesCheckBox->setChecked(settings->value("SkeletalMeshFixTwistBones").toBool());
+	}
+
+	if (!settings->value("SkeletalMeshFaceCharacterRight").isNull())
+	{
+		skeletalMeshFaceCharacterRightCheckBox->setChecked(settings->value("SkeletalMeshFaceCharacterRight").toBool());
 	}
 
 	return true;
@@ -248,10 +297,14 @@ void DzUnrealDialog::saveSettings()
 
 	// MLDeformer settings
 	settings->setValue("MLDeformerPoseCount", mlDeformerPoseCountEdit->text().toInt());
+	settings->setValue("MLDeformerIncludeFingers", mlDeformerIncludeFingersCheckBox->isChecked());
+	settings->setValue("MLDeformerIncludeToes", mlDeformerIncludeToesCheckBox->isChecked());
+	settings->setValue("MLDeformerIncludeFace", mlDeformerIncludeFaceCheckBox->isChecked());
 
 	// SkeletalMesh settings
 	settings->setValue("SkeletalMeshUniqueSkeletonPerCharacter", skeletalMeshUniqueSkeletonPerCharacterCheckBox->isChecked());
 	settings->setValue("SkeletalMeshFixTwistBones", skeletalMeshFixTwistBonesCheckBox->isChecked());
+	settings->setValue("SkeletalMeshFaceCharacterRight", skeletalMeshFaceCharacterRightCheckBox->isChecked());
 }
 
 void DzUnrealDialog::resetToDefaults()
@@ -516,6 +569,8 @@ void DzUnrealDialog::HandleAssetTypeComboChange(const QString& assetType)
 	skeletalMeshSettingsGroupBox->setVisible(assetType == "Skeletal Mesh");
 	// DB 2023-Aug-10: Override default Base class behavior which hides Animation options behind Experimental Options mode
 	//DzBridgeDialog::HandleAssetTypeComboChange(assetType);
+	commonSettingsGroupBox->setVisible(assetType == "Skeletal Mesh" || assetType == "MLDeformer" || assetType == "Animation" || assetType == "Pose");
+	DzBridgeDialog::HandleAssetTypeComboChange(assetType);
 }
 
 #include <QDesktopServices>
