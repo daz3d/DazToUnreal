@@ -45,18 +45,12 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	intermediateFolderEdit = nullptr;
 	intermediateFolderButton = nullptr;
 
+	settings = new QSettings("Daz 3D", "DazToUnreal");
+
 	// Declarations
 	int margin = style()->pixelMetric(DZ_PM_GeneralMargin);
 	int wgtHeight = style()->pixelMetric(DZ_PM_ButtonHeight);
 	int btnMinWidth = style()->pixelMetric(DZ_PM_ButtonMinWidth);
-
-	// Set the dialog title
-	int revision = PLUGIN_REV % 1000;
-#if 0
-	setWindowTitle(tr("ALPHA BUILD: Daz To Unreal %1 v%2.%3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD));
-#else
-	setWindowTitle(tr("Daz To Unreal %1 v%2.%3").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision));
-#endif
 
 
 	// Welcome String for Setup/Welcome Mode
@@ -81,12 +75,11 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 ");
 	m_WelcomeLabel->setText(sSetupModeString);
 
-	QString sBridgeVersionString = tr("Daz To Unreal Bridge %1 v%2.%3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(revision).arg(PLUGIN_BUILD);
-	setBridgeVersionStringAndLabel(sBridgeVersionString);
+	// GUI Refresh
+	m_WelcomeLabel->hide();
+	setWindowTitle(tr("Unreal Export Options"));
+	this->wHelpMenuButton->show();
 
-	layout()->setSizeConstraint(QLayout::SetFixedSize);
-
-	settings = new QSettings("Daz 3D", "DazToUnreal");
 
 	// Rename Animation Options Box
 	animationSettingsGroupBox->setTitle(tr("Animation Options : "));
@@ -94,22 +87,26 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	// add new asset type to assetTypeCombo widget ("MLDeformer")
 	assetTypeCombo->addItem("MLDeformer");
 
-
-
 	// Common Settings
 	commonSettingsGroupBox = new QGroupBox("Common Settings", this);
 	QFormLayout* commonSettingsLayout = new QFormLayout();
+	commonSettingsLayout->setContentsMargins(margin, margin, margin, margin);
+	commonSettingsLayout->setMargin(margin);
+	commonSettingsLayout->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
 	commonSettingsGroupBox->setLayout(commonSettingsLayout);
 
 	skeletalMeshFixTwistBonesCheckBox = new QCheckBox("", commonSettingsGroupBox);
 	skeletalMeshFixTwistBonesCheckBox->setChecked(false);
 	skeletalMeshFixTwistBonesCheckBox->setWhatsThis("If checked, twist bones will be taken out of line.");
-	commonSettingsLayout->addRow("Fix Twist Bones", skeletalMeshFixTwistBonesCheckBox);
+	QLabel* wFixTwistBonesRowLabel = new QLabel(tr("Fix Twist Bones"));
+	m_aRowLabels.append(wFixTwistBonesRowLabel);
+	commonSettingsLayout->addRow(wFixTwistBonesRowLabel, skeletalMeshFixTwistBonesCheckBox);
 
 	skeletalMeshFaceCharacterRightCheckBox = new QCheckBox("", commonSettingsGroupBox);
 	skeletalMeshFaceCharacterRightCheckBox->setChecked(false);
 	skeletalMeshFaceCharacterRightCheckBox->setWhatsThis("If checked, character will be imported facing right (X Forward) in Unreal.");
-	commonSettingsLayout->addRow("Import Facing Right", skeletalMeshFaceCharacterRightCheckBox);
+	QLabel* wImportFacingRightRowLabel = new QLabel(tr("Import Facing Right"));
+	commonSettingsLayout->addRow(wImportFacingRightRowLabel, skeletalMeshFaceCharacterRightCheckBox);
 
 	commonSettingsGroupBox->setVisible(true);
 
@@ -119,27 +116,39 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	// MLDeformer Settings
 	mlDeformerSettingsGroupBox = new QGroupBox(tr("MLDeformer Options : "), this);
 	QFormLayout* mlDeformerSettingsLayout = new QFormLayout();
+	mlDeformerSettingsLayout->setContentsMargins(margin, margin, margin, margin);
+	mlDeformerSettingsLayout->setMargin(margin);
+	mlDeformerSettingsLayout->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
 	mlDeformerSettingsGroupBox->setLayout(mlDeformerSettingsLayout);
+
 	mlDeformerPoseCountEdit = new QLineEdit("500", mlDeformerSettingsGroupBox);
 	mlDeformerPoseCountEdit->setFixedHeight(wgtHeight);
 	mlDeformerPoseCountEdit->setValidator(new QIntValidator());
-	mlDeformerSettingsLayout->addRow("Pose Count", mlDeformerPoseCountEdit);
+	QLabel* wPoseCountRowLabel = new QLabel(tr("Pose Count"));
+	m_aRowLabels.append(wPoseCountRowLabel);
+	mlDeformerSettingsLayout->addRow(wPoseCountRowLabel, mlDeformerPoseCountEdit);
 	mlDeformerSettingsGroupBox->setVisible(false);
 
 	mlDeformerIncludeFingersCheckBox = new QCheckBox("", mlDeformerSettingsGroupBox);
 	mlDeformerIncludeFingersCheckBox->setChecked(false);
 	mlDeformerIncludeFingersCheckBox->setWhatsThis("If checked, finger poses will be added.");
-	mlDeformerSettingsLayout->addRow("Include Finger Poses", mlDeformerIncludeFingersCheckBox);
+	QLabel* wIncludeFingerPosesRowLabel = new QLabel(tr("Include Finger Poses"));
+	m_aRowLabels.append(wIncludeFingerPosesRowLabel);
+	mlDeformerSettingsLayout->addRow(wIncludeFingerPosesRowLabel, mlDeformerIncludeFingersCheckBox);
 
 	mlDeformerIncludeToesCheckBox = new QCheckBox("", mlDeformerSettingsGroupBox);
 	mlDeformerIncludeToesCheckBox->setChecked(false);
 	mlDeformerIncludeToesCheckBox->setWhatsThis("If checked, toe poses will be added.");
-	mlDeformerSettingsLayout->addRow("Include Toe Poses", mlDeformerIncludeToesCheckBox);
+	QLabel* wIncludeToePosesRowLabel = new QLabel(tr("Include Toe Poses"));
+	m_aRowLabels.append(wIncludeToePosesRowLabel);
+	mlDeformerSettingsLayout->addRow(wIncludeToePosesRowLabel, mlDeformerIncludeToesCheckBox);
 
 	mlDeformerIncludeFaceCheckBox = new QCheckBox("", mlDeformerSettingsGroupBox);
 	mlDeformerIncludeFaceCheckBox->setChecked(false);
 	mlDeformerIncludeFaceCheckBox->setWhatsThis("If checked, face bones will be added to the animation.");
-	mlDeformerSettingsLayout->addRow("Include Face Bones", mlDeformerIncludeFaceCheckBox);
+	QLabel* wIncludeFaceBonesRowLabel = new QLabel(tr("Include Face Bones"));
+	m_aRowLabels.append(wIncludeFaceBonesRowLabel);
+	mlDeformerSettingsLayout->addRow(wIncludeFaceBonesRowLabel, mlDeformerIncludeFaceCheckBox);
 
 	// Add ML Deformer settings to the mainLayout as a new row without header
 	mainLayout->addRow(mlDeformerSettingsGroupBox);
@@ -149,12 +158,17 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	// SkeletalMesh Settings
 	skeletalMeshSettingsGroupBox = new QGroupBox(tr("Skeletal Mesh Options : "), this);
 	QFormLayout* skeletalMeshSettingsLayout = new QFormLayout();
+	skeletalMeshSettingsLayout->setContentsMargins(margin, margin, margin, margin);
+	skeletalMeshSettingsLayout->setMargin(margin);
+	skeletalMeshSettingsLayout->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
 	skeletalMeshSettingsGroupBox->setLayout(skeletalMeshSettingsLayout);
 
 	skeletalMeshUniqueSkeletonPerCharacterCheckBox = new QCheckBox("", skeletalMeshSettingsGroupBox);
 	skeletalMeshUniqueSkeletonPerCharacterCheckBox->setChecked(false);
 	skeletalMeshUniqueSkeletonPerCharacterCheckBox->setWhatsThis("If checked, a new skeleton will be created for this character instead of sharing a skeleton with related characters.");
-	skeletalMeshSettingsLayout->addRow("Unique Skeleton", skeletalMeshUniqueSkeletonPerCharacterCheckBox);
+	QLabel* wUniqueSkeletonRowLabel = new QLabel(tr("Unique Skeleton"));
+	m_aRowLabels.append(wUniqueSkeletonRowLabel);
+	skeletalMeshSettingsLayout->addRow(wUniqueSkeletonRowLabel, skeletalMeshUniqueSkeletonPerCharacterCheckBox);
 
 	mlDeformerSettingsGroupBox->setVisible(false);
 
@@ -183,8 +197,12 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 //	QFormLayout* advancedLayout = qobject_cast<QFormLayout*>(advancedWidget->layout());
 	if (advancedLayout)
 	{
-		advancedLayout->addRow("Port", portEdit);
-		advancedLayout->addRow("Intermediate Folder", intermediateFolderLayout);
+		QLabel* wPortRowLabel = new QLabel(tr("Port"));
+		m_aRowLabels.append(wPortRowLabel);
+		advancedLayout->addRow(wPortRowLabel, portEdit);
+		QLabel* wIntermediateFolderRowLabel = new QLabel(tr("Intermediate Folder"));
+		m_aRowLabels.append(wIntermediateFolderRowLabel);
+		advancedLayout->addRow(wIntermediateFolderRowLabel, intermediateFolderLayout);
 		// reposition the Open Intermediate Folder button so it aligns with the center section
 		advancedLayout->removeWidget(m_OpenIntermediateFolderButton);
 		advancedLayout->addRow("", m_OpenIntermediateFolderButton);
@@ -196,12 +214,16 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 
 	}
 
+	QString sBridgeVersionString = tr("Daz To Unreal Bridge %1 v%2.%3.%4").arg(PLUGIN_MAJOR).arg(PLUGIN_MINOR).arg(PLUGIN_REV).arg(PLUGIN_BUILD);
+	setBridgeVersionStringAndLabel(sBridgeVersionString);
+
 	// Configure Target Plugin Installer
 	if (m_TargetSoftwareVersionCombo)
 	{
 		renameTargetPluginInstaller("Unreal Plugin Installer");
 		m_TargetSoftwareVersionCombo->clear();
-		m_TargetSoftwareVersionCombo->addItem("Select Unreal Version");
+		m_TargetSoftwareVersionCombo->addItem("Select Unreal Version", -1);
+/*
 		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.25");
 		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.26");
 		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 4.27");
@@ -209,6 +231,8 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.1");
 		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.2");
 		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.3");
+*/
+//		m_TargetSoftwareVersionCombo->addItem("Unreal Engine 5.4", 5.4);
 		showTargetPluginInstaller(true);
 	}
 
@@ -227,10 +251,9 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	// Load Settings
 	loadSavedSettings();
 
-	// GUI Refresh
-	m_WelcomeLabel->hide();
-	setWindowTitle(tr("Unreal Export Options"));
-	this->wHelpMenuButton->show();
+
+	fixRowLabelStyle();
+	fixRowLabelWidths();
 
 }
 
@@ -350,6 +373,23 @@ void DzUnrealDialog::HandleTargetPluginInstallerButton()
 	DzBridgeDialog::m_sEmbeddedFilesPath = ":/DazBridgeUnreal";
 	QString sBaseFile = "/UEpluginbase.zip";
 	QString sBinariesFile = "";
+
+	bool bValid = false;
+	double fUEVersion = m_TargetSoftwareVersionCombo->itemData(m_TargetSoftwareVersionCombo->currentIndex()).toDouble(&bValid);
+	if (bValid && fUEVersion == 5.4) {
+		sBinariesFile = "/UE54.zip";
+	}
+	else if (bValid && fUEVersion == 5.3) {
+		sBinariesFile = "/UE53.zip";
+	}
+	else
+	{
+		QMessageBox::information(0, "DazToUnreal Bridge",
+			tr("Please select an Unreal Engine version."));
+		return;
+	}
+
+/*
 	QString softwareVersion = m_TargetSoftwareVersionCombo->currentText();
 	if (softwareVersion.contains("4.25"))
 	{
@@ -385,6 +425,8 @@ void DzUnrealDialog::HandleTargetPluginInstallerButton()
 			tr("Please select an Unreal Engine version."));
 		return;
 	}
+*/
+
 
 	// For the first run, Display help / explanation popup dialog...
 	// TODO
