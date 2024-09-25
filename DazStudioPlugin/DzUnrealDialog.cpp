@@ -195,13 +195,10 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	// Load Settings
 	loadSavedSettings();
 
-	// Daz Ultra
+	// GUI Refresh
 	m_WelcomeLabel->hide();
 	setWindowTitle(tr("Unreal Export Options"));
-	this->m_wPdfButton->show();
-	this->m_wSupportButton->show();
-	this->m_wYoutubeButton->show();
-
+	this->wHelpMenuButton->show();
 
 }
 
