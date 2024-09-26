@@ -41,6 +41,8 @@ Local definitions
 DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	DzBridgeDialog(parent, DAZ_TO_UNREAL_PLUGIN_NAME)
 {
+	this->setObjectName("DzBridge_DazToUnreal_Dialog");
+
 	portEdit = nullptr;
 	intermediateFolderEdit = nullptr;
 	intermediateFolderButton = nullptr;

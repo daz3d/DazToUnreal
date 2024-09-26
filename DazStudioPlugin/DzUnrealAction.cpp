@@ -34,6 +34,8 @@
 DzUnrealAction::DzUnrealAction() :
 	 DzBridgeAction(tr("Send to &Unreal..."), tr("Send the selected node to Unreal."))
 {
+	 this->setObjectName("DzBridge_DazToUnreal_Action");
+
 	 m_nPort = 0;
      m_nNonInteractiveMode = 0;
 	 m_sAssetType = QString("SkeletalMesh");
