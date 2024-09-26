@@ -101,3 +101,22 @@ elseif (APPLE)
 endif()
 
 set_property(SOURCE ${DPC_IMAGES_CPP} PROPERTY SKIP_AUTOMOC ON)
+
+############################
+# PRE-BUILD: Prepare Unreal Engline plugin
+############################
+# Define your source and destination directories
+set(SOURCE_DIR "${CMAKE_SOURCE_DIR}/UnrealPlugin")
+set(ZIP_DEST_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/UnrealPlugin")
+set(ZIP_NAME "unrealplugin.zip")
+set(UPLUGIN_FILE "${SOURCE_DIR}/DazToUnreal/DazToUnreal.uplugin")
+add_custom_target(plugindata)
+target_sources(plugindata
+    PRIVATE
+    ${UPLUGIN_FILE}
+)
+set_target_properties (plugindata
+	PROPERTIES
+	FOLDER ""
+	PROJECT_LABEL "UnrealPlugin"
+)
