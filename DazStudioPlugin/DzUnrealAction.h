@@ -30,6 +30,7 @@ protected:
 	 void executeAction();
 	 Q_INVOKABLE void writeConfiguration();
 	 void setExportOptions(DzFileIOSettings& ExportOptions);
+	 Q_INVOKABLE virtual bool readGui(DZ_BRIDGE_NAMESPACE::DzBridgeDialog*) override;
 
 	 virtual bool exportNode(DzNode* Node) override;
 	 virtual void exportAnimation() override;

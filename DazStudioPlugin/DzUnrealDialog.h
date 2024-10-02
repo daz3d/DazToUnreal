@@ -64,10 +64,21 @@ protected slots:
 	void HandlePortChanged(const QString& port);
 	void HandleTargetPluginInstallerButton() override;
 	void HandleOpenIntermediateFolderButton(QString sFolderPath = "") override;
-	void HandleAssetTypeComboChange(const QString& assetType) override;
+	void HandleAssetTypeComboChange(int state) override;
 	void HandlePdfButton() override;
 	void HandleYoutubeButton() override;
 	void HandleSupportButton() override;
+
+// DB 2024-10-02: overrides new base class behaviors
+#ifdef VODSVERSION
+	void HandleMorphsCheckBoxChange(int state) override;
+	void HandleSubdivisionCheckBoxChange(int state) override;
+	void HandleFBXVersionChange(const QString& fbxVersion) override;
+	void HandleShowFbxDialogCheckBoxChange(int state) override;
+	void HandleExportMaterialPropertyCSVCheckBoxChange(int state) override;
+	void HandleConvertBumpToNormalCheckBoxChange(int state) override;
+	void HandleEnableLodCheckBoxChange(int state) override;
+#endif VODSVERSION
 
 
 protected:

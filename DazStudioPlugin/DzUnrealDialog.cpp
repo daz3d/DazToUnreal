@@ -606,15 +606,17 @@ void DzUnrealDialog::HandleOpenIntermediateFolderButton(QString sFolderPath)
 	DzBridgeDialog::HandleOpenIntermediateFolderButton(sIntermediateFolder);
 }
 
-void DzUnrealDialog::HandleAssetTypeComboChange(const QString& assetType)
+void DzUnrealDialog::HandleAssetTypeComboChange(int state)
 {
+	DzBridgeDialog::HandleAssetTypeComboChange(state);
+
+	QString assetType = assetTypeCombo->currentText();
 	mlDeformerSettingsGroupBox->setVisible(assetType == "MLDeformer");
 	animationSettingsGroupBox->setVisible(assetType == "Animation" || assetType == "Pose");
 	skeletalMeshSettingsGroupBox->setVisible(assetType == "Skeletal Mesh");
 	// DB 2023-Aug-10: Override default Base class behavior which hides Animation options behind Experimental Options mode
 	//DzBridgeDialog::HandleAssetTypeComboChange(assetType);
 	commonSettingsGroupBox->setVisible(assetType == "Skeletal Mesh" || assetType == "MLDeformer" || assetType == "Animation" || assetType == "Pose");
-	DzBridgeDialog::HandleAssetTypeComboChange(assetType);
 }
 
 #include <QDesktopServices>
@@ -644,5 +646,55 @@ void DzUnrealDialog::whatsThis()
 	// m_WelcomeLabel->setVisible(!m_WelcomeLabel->isVisible());
 	DzBasicDialog::whatsThis();
 }
+
+#ifdef VODSVERSION
+void DzUnrealDialog::HandleMorphsCheckBoxChange(int state)
+{
+	DzBridgeDialog::HandleMorphsCheckBoxChange(state);
+	if (settings == nullptr || m_bDontSaveSettings) return;
+	settings->setValue("MorphsEnabled", state == Qt::Checked);
+}
+
+void DzUnrealDialog::HandleSubdivisionCheckBoxChange(int state)
+{
+	DzBridgeDialog::HandleSubdivisionCheckBoxChange(state);
+	if (settings == nullptr || m_bDontSaveSettings) return;
+	settings->setValue("SubdivisionEnabled", state == Qt::Checked);
+}
+
+void DzUnrealDialog::HandleFBXVersionChange(const QString& fbxVersion)
+{
+	DzBridgeDialog::HandleFBXVersionChange(fbxVersion);
+	if (settings == nullptr || m_bDontSaveSettings) return;
+	settings->setValue("FBXExportVersion", fbxVersion);
+}
+void DzUnrealDialog::HandleShowFbxDialogCheckBoxChange(int state)
+{
+	DzBridgeDialog::HandleShowFbxDialogCheckBoxChange(state);
+	if (settings == nullptr || m_bDontSaveSettings) return;
+	settings->setValue("ShowFBXDialog", state == Qt::Checked);
+}
+void DzUnrealDialog::HandleExportMaterialPropertyCSVCheckBoxChange(int state)
+{
+	DzBridgeDialog::HandleExportMaterialPropertyCSVCheckBoxChange(state);
+	if (settings == nullptr || m_bDontSaveSettings) return;
+	settings->setValue("ExportMaterialPropertyCSV", state == Qt::Checked);
+}
+
+void DzUnrealDialog::HandleConvertBumpToNormalCheckBoxChange(int state)
+{
+	DzBridgeDialog::HandleConvertBumpToNormalCheckBoxChange(state);
+	if (settings == nullptr || m_bDontSaveSettings) return;
+	settings->setValue("EnableNormalMapGeneration", state == Qt::Checked);
+}
+
+void DzUnrealDialog::HandleEnableLodCheckBoxChange(int state)
+{
+	DzBridgeDialog::HandleEnableLodCheckBoxChange(state);
+	if (settings == nullptr || m_bDontSaveSettings) return;
+	settings->setValue("LodEnabled", state == Qt::Checked);
+}
+#endif VODSVERSION
+
 
 #include "moc_DzUnrealDialog.cpp"

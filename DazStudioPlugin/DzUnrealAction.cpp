@@ -60,7 +60,10 @@ DzUnrealAction::DzUnrealAction() :
 
 void DzUnrealAction::executeAction()
 {
-	 // Check if the main window has been created yet.
+	m_nExecuteActionResult = DZ_OPERATION_FAILED_ERROR;
+	m_eSelectedNodeAssetType = DZ_BRIDGE_NAMESPACE::EAssetType::None;
+	
+	// Check if the main window has been created yet.
 	 // If it hasn't, alert the user and exit early.
 	 DzMainWindow* mw = dzApp->getInterface();
 	 if (!mw)
@@ -73,9 +76,9 @@ void DzUnrealAction::executeAction()
 		 return;
 	 }
 
-	 bool bDefaultToEnvironment = false;
-	 if (SelectBestRootNodeForTransfer() == DZ_BRIDGE_NAMESPACE::EAssetType::Other) {
-		 bDefaultToEnvironment = true;
+	 if (m_nNonInteractiveMode != DZ_BRIDGE_NAMESPACE::eNonInteractiveMode::DzExporterMode) {
+		 m_eSelectedNodeAssetType = SelectBestRootNodeForTransfer(true);
+		 m_pSelectedNode = dzScene->getPrimarySelection();
 	 }
 
     // Create the dialog
@@ -133,9 +136,8 @@ void DzUnrealAction::executeAction()
 
 	}
 
-	if (bDefaultToEnvironment) {
-		int nEnvIndex = m_bridgeDialog->getAssetTypeCombo()->findText("Environment");
-		m_bridgeDialog->getAssetTypeCombo()->setCurrentIndex(nEnvIndex);
+	if (m_nNonInteractiveMode != DZ_BRIDGE_NAMESPACE::eNonInteractiveMode::DzExporterMode) {
+		m_bridgeDialog->setEAssetType(m_eSelectedNodeAssetType);
 	}
 
     // If the Accept button was pressed, start the export
@@ -146,21 +148,25 @@ void DzUnrealAction::executeAction()
 	}
     if (m_nNonInteractiveMode == 1 || dialog_choice == QDialog::Accepted)
     {
-		DzProgress* exportProgress = new DzProgress("Sending to Unreal...", 10);
-
-		// Read in Custom GUI values
-		DzUnrealDialog* unrealDialog = qobject_cast<DzUnrealDialog*>(m_bridgeDialog);
-		if (unrealDialog)
+		// Read GUI values
+		if (readGui(m_bridgeDialog) == false)
 		{
-			m_nPort = unrealDialog->getPortEdit()->text().toInt();
-			m_bExportMaterialPropertiesCSV = unrealDialog->getExportMaterialPropertyCSVCheckBox()->isChecked();
+			m_nExecuteActionResult = DZ_OPERATION_FAILED_ERROR;
+			return;
 		}
-		// Read in Common GUI values
-		readGui(m_bridgeDialog);
+
+		DzProgress* exportProgress = new DzProgress("Sending to Unreal...", 10, false, true);
+
+		DzError result = doPromptableObjectBaking();
+		if (result != DZ_NO_ERROR) {
+			exportProgress->finish();
+			exportProgress->cancel();
+			m_nExecuteActionResult = result;
+			return;
+		}
+		exportProgress->step();
 
 		exportHD(exportProgress);
-
-		exportProgress->finish();
 
 		// DB, 2022-June-4: Hotfix for Corrupted Imports due to UDP Packet before UpgradeToHD
 		if (m_EnableSubdivisions)
@@ -174,6 +180,7 @@ void DzUnrealAction::executeAction()
 			sendSocket->write(DTUfilename.toUtf8());
 		}
 
+		exportProgress->update(10);
 		// DB 2021-09-02: messagebox "Export Complete"
 		if (m_nNonInteractiveMode == 0)
 		{
@@ -181,7 +188,11 @@ void DzUnrealAction::executeAction()
 				tr("Export phase from Daz Studio complete. Please switch to Unreal to continue with Import phase."), QMessageBox::Ok);
 		}
 
-    }
+		exportProgress->finish();
+	}
+
+	m_nExecuteActionResult = DZ_NO_ERROR;
+
 }
 
 void DzUnrealAction::writeConfiguration()
@@ -426,5 +437,26 @@ void DzUnrealAction::exportNodeAnimation(DzNode* Bone, QMap<DzNode*, FbxNode*>& 
 		// Insert MLDeformer specific code here
 	}
 }
+
+
+bool DzUnrealAction::readGui(DZ_BRIDGE_NAMESPACE::DzBridgeDialog* pBridgeDialog)
+{
+	bool bResult = DzBridgeAction::readGui(pBridgeDialog);
+	if (!bResult)
+	{
+		return false;
+	}
+
+	// Read in Custom GUI values
+	DzUnrealDialog* unrealDialog = qobject_cast<DzUnrealDialog*>(pBridgeDialog);
+	if (unrealDialog)
+	{
+		m_nPort = unrealDialog->getPortEdit()->text().toInt();
+		m_bExportMaterialPropertiesCSV = unrealDialog->getExportMaterialPropertyCSVCheckBox()->isChecked();
+	}
+
+	return true;
+}
+
 
 #include "moc_DzUnrealAction.cpp"
