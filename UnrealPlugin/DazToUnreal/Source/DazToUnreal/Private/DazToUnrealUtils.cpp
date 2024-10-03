@@ -2,7 +2,10 @@
 #include "GenericPlatform/GenericPlatformFile.h"
 #include "Misc/Paths.h"
 #include "UObject/SoftObjectPath.h"
+// only include in UE 4.26 and later
+#if ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION >= 26
 #include "AssetRegistry/AssetRegistryModule.h"
+#endif
 
 #include "Engine/SkeletalMesh.h"
 #include "Animation/Skeleton.h"
