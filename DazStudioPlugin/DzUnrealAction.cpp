@@ -96,16 +96,6 @@ void DzUnrealAction::executeAction()
 		}
 	}
 
-	// Enable autoJCM option in morph selection dialog
-	if (dzScene->getPrimarySelection() != nullptr)
-	{
-		if (m_morphSelectionDialog == nullptr)
-		{
-			m_morphSelectionDialog = DZ_BRIDGE_NAMESPACE::DzBridgeMorphSelectionDialog::Get(m_bridgeDialog);
-		}
-		m_morphSelectionDialog->SetAutoJCMVisible(true);
-	}
-
 	// Prepare member variables when not using GUI
 	if (m_nNonInteractiveMode == 1)
 	{

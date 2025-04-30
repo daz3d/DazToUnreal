@@ -82,6 +82,8 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	setWindowTitle(tr("Unreal Export Options"));
 	this->wHelpMenuButton->show();
 
+	m_wAutoJCMCheckBox->setVisible(true);
+	m_wFakeDualQuatCheckBox->setVisible(true);
 
 	// Rename Animation Options Box
 	animationSettingsGroupBox->setTitle(tr("Animation Options : "));
