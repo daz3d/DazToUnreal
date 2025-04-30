@@ -7,3 +7,5 @@
 #define PLUGIN_MINOR	VER_MINOR
 #define PLUGIN_REV		VER_REV
 #define PLUGIN_BUILD	VER_BUILD
+
+#define VODS_PLUGIN_VERSION "Vod's Version"

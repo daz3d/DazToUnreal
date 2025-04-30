@@ -47,12 +47,20 @@ public:
 		return skeletalMeshUniqueSkeletonPerCharacterCheckBox ? skeletalMeshUniqueSkeletonPerCharacterCheckBox->isChecked() : false;
 	}
 
+	bool getConvertToEpicSkeleton() {
+		return skeletalMeshConvertToEpicSkeletonCheckBox ? skeletalMeshConvertToEpicSkeletonCheckBox->isChecked() : false;
+	}
+
 	bool getFixTwistBones() {
 		return skeletalMeshFixTwistBonesCheckBox ? skeletalMeshFixTwistBonesCheckBox->isChecked() : false;
 	}
 
 	bool getFaceCharacterRight() {
 		return skeletalMeshFaceCharacterRightCheckBox ? skeletalMeshFaceCharacterRightCheckBox->isChecked() : false;
+	}
+
+	QString getMaterialCombineMethod() {
+		return combineMaterialMethodComboBox ? combineMaterialMethodComboBox->currentText() : QString("Combine Identical");
 	}
 
 	// Settings
@@ -100,11 +108,13 @@ protected:
 	// SkeletalMesh settings
 	QGroupBox* skeletalMeshSettingsGroupBox = nullptr;
 	QCheckBox* skeletalMeshUniqueSkeletonPerCharacterCheckBox = nullptr;
+	QCheckBox* skeletalMeshConvertToEpicSkeletonCheckBox = nullptr;
 
 	// Common settings
 	QGroupBox* commonSettingsGroupBox = nullptr;
 	QCheckBox* skeletalMeshFixTwistBonesCheckBox = nullptr;
 	QCheckBox* skeletalMeshFaceCharacterRightCheckBox = nullptr;
+	QComboBox* combineMaterialMethodComboBox = nullptr;
 
 #ifdef UNITTEST_DZBRIDGE
 	friend class UnitTest_DzUnrealDialog;

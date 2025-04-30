@@ -54,6 +54,9 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	int wgtHeight = style()->pixelMetric(DZ_PM_ButtonHeight);
 	int btnMinWidth = style()->pixelMetric(DZ_PM_ButtonMinWidth);
 
+#ifdef VODSVERSION
+	setWindowTitle(tr("Daz To Unreal (%1)").arg(VODS_PLUGIN_VERSION));
+#endif
 
 	// Welcome String for Setup/Welcome Mode
 	QString sDazAppDir = dzApp->getHomePath().replace("\\","/");
@@ -111,6 +114,14 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	skeletalMeshFaceCharacterRightCheckBox->setWhatsThis("If checked, character will be imported facing right (X Forward) in Unreal.");
 	QLabel* wImportFacingRightRowLabel = new QLabel(tr("Import Facing Right"));
 	commonSettingsLayout->addRow(wImportFacingRightRowLabel, skeletalMeshFaceCharacterRightCheckBox);
+
+	combineMaterialMethodComboBox = new QComboBox(commonSettingsGroupBox);
+	combineMaterialMethodComboBox->setWhatsThis("How to combine Materials in Unreal");
+	combineMaterialMethodComboBox->addItem("Combine Identical");
+	combineMaterialMethodComboBox->addItem("No Combine");
+	combineMaterialMethodComboBox->addItem("Combine All");
+	combineMaterialMethodComboBox->setCurrentIndex(0);
+	commonSettingsLayout->addRow("Material Combine Method", combineMaterialMethodComboBox);
 
 	commonSettingsGroupBox->setVisible(true);
 
@@ -173,6 +184,11 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	QLabel* wUniqueSkeletonRowLabel = new QLabel(tr("Unique Skeleton"));
 	m_aRowLabels.append(wUniqueSkeletonRowLabel);
 	skeletalMeshSettingsLayout->addRow(wUniqueSkeletonRowLabel, skeletalMeshUniqueSkeletonPerCharacterCheckBox);
+
+	skeletalMeshConvertToEpicSkeletonCheckBox = new QCheckBox("", skeletalMeshSettingsGroupBox);
+	skeletalMeshConvertToEpicSkeletonCheckBox->setChecked(false);
+	skeletalMeshConvertToEpicSkeletonCheckBox->setWhatsThis("If checked, will attempts to convert the character to the Epic Skeleton.  Requires an Unreal project containing the Manny or Quinn mannequin.");
+	skeletalMeshSettingsLayout->addRow("Convert To Epic Skeleton", skeletalMeshConvertToEpicSkeletonCheckBox);
 
 	mlDeformerSettingsGroupBox->setVisible(false);
 
@@ -303,6 +319,11 @@ bool DzUnrealDialog::loadSavedSettings()
 		skeletalMeshUniqueSkeletonPerCharacterCheckBox->setChecked(settings->value("SkeletalMeshUniqueSkeletonPerCharacter").toBool());
 	}
 
+	if (!settings->value("SkeletalMeshConvertToEpicSkeleton").isNull())
+	{
+		skeletalMeshConvertToEpicSkeletonCheckBox->setChecked(settings->value("SkeletalMeshConvertToEpicSkeleton").toBool());
+	}
+
 	if (!settings->value("SkeletalMeshFixTwistBones").isNull())
 	{
 		skeletalMeshFixTwistBonesCheckBox->setChecked(settings->value("SkeletalMeshFixTwistBones").toBool());
@@ -311,6 +332,11 @@ bool DzUnrealDialog::loadSavedSettings()
 	if (!settings->value("SkeletalMeshFaceCharacterRight").isNull())
 	{
 		skeletalMeshFaceCharacterRightCheckBox->setChecked(settings->value("SkeletalMeshFaceCharacterRight").toBool());
+	}
+
+	if (!settings->value("MaterialCombineMethod").isNull())
+	{
+		combineMaterialMethodComboBox->setCurrentIndex(settings->value("MaterialCombineMethod").toInt());
 	}
 
 	return true;
@@ -330,8 +356,10 @@ void DzUnrealDialog::saveSettings()
 
 	// SkeletalMesh settings
 	settings->setValue("SkeletalMeshUniqueSkeletonPerCharacter", skeletalMeshUniqueSkeletonPerCharacterCheckBox->isChecked());
+	settings->setValue("SkeletalMeshConvertToEpicSkeleton", skeletalMeshConvertToEpicSkeletonCheckBox->isChecked());
 	settings->setValue("SkeletalMeshFixTwistBones", skeletalMeshFixTwistBonesCheckBox->isChecked());
 	settings->setValue("SkeletalMeshFaceCharacterRight", skeletalMeshFaceCharacterRightCheckBox->isChecked());
+	settings->setValue("MaterialCombineMethod", combineMaterialMethodComboBox->currentIndex());
 }
 
 void DzUnrealDialog::resetToDefaults()
