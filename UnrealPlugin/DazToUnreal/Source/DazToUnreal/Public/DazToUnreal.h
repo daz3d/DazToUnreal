@@ -15,6 +15,9 @@ class FToolBarBuilder;
 class FMenuBuilder;
 struct FDUFTextureProperty;
 
+// 2025-06-13, DB: Refactoring ImportFromDaz()
+class UDazToUnrealSettings;
+
 struct TextureLookupInfo
 {
 	FString sSourceFullPath;
@@ -56,6 +59,21 @@ public:
 	/** Function to start the import process*/
 	UObject* ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, const FString& FileName);
 
+	/** 2025-06-13, DB: Refactoring ImportFromDaz() */
+	bool PreProcessFbxFile(
+		FScopedSlowTask &Progress,
+		FString &FBXFile,
+		DazAssetType &AssetType,
+		const UDazToUnrealSettings* CachedSettings,
+		FString& AssetName,
+		DazToUnrealImportData& ImportData,
+		TSharedPtr<FJsonObject>& JsonObject,
+		DazMaterialCombineType& MaterialCombineMethod,
+		TMap<TSharedPtr<FJsonValue>, TSharedPtr<FJsonValue>>& DuplicateMaterials,
+		TMap<FString, TArray<FDUFTextureProperty>>& MaterialProperties,
+		FString& FBXPath,
+		FString& RootBoneName, TArray<FString>& MaterialNames);
+	
 private:
 	
 	void AddToolbarExtension(FToolBarBuilder& Builder);
@@ -145,9 +163,10 @@ private:
 	//bool CreateMaterials(const FString CharacterMaterialFolder, const FString CharacterTexturesFolder, const TArray<FString>& MaterialNames, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties, const DazCharacterType CharacterType);
 
 	/** Set material properties that will be set on the Material Instances*/
-	void SetMaterialProperty(const FString& MaterialName, const FString& PropertyName, const FString& PropertyType, const FString& PropertyValue, TMap<FString, TArray<FDUFTextureProperty>>& MaterialProperties);
+	//void SetMaterialProperty(const FString& MaterialName, const FString& PropertyName, const FString& PropertyType, const FString& PropertyValue, TMap<FString, TArray<FDUFTextureProperty>>& MaterialProperties);
 	FString GetSubSurfaceAlphaTexture(const DazCharacterType CharacterType, const FString& MaterialName);
 
 	/** Converts a hex string to a Linear color.*/
 	FLinearColor FromHex(const FString& HexString);
+
 };

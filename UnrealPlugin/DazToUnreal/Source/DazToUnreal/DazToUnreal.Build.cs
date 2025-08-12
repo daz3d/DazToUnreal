@@ -17,6 +17,7 @@ public class DazToUnreal : ModuleRules
 				"Sockets",
 				"Networking",
 				"Json",
+				"PakFile",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

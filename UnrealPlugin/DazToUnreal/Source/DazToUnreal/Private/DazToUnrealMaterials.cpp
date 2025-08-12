@@ -174,7 +174,21 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 
 		for (FDUFTextureProperty Property : Properties)
 		{
-			if (Property.Name == TEXT("Cutout Opacity Texture"))
+			if (Property.Name == TEXT("Cutout Opacity Texture") || 
+				Property.Name == TEXT("Opacity Mask Texture") ||
+				Property.Name == TEXT("Opacity Texture") ||
+				Property.Name == TEXT("Opacity Strength Texture") ||
+				Property.Name == TEXT("Refraction Weight Texture") )
+			{
+				BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
+				break;
+			}
+			else if (Property.Name == TEXT("Opacity") && Property.Value != TEXT("1"))
+			{
+				BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
+				break;
+			}
+			else if (Property.Name == TEXT("Opacity Mask") && Property.Value != TEXT("1"))
 			{
 				BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Alpha);
 				break;
@@ -209,13 +223,18 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 {
 	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
 
+	FString ParentMaterialName = ParentMaterial ? ParentMaterial->GetName() : TEXT("");
+
 	FSoftObjectPath BaseMaterialAssetPath = CachedSettings->FindMaterial(FString(TEXT("None")), EDazMaterialType::Base);
 	// Prepare the material Properties
 	if (MaterialProperties.Contains(MaterialName))
 	{
+		// 2025-07-03: THIS IS BROKEN LOGIC SINCE THE MATERIAL PROPERTIES HAVE ALREADY BEEN REMOVED / DEDUPLICATED IF EXISTING IN PARENT MATERIAL //
 		BaseMaterialAssetPath = GetBaseMaterial(MaterialName, MaterialProperties[MaterialName]);
 	}
 
+	// TwoSided support
+	bool bTwoSided = false;
 	// DB 2023-May-23: Fix for refraction weight & opacity strength interaction, part 1
 	double RefractionWeight = 0.0;
 	double OpacityStrength = 1.0;
@@ -288,6 +307,13 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
+		else if (MaterialName.Contains(Seperator + TEXT("EyeLash")))
+		{
+			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("0"), MaterialProperties);
+			SetMaterialProperty(MaterialName, TEXT("Glossy Layered Weight"), TEXT("Double"), TEXT("0"), MaterialProperties);
+			// Set Double Sided
+			bTwoSided = true;		
+		}
 		else
 		{
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("0"), MaterialProperties);
@@ -335,6 +361,8 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("0"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Glossy Layered Weight"), TEXT("Double"), TEXT("0"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
+			// Set Double Sided
+			bTwoSided = true;
 		}
 		else if (MaterialName.EndsWith(Seperator + TEXT("cornea")))
 		{
@@ -370,9 +398,10 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 #endif
 	UMaterialInstanceConstant* UnrealMaterialConstant = (UMaterialInstanceConstant*)MaterialInstanceFactory->FactoryCreateNew(UMaterialInstanceConstant::StaticClass(), Package, *MaterialName, RF_Standalone | RF_Public, NULL, GWarn);
 
-
 	if (UnrealMaterialConstant != NULL)
 	{
+		UE_LOG(LogDazToUnrealMaterial, Log, TEXT("Creating Material: %s [%s]"), *MaterialName, *ParentMaterialName);
+
 		// Notify the asset registry
 		FAssetRegistryModule::AssetCreated(UnrealMaterialConstant);
 
@@ -380,6 +409,7 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 		Package->SetDirtyFlag(true);
 
 		UObject* BaseMaterial = BaseMaterialAssetPath.TryLoad();
+		FString BaseMaterialName = BaseMaterialAssetPath.GetAssetName();
 		if (ParentMaterial && ParentMaterial->IsA(UMaterialInstanceConstant::StaticClass()) && Cast<UMaterialInstanceConstant>(ParentMaterial)->Parent == BaseMaterial)
 		{
 			UnrealMaterialConstant->SetParentEditorOnly(ParentMaterial);
@@ -390,6 +420,9 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 		}
 		else
 		{
+			if (ParentMaterial) {
+				UE_LOG(LogDazToUnrealMaterial, Warning, TEXT("ParentMaterial is being IGNORED and overridden by BaseMaterial for: %s [%s vs %s] "), *MaterialName, *ParentMaterialName, *BaseMaterialName);
+			}
 			UnrealMaterialConstant->SetParentEditorOnly((UMaterial*)BaseMaterial);
 		}
 
@@ -404,6 +437,14 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 			{
 				UnrealMaterialConstant->bOverrideSubsurfaceProfile = 0;
 			}
+		}
+
+		// Apply Base Material Property Override Settings
+		if (bTwoSided) {
+			UE_LOG(LogDazToUnrealMaterial, Warning, TEXT("Setting TwoSided Material Property Override for: %s"), *MaterialName);
+			UnrealMaterialConstant->BasePropertyOverrides.bOverride_TwoSided = true;
+			UnrealMaterialConstant->BasePropertyOverrides.TwoSided = true;
+			UnrealMaterialConstant->PostEditChange();
 		}
 
 		// Set the MaterialInstance properties
@@ -480,7 +521,10 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 			}
 		}
 	}
-
+	else
+	{
+		UE_LOG(LogDazToUnrealMaterial, Warning, TEXT("Failed to create material: %s [%s]"), *MaterialName, *ParentMaterialName);
+	}
 
 	return UnrealMaterialConstant;
 }

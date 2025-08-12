@@ -56,6 +56,8 @@ THIRD_PARTY_INCLUDES_END
 #pragma warning( pop )
 // end of fbx include
 
+class UDazToUnrealSettings;
+
 class FDazToUnrealFbx
 {
 public:
@@ -69,6 +71,21 @@ public:
 	static void FixTwistBones(FbxNode* RootNode);
 	static int CountBonesInFbxNode(FbxNode* Node);
 	static void ConvertToEpicSkeleton(FbxScene* Scene);
+
+	static bool SaveUpdatedFbxFile(FbxManager* SdkManager, FbxScene* Scene, FbxNode* RootBone,
+		FString& FBXFile,
+		FString& FBXPath,
+		FString& AssetName,
+		const UDazToUnrealSettings* CachedSettings,
+		DazToUnrealImportData& ImportData);
+	static bool ProcessMorphs(FbxScene* Scene,
+		const UDazToUnrealSettings* CachedSettings, TSharedPtr<FJsonObject>& JsonObject);
+	static bool AddIKBones(FbxNode* RootBone, FbxScene* Scene,
+		const UDazToUnrealSettings* CachedSettings);
+	static bool DetachGeometryFromSkeleton(FbxNode* RootNode, FbxScene *Scene);
+	static FbxNode* FindRootBone(FString &RootBoneName, FbxNode *RootNode, FbxScene *Scene, 
+		DazAssetType AssetType, const UDazToUnrealSettings* CachedSettings, FString& AssetName);
+
 private:
 	static void RenameDuplicateBones(FbxNode* RootNode, TMap<FString, int>& ExistingBones);
 };

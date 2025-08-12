@@ -13,6 +13,10 @@ public:
 	static FString GetDTUPathForModel(FSoftObjectPath MeshObjectPath);
 	static FSoftObjectPath GetSkeletonForImport(const DazToUnrealImportData& DazImportData);
 
+	static void InstallPluginContentToProject();
+	static void DuplicatePluginAsset(FName AssetPathInPlugin, const FString& DestPackagePath);
+	static FString InstallCommonMaterialFromPlugin(FString PluginMaterialPath);
+
 private:
 	static bool IsSkeletonUsed(FSoftObjectPath SkeletonPath);
 };

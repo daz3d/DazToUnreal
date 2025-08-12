@@ -17,7 +17,9 @@ enum DazAssetType
 	Animation,
 	Environment,
 	Pose,
-	MLDeformer
+	MLDeformer,
+	UNKNOWN,
+	R2x
 };
 
 enum DazMaterialCombineType

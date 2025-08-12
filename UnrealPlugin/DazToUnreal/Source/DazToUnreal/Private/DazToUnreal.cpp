@@ -466,15 +466,19 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 FString ImportFolder = JsonObject->GetStringField(TEXT("Import Folder"));
 	 DazAssetType AssetType = DazAssetType::StaticMesh;
 	 if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("SkeletalMesh"))
-		  AssetType = DazAssetType::SkeletalMesh;
+		 AssetType = DazAssetType::SkeletalMesh;
 	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Animation"))
-		  AssetType = DazAssetType::Animation;
+		 AssetType = DazAssetType::Animation;
 	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Environment"))
 		 AssetType = DazAssetType::Environment;
 	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Pose"))
 		 AssetType = DazAssetType::Pose;
 	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("MLDeformer"))
 		 AssetType = DazAssetType::MLDeformer;
+	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("R2x"))
+		 AssetType = DazAssetType::R2x;
+	 else
+		 AssetType = DazAssetType::UNKNOWN;
 
 	 bool UseExperimentalAnimationTransfer = false;
 	 if (JsonObject->HasField(TEXT("Use Experimental Animation Transfer")))
@@ -545,25 +549,36 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 FString LocalCharacterTexturesFolder = CharacterTexturesFolder.Replace(TEXT("/Game/"), *ContentDirectory);
 	 FString LocalCharacterMaterialFolder = CharacterMaterialFolder.Replace(TEXT("/Game/"), *ContentDirectory);
 
-	 // Make any needed folders.  If any of these fail, don't continue
+	 // Make common required folders.  If any of these fail, don't continue
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportDirectory)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportCharacterFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportCharacterTexturesFolder)) return nullptr;
 #if PLATFORM_MAC
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZImportFolder)) return nullptr;
-	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZAnimationImportFolder)) return nullptr;
-	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZMLDeformerImportFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterTexturesFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterMaterialFolder)) return nullptr;
 #else
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DAZImportFolder)) return nullptr;
-	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DAZAnimationImportFolder)) return nullptr;
-	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DazMLDeformerImportFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterTexturesFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterMaterialFolder)) return nullptr;
 #endif
+	// Make asset type specific folders.  If any of these fail, don't continue
+	if (AssetType != DazAssetType::R2x) {
+#if PLATFORM_MAC
+		if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZAnimationImportFolder)) return nullptr;
+		if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZMLDeformerImportFolder)) return nullptr;
+#else
+		if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DAZAnimationImportFolder)) return nullptr;
+		if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DazMLDeformerImportFolder)) return nullptr;
+#endif
+	}
+	
+	if (AssetType == DazAssetType::R2x) {
+		FDazToUnrealUtils::InstallPluginContentToProject();
+	}
+
 
 	 // If there's an HD FBX File, that's the source
 	 if (FPaths::FileExists(HDFBXFile))
@@ -922,9 +937,6 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 					TSharedPtr<FJsonObject> propListElement = propList[propIndex]->AsObject();
 
 					FDUFTextureProperty Property;
-//					Property.Name = material->GetStringField(TEXT("Name"));
-//					Property.Type = material->GetStringField(TEXT("Data Type"));
-//					Property.Value = material->GetStringField(TEXT("Value"));
 					Property.Name = propListElement->GetStringField(TEXT("Name"));
 					Property.Type = propListElement->GetStringField(TEXT("Data Type"));
 					Property.Value = propListElement->GetStringField(TEXT("Value"));
@@ -1010,495 +1022,16 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 		  }
 	 }
 
-	 ///////////////////////////////////////////////////////////////////////////////
-	 //// Start of FBX preprocessing before actual import
-	 ///////////////////////////////////////////////////////////////////////////////
-
-	 // Load the FBX file
-	 FbxManager* SdkManager = FbxManager::Create();
-
-	 // create an IOSettings object
-	 FbxIOSettings* ios = FbxIOSettings::Create(SdkManager, IOSROOT);
-	 SdkManager->SetIOSettings(ios);
-
-	 // Create the geometry converter
-	 Progress.EnterProgressFrame(1, LOCTEXT("LoadingFBX", "Loading FBX for Updating"));
-	 FbxGeometryConverter* GeometryConverter = new FbxGeometryConverter(SdkManager);
-
-	 FbxImporter* Importer = FbxImporter::Create(SdkManager, "");
-	 const bool bImportStatus = Importer->Initialize(TCHAR_TO_UTF8(*FBXFile));
-	 FbxScene* Scene = FbxScene::Create(SdkManager, "");
-	 Importer->Import(Scene);
-
-	 FbxNode* RootNode = Scene->GetRootNode();
-
-	 // Find the root bone.  There should only be one bone off the scene root
-	 FbxNode* RootBone = nullptr;
+	 // DB 2025-06-11 added to arguments
 	 FString RootBoneName = TEXT("");
-	 for (int ChildIndex = 0; ChildIndex < RootNode->GetChildCount(); ++ChildIndex)
-	 {
-		  FbxNode* ChildNode = RootNode->GetChild(ChildIndex);
-		  FbxNodeAttribute* Attr = ChildNode->GetNodeAttribute();
-		  if (Attr && Attr->GetAttributeType() == FbxNodeAttribute::eSkeleton)
-		  {
-				RootBone = ChildNode;
-				RootBoneName = UTF8_TO_TCHAR(RootBone->GetName());
-				RootBone->SetName(TCHAR_TO_UTF8(TEXT("root")));
-				Attr->SetName(TCHAR_TO_UTF8(TEXT("root")));
-				break;
-		  }
-	 }
-
-	 // Daz characters sometimes have additional skeletons inside the character for accesories
-	 if (AssetType == DazAssetType::SkeletalMesh)
-	 {
-		 FDazToUnrealFbx::ParentAdditionalSkeletalMeshes(Scene);
-	 }
-
-	 // Daz Studio puts the base bone rotations in a different place than Unreal expects them.
-	 if (CachedSettings->FixBoneRotationsOnImport && AssetType == DazAssetType::SkeletalMesh && RootBone)
-	 {
-		FDazToUnrealFbx::RemoveBindPoses(Scene);
-		FDazToUnrealFbx::FixClusterTranformLinks(Scene, RootBone);
-	 }
-
-	 // If this is a skeleton mesh, but a root bone wasn't found, it may be a scene under a group node or something similar
-	 // So create a root node.
-	 if (AssetType == DazAssetType::SkeletalMesh && RootBone == nullptr)
-	 {
-		  RootBoneName = AssetName;
-
-		  FbxSkeleton* NewRootNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("root")));
-		  NewRootNodeAttribute->SetSkeletonType(FbxSkeleton::eRoot);
-		  NewRootNodeAttribute->Size.Set(1.0);
-		  RootBone = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("root")));
-		  RootBone->SetNodeAttribute(NewRootNodeAttribute);
-		  RootBone->LclTranslation.Set(FbxVector4(0.0, 00.0, 0.0));
-
-
-		  for (int ChildIndex = RootNode->GetChildCount() - 1; ChildIndex >= 0; --ChildIndex)
-		  {
-				FbxNode* ChildNode = RootNode->GetChild(ChildIndex);
-				RootBone->AddChild(ChildNode);
-				if (FbxSkeleton* ChildSkeleton = ChildNode->GetSkeleton())
-				{
-					 if (ChildSkeleton->GetSkeletonType() == FbxSkeleton::eRoot)
-					 {
-						  ChildSkeleton->SetSkeletonType(FbxSkeleton::eLimb);
-					 }
-				}
-		  }
-
-		  RootNode->AddChild(RootBone);
-	 }
-
-	 FDazToUnrealFbx::RenameDuplicateBones(RootBone);
-
-
-	 // Detach geometry from the skeleton
-	 for (int NodeIndex = 0; NodeIndex < Scene->GetNodeCount(); ++NodeIndex)
-	 {
-		  FbxNode* SceneNode = Scene->GetNode(NodeIndex);
-		  if (SceneNode == nullptr)
-		  {
-				continue;
-		  }
-		  FbxGeometry* NodeGeometry = static_cast<FbxGeometry*>(SceneNode->GetMesh());
-		  if (NodeGeometry)
-		  {
-				if (SceneNode->GetParent() &&
-					 SceneNode->GetParent()->GetNodeAttribute() &&
-					 SceneNode->GetParent()->GetNodeAttribute()->GetAttributeType() == FbxNodeAttribute::eSkeleton)
-				{
-					 // DB 2023-May-26: Only detach skinned geometry, leave props attached to bones
-					 if (NodeGeometry->GetDeformerCount(FbxDeformer::eSkin) > 0)
-					 {
-						 SceneNode->GetParent()->RemoveChild(SceneNode);
-						 RootNode->AddChild(SceneNode);
-					 }
-					 else
-					 {
-						 UE_LOG(LogDazToUnreal, Warning, TEXT("DazToUnreal: leaving prop geometry (%s) attached to bone: %s"), ANSI_TO_TCHAR(SceneNode->GetName()), ANSI_TO_TCHAR(SceneNode->GetParent()->GetName()));
-					 }
-				}
-		  }
-	 }
-
-	 // Add IK bones
-	 if (RootBone && CachedSettings->AddIKBones)
-	 {
-		  // ik_foot_root
-		  FbxNode* IKRootNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_foot_root")));
-		  if (!IKRootNode)
-		  {
-				// Create IK Root
-				FbxSkeleton* IKRootNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_root")));
-				IKRootNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
-				IKRootNodeAttribute->Size.Set(1.0);
-				IKRootNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_root")));
-				IKRootNode->SetNodeAttribute(IKRootNodeAttribute);
-				IKRootNode->LclTranslation.Set(FbxVector4(0.0, 00.0, 0.0));
-				RootBone->AddChild(IKRootNode);
-		  }
-
-		  // ik_foot_l
-		  FbxNode* IKFootLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_foot_l")));
-		  FbxNode* FootLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("lFoot")));
-		  if(!FootLNode) FootLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("l_foot")));
-		  if (!IKFootLNode && FootLNode)
-		  {
-				// Create IK Root
-				FbxSkeleton* IKFootLNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_l")));
-				IKFootLNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
-				IKFootLNodeAttribute->Size.Set(1.0);
-				IKFootLNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_l")));
-				IKFootLNode->SetNodeAttribute(IKFootLNodeAttribute);
-				FbxVector4 FootLocation = FootLNode->EvaluateGlobalTransform().GetT();
-				IKFootLNode->LclTranslation.Set(FootLocation);
-				IKRootNode->AddChild(IKFootLNode);
-		  }
-
-		  // ik_foot_r
-		  FbxNode* IKFootRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_foot_r")));
-		  FbxNode* FootRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("rFoot")));
-		  if (!FootRNode) FootRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("r_foot")));
-		  if (!IKFootRNode && FootRNode)
-		  {
-				// Create IK Root
-				FbxSkeleton* IKFootRNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_r")));
-				IKFootRNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
-				IKFootRNodeAttribute->Size.Set(1.0);
-				IKFootRNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_foot_r")));
-				IKFootRNode->SetNodeAttribute(IKFootRNodeAttribute);
-				FbxVector4 FootLocation = FootRNode->EvaluateGlobalTransform().GetT();
-				IKFootRNode->LclTranslation.Set(FootLocation);
-				IKRootNode->AddChild(IKFootRNode);
-		  }
-
-		  // ik_hand_root
-		  FbxNode* IKHandRootNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_root")));
-		  if (!IKHandRootNode)
-		  {
-				// Create IK Root
-				FbxSkeleton* IKHandRootNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_root")));
-				IKHandRootNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
-				IKHandRootNodeAttribute->Size.Set(1.0);
-				IKHandRootNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_root")));
-				IKHandRootNode->SetNodeAttribute(IKHandRootNodeAttribute);
-				IKHandRootNode->LclTranslation.Set(FbxVector4(0.0, 00.0, 0.0));
-				RootBone->AddChild(IKHandRootNode);
-		  }
-
-		  // ik_hand_gun
-		  FbxNode* IKHandGunNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
-		  FbxNode* HandRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("rHand")));
-		  if (!HandRNode) HandRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("r_hand")));
-		  if (!IKHandGunNode && HandRNode)
-		  {
-				// Create IK Root
-				FbxSkeleton* IKHandGunNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
-				IKHandGunNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
-				IKHandGunNodeAttribute->Size.Set(1.0);
-				IKHandGunNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_gun")));
-				IKHandGunNode->SetNodeAttribute(IKHandGunNodeAttribute);
-				FbxVector4 HandLocation = HandRNode->EvaluateGlobalTransform().GetT();
-				IKHandGunNode->LclTranslation.Set(HandLocation);
-				IKHandRootNode->AddChild(IKHandGunNode);
-		  }
-
-		  // ik_hand_r
-		  FbxNode* IKHandRNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_r")));
-		  if (!IKHandRNode && HandRNode && IKHandGunNode)
-		  {
-				// Create IK Root
-				FbxSkeleton* IKHandRNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_r")));
-				IKHandRNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
-				IKHandRNodeAttribute->Size.Set(1.0);
-				IKHandRNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_r")));
-				IKHandRNode->SetNodeAttribute(IKHandRNodeAttribute);
-				IKHandRNode->LclTranslation.Set(FbxVector4(0.0, 00.0, 0.0));
-				IKHandGunNode->AddChild(IKHandRNode);
-		  }
-
-		  // ik_hand_l
-		  FbxNode* IKHandLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("ik_hand_l")));
-		  FbxNode* HandLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("lHand")));
-		  if (!HandLNode) HandLNode = Scene->FindNodeByName(TCHAR_TO_UTF8(TEXT("l_hand")));
-		  if (!IKHandLNode && HandLNode && IKHandGunNode)
-		  {
-				// Create IK Root
-				FbxSkeleton* IKHandRNodeAttribute = FbxSkeleton::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_l")));
-				IKHandRNodeAttribute->SetSkeletonType(FbxSkeleton::eLimbNode);
-				IKHandRNodeAttribute->Size.Set(1.0);
-				IKHandLNode = FbxNode::Create(Scene, TCHAR_TO_UTF8(TEXT("ik_hand_l")));
-				IKHandLNode->SetNodeAttribute(IKHandRNodeAttribute);
-				FbxVector4 HandLocation = HandLNode->EvaluateGlobalTransform().GetT();
-				FbxVector4 ParentLocation = IKHandGunNode->EvaluateGlobalTransform().GetT();
-				IKHandLNode->LclTranslation.Set(HandLocation - ParentLocation);
-				IKHandGunNode->AddChild(IKHandLNode);
-		  }
-	 }
-
-	 // Take twist bones out of the chain
-	 if (AssetType == DazAssetType::SkeletalMesh && ImportData.bFixTwistBones)
-	 {
-		 FDazToUnrealFbx::FixTwistBones(RootBone);
-	 }
-
-	 // Get a list of morph name mappings
-	 TMap<FString, FString> MorphMappings;
-	 TArray<TSharedPtr<FJsonValue>> morphList = JsonObject->GetArrayField(TEXT("Morphs"));
-	 for (int32 i = 0; i < morphList.Num(); i++)
-	 {
-		  TSharedPtr<FJsonObject> morph = morphList[i]->AsObject();
-		  FString MorphName = morph->GetStringField(TEXT("Name"));
-		  FString MorphLabel = morph->GetStringField(TEXT("Label"));
-
-		  // Daz Studio seems to strip the part of the name before a period when exporting the morph to FBX
-		  if (MorphName.Contains(TEXT(".")))
-		  {
-			  FString Left;
-			  MorphName.Split(TEXT("."), &Left, &MorphName);
-		  }
-
-		  if (CachedSettings->UseInternalMorphName)
-		  {
-			  MorphMappings.Add(MorphName, MorphName);
-		  }
-		  else
-		  {
-			  MorphMappings.Add(MorphName, MorphLabel);
-		  }
-	 }
-
-	 // Combine clothing and body morphs
-	 Progress.EnterProgressFrame(1, LOCTEXT("CombiningMorphs", "Combining Morphs"));
-	 for (int NodeIndex = 0; NodeIndex < Scene->GetNodeCount(); ++NodeIndex)
-	 {
-		  FbxNode* SceneNode = Scene->GetNode(NodeIndex);
-		  if (SceneNode == nullptr)
-		  {
-				continue;
-		  }
-		  FbxGeometry* NodeGeometry = static_cast<FbxGeometry*>(SceneNode->GetMesh());
-		  if (NodeGeometry)
-		  {
-
-				const int32 BlendShapeDeformerCount = NodeGeometry->GetDeformerCount(FbxDeformer::eBlendShape);
-				for (int32 BlendShapeIndex = 0; BlendShapeIndex < BlendShapeDeformerCount; ++BlendShapeIndex)
-				{
-					 FbxBlendShape* BlendShape = (FbxBlendShape*)NodeGeometry->GetDeformer(BlendShapeIndex, FbxDeformer::eBlendShape);
-					 const int32 BlendShapeChannelCount = BlendShape->GetBlendShapeChannelCount();
-
-					 TArray<FbxBlendShapeChannel*> ChannelsToRemove;
-					 for (int32 ChannelIndex = 0; ChannelIndex < BlendShapeChannelCount; ++ChannelIndex)
-					 {
-						  FbxBlendShapeChannel* Channel = BlendShape->GetBlendShapeChannel(ChannelIndex);
-						  if (Channel)
-						  {
-								FString ChannelName = UTF8_TO_TCHAR(Channel->GetNameOnly());
-								FString NewChannelName, Extra;
-								ChannelName.Split(TEXT("__"), &Extra, &NewChannelName);
-								if (MorphMappings.Contains(NewChannelName))
-								{
-									 NewChannelName = MorphMappings[NewChannelName];
-									 Channel->SetName(TCHAR_TO_UTF8(*NewChannelName));
-								}
-								else
-								{
-									 ChannelsToRemove.AddUnique(Channel);
-								}
-						  }
-					 }
-
-					 for (FbxBlendShapeChannel* ChannelToRemove : ChannelsToRemove)
-					 {
-						 BlendShape->RemoveBlendShapeChannel(ChannelToRemove);
-					 }
-				}
-		  }
-	 }
-
-	 // Get FBX scene materials
-	 FbxArray<FbxSurfaceMaterial*> MaterialArray;
-	 Scene->FillMaterialArray(MaterialArray);
-
-	 // Create a mapping of the names of duplicate (identical) materials
-	 if (MaterialCombineMethod != DazMaterialCombineType::NoCombine)
-	 {
-		 TMap<FString, FString> DuplicateToOriginalName;
-		 for (auto DuplicateMaterialPair : DuplicateMaterials)
-		 {
-			 TSharedPtr<FJsonObject> DuplicateMaterial = DuplicateMaterialPair.Key->AsObject();
-			 FString DuplicateMaterialName = DuplicateMaterial->GetStringField(TEXT("Material Name"));
-
-			 TSharedPtr<FJsonObject> OriginalMaterial = DuplicateMaterialPair.Value->AsObject();
-			 FString OriginalMaterialName = OriginalMaterial->GetStringField(TEXT("Material Name"));
-
-			 DuplicateToOriginalName.Add(DuplicateMaterialName, OriginalMaterialName);
-		 }
-
-		 // Remap FBX Surfaces to remove references to duplicate materials
-		 TMap<FString, FbxSurfaceMaterial*> MaterialNameToFbxMaterial;
-		 for (int32 MaterialIndex = MaterialArray.Size() - 1; MaterialIndex >= 0; --MaterialIndex)
-		 {
-			 FbxSurfaceMaterial* Material = MaterialArray[MaterialIndex];
-			 FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
-			 MaterialNameToFbxMaterial.Add(OriginalMaterialName, Material);
-		 }
-
-		 for (int32 MeshIndex = Scene->GetGeometryCount() - 1; MeshIndex >= 0; --MeshIndex)
-		 {
-			 FbxArray<FbxSurfaceMaterial*> NewMaterialArray;
-			 FbxGeometry* Geometry = Scene->GetGeometry(MeshIndex);
-			 FbxNode* GeometryNode = Geometry->GetNode();
-			 int32 MaterialCount = GeometryNode->GetMaterialCount();
-			 for (int32 AddIndex = 0; AddIndex < MaterialCount; AddIndex++)
-			 {
-				 FbxSurfaceMaterial* MaterialToReplace = GeometryNode->GetMaterial(AddIndex);
-				 FString MaterialToReplaceName = UTF8_TO_TCHAR(MaterialToReplace->GetName());
-				 if (DuplicateToOriginalName.Contains(MaterialToReplaceName) && MaterialNameToFbxMaterial.Contains(DuplicateToOriginalName[MaterialToReplaceName]))
-				 {
-					 NewMaterialArray.Add(MaterialNameToFbxMaterial[DuplicateToOriginalName[MaterialToReplaceName]]);
-				 }
-				 else
-				 {
-					 NewMaterialArray.Add(MaterialToReplace);
-				 }
-
-			 }
-
-			 GeometryNode->RemoveAllMaterials();
-			 for (int32 AddIndex = 0; AddIndex < MaterialCount; AddIndex++)
-			 {
-				 GeometryNode->AddMaterial(NewMaterialArray[AddIndex]);
-			 }
-		 }
-	 }
-
-	 // Rename Materials
 	 TArray<FString> MaterialNames;
-	 for (int32 MaterialIndex = MaterialArray.Size() - 1; MaterialIndex >= 0; --MaterialIndex)
+	 if (PreProcessFbxFile(Progress,
+			FBXFile, AssetType, CachedSettings, AssetName, ImportData, JsonObject,
+			MaterialCombineMethod, DuplicateMaterials, MaterialProperties, FBXPath,
+			RootBoneName, MaterialNames) == false)
 	 {
-		  FbxSurfaceMaterial* Material = MaterialArray[MaterialIndex];
-		  FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
-		  FString MaterialFbxObjectName = FDazToUnrealFbx::GetObjectNameForMaterial(Material);
-		  FString MaterialObjectName = FDazToUnrealMaterials::GetFriendlyObjectName(FDazToUnrealUtils::SanitizeName(MaterialFbxObjectName), MaterialProperties);
-
-		  FString NewMaterialName;
-		  if (CachedSettings->UseOriginalMaterialName)
-		  {
-				 NewMaterialName = OriginalMaterialName;
-		  }
-		  else
-		  {
-				 NewMaterialName = MaterialObjectName + TEXT("_") + OriginalMaterialName;
-		  }
-
-		  NewMaterialName = FDazToUnrealUtils::SanitizeName(NewMaterialName);
-		  Material->SetName(TCHAR_TO_UTF8(*NewMaterialName));
-		  if (MaterialProperties.Contains(NewMaterialName))
-		  {
-				MaterialNames.Add(NewMaterialName);
-				ImportData.MaterialSlotNameToMaterialName.Add(FName(NewMaterialName), FName(FDazToUnrealUtils::SanitizeName(OriginalMaterialName)));
-		  }
-		  else
-		  {
-			    // TODO: Not sure this is needed anymore
-				// search all materialproperties for partial match
-				bool bPartialMatchFound = false;
-				for (auto keyvalPair : MaterialProperties)
-				{
-					if (keyvalPair.Key.Contains(TEXT("_") + OriginalMaterialName))
-					{
-						MaterialNames.Add(keyvalPair.Key);
-						ImportData.MaterialSlotNameToMaterialName.Add(FName(keyvalPair.Key), FName(FDazToUnrealUtils::SanitizeName(OriginalMaterialName)));
-						bPartialMatchFound = true;
-						break;
-					}
-				}
-				if (bPartialMatchFound == false)
-				{
-					for (int32 MeshIndex = Scene->GetGeometryCount() - 1; MeshIndex >= 0; --MeshIndex)
-					{
-						FbxGeometry* Geometry = Scene->GetGeometry(MeshIndex);
-						FbxNode* GeometryNode = Geometry->GetNode();
-						if (GeometryNode->GetMaterialIndex(TCHAR_TO_UTF8(*NewMaterialName)) != -1)
-						{
-							UE_LOG(LogDazToUnreal, Warning, TEXT("Material %s not found in material properties, removing geometry..."), *NewMaterialName);
-							Scene->RemoveGeometry(Geometry);
-						}
-					}
-					Scene->RemoveMaterial(Material);
-				}
-		  }
-
+		return nullptr;
 	 }
-
-	 // Create an exporter.
-	 Progress.EnterProgressFrame(1, LOCTEXT("WritingUpdatedFBX", "Writing Updated FBX"));
-	 FbxExporter* Exporter = FbxExporter::Create(SdkManager, "");
-	 int32 FileFormat = -1;
-
-	 // set file format
-	 if (CachedSettings->UpdatedFbxAsAscii)
-	 {
-		 FileFormat = SdkManager->GetIOPluginRegistry()->FindWriterIDByDescription("FBX ascii (*.fbx)");
-	 }
-	 else
-	 {
-		 FileFormat = SdkManager->GetIOPluginRegistry()->GetNativeWriterFormat();
-	 }
-
-	 // Make folders for saving the updated FBX file
-	 FString UpdatedFBXFolder = FPaths::GetPath(FBXFile) / TEXT("UpdatedFBX");
-	 FString UpdatedFBXFile = FPaths::GetPath(FBXFile) / TEXT("UpdatedFBX") / FPaths::GetCleanFilename(FBXPath);
-	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(UpdatedFBXFolder)) return nullptr;
-
-	 // Initialize the exporter by providing a filename.
-	 if (!Exporter->Initialize(TCHAR_TO_UTF8(*UpdatedFBXFile), FileFormat, SdkManager->GetIOSettings()))
-	 {
-		  return nullptr;
-	 }
-
-	 // DB 2023-Sep-1: Re-Import Crash Prevention
-	 // 1. Obtain number of bones in the UpdatedFBX
-	 // 2. Check if skeletal mesh destination asset path exists
-	 // 3. Check if number of bones in existing skeletal mesh exactly matches number of bones in UpdatedFBX
-	 // 4. If not equal, then fail gracefully
-	 int FbxBoneCount = FDazToUnrealFbx::CountBonesInFbxNode(RootBone);
-	 int ExistingBoneCount = -1;
-	 FString DestinationPath = ImportData.ImportLocation + "/" + AssetName;
-	 UObject* ExistingMesh = StaticLoadObject(UObject::StaticClass(), nullptr, *DestinationPath);
-	 if (ExistingMesh) {
-		 USkeletalMesh* ExistingSkeletalMesh = Cast<USkeletalMesh>(ExistingMesh);
-		 if (ExistingSkeletalMesh) {
-			 ExistingBoneCount = ExistingSkeletalMesh->RefSkeleton.GetNum();
-		 }
-	 }
-	 if (ExistingBoneCount != -1 && ExistingBoneCount != FbxBoneCount)
-	 {
-		 const FString ErrorMessage = TEXT("The number of bones in the existing skeletal mesh does not match the number of \
-bones in the new import. Aborting import.\n\n\
-Please make sure the number of bones match, or change the Asset Name in the DazToUnreal Bridge to something different from \
-the existing skeletal mesh in Unreal.");
-		 UE_LOG(LogDazToUnreal, Error, TEXT("%s"), *ErrorMessage);
-		 FText DialogText = FText::FromString(ErrorMessage);
-		 FText DialogTitle = FText::FromString(TEXT("DazToUnreal Import Error"));
-		 FMessageDialog::Open(EAppMsgType::Ok, DialogText, &DialogTitle);
-		 Exporter->Destroy();
-		 return nullptr;
-	 }
-
-	 // Export the scene.
-	 bool Status = Exporter->Export(Scene);
-
-	 // Destroy the exporter.
-	 Exporter->Destroy();
-
-	 ///////////////////////////////////////////////////////////////////////////////
-	 //// End of FBX preprocessing before actual import
-	 ///////////////////////////////////////////////////////////////////////////////
 
 	 // If this is a character, determine the type.
 	 DazCharacterType CharacterType = DazCharacterType::Unknown;
@@ -1528,7 +1061,7 @@ the existing skeletal mesh in Unreal.");
 
 	 // Import Textures
 	 Progress.EnterProgressFrame(1, LOCTEXT("ImportingTextures", "Importing Textures"));
-	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh)
+	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh || AssetType == DazAssetType::R2x)
 	 {
 		  TArray<FString> TexturesFilesToImport;
 		  m_targetTextureLookupTable.Reset();
@@ -1545,7 +1078,6 @@ the existing skeletal mesh in Unreal.");
 					TextureLookupInfo lookupData = m_sourceTextureLookupTable[sSearchString];
 					m_targetTextureLookupTable.Add(TargetFileName, lookupData);
 				}
-
 				PlatformFile.CopyFile(*TargetFileName, *SourceFileName);
 				TexturesFilesToImport.Add(TargetFileName);
 		  }
@@ -1554,7 +1086,7 @@ the existing skeletal mesh in Unreal.");
 
 	 // Create Intermediate Materials
 	 Progress.EnterProgressFrame(1, LOCTEXT("CreatingMaterials", "Creating Materials"));
-	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh)
+	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh || AssetType == DazAssetType::R2x)
 	 {
 		 // Create a default Master Subsurface Profile if needed
 		 USubsurfaceProfile* MasterSubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceBaseProfileForCharacter(CharacterMaterialFolder, MaterialProperties);
@@ -1617,8 +1149,17 @@ the existing skeletal mesh in Unreal.");
 								{
 									if (ParentProperty.Name == ChildPropertyForRemoval.Name && ParentProperty.Value == ChildPropertyForRemoval.Value)
 									{
-											MaterialProperties[MaterialName].RemoveAt(Index);
-											break;
+										// 2025-07-03: DO NOT REMOVE IF PROPERTY IS RELATED TO ALPHA / CUTOUT / OPACITY
+										if (ParentProperty.Name.Contains(TEXT("Cutout")) || 
+											ParentProperty.Name.Contains(TEXT("Opacity")) ||
+											ParentProperty.Name.Contains(TEXT("Refraction")) )
+										{
+											continue;
+										}
+										// 2025-07-03: DESIGN FLAW: PROPERTIES ARE REMOVED FROM CHILD MATERIALS BEFORE LOGIC TO CHOOSE BETWEEN USING PARENT MATERIAL VS BASE MATERIAL (See CreateMaterial() )
+										UE_LOG(LogDazToUnreal, Warning, TEXT("Removing Material Property [%i] of %s-%s to keep parent property: %s ..."), Index, *MaterialName, *ChildPropertyForRemoval.Name, *IntermediateMaterialName);
+										MaterialProperties[MaterialName].RemoveAt(Index);
+										break;
 									}
 								}
 							}
@@ -1877,28 +1418,28 @@ FLinearColor FDazToUnrealModule::FromHex(const FString& HexString)
 	 return FLinearColor(ForceInitToZero);
 }
 
-void FDazToUnrealModule::SetMaterialProperty(const FString& MaterialName, const FString& PropertyName, const FString& PropertyType, const FString& PropertyValue, TMap<FString, TArray<FDUFTextureProperty>>& MaterialProperties)
-{
-	 if (!MaterialProperties.Contains(MaterialName))
-	 {
-		  MaterialProperties.Add(MaterialName, TArray<FDUFTextureProperty>());
-	 }
-	 TArray<FDUFTextureProperty>& Properties = MaterialProperties[MaterialName];
-	 for (FDUFTextureProperty& Property : Properties)
-	 {
-		  if (Property.Name == PropertyName)
-		  {
-				Property.Value = PropertyValue;
-				return;
-		  }
-	 }
-	 FDUFTextureProperty TextureProperty;
-	 TextureProperty.Name = PropertyName;
-	 TextureProperty.Type = PropertyType;
-	 TextureProperty.Value = PropertyValue;
-	 MaterialProperties[MaterialName].Add(TextureProperty);
+// void FDazToUnrealModule::SetMaterialProperty(const FString& MaterialName, const FString& PropertyName, const FString& PropertyType, const FString& PropertyValue, TMap<FString, TArray<FDUFTextureProperty>>& MaterialProperties)
+// {
+// 	 if (!MaterialProperties.Contains(MaterialName))
+// 	 {
+// 		  MaterialProperties.Add(MaterialName, TArray<FDUFTextureProperty>());
+// 	 }
+// 	 TArray<FDUFTextureProperty>& Properties = MaterialProperties[MaterialName];
+// 	 for (FDUFTextureProperty& Property : Properties)
+// 	 {
+// 		  if (Property.Name == PropertyName)
+// 		  {
+// 				Property.Value = PropertyValue;
+// 				return;
+// 		  }
+// 	 }
+// 	 FDUFTextureProperty TextureProperty;
+// 	 TextureProperty.Name = PropertyName;
+// 	 TextureProperty.Type = PropertyType;
+// 	 TextureProperty.Value = PropertyValue;
+// 	 MaterialProperties[MaterialName].Add(TextureProperty);
 
-}
+// }
 
 bool FDazToUnrealModule::ImportTextureAssets(TArray<FString>& SourcePaths, FString& ImportLocation)
 {
@@ -2048,6 +1589,18 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImpo
 		  FbxFactory->ImportUI->AnimSequenceImportData->bAddCurveMetadataToSkeleton = true;
 #endif
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_Animation;
+	 }
+	 if (DazImportData.AssetType == DazAssetType::R2x)
+	 {
+		 FbxFactory->ImportUI->bImportAsSkeletal = true;
+		 FbxFactory->ImportUI->Skeleton = Skeleton;
+		 FbxFactory->ImportUI->SkeletalMeshImportData->bImportMorphTargets = true;
+		 FbxFactory->ImportUI->bImportAnimations = false;
+		 //FbxFactory->ImportUI->SkeletalMeshImportData->bUseT0AsRefPose = CachedSettings->FrameZeroIsReferencePose;
+		 //FbxFactory->ImportUI->SkeletalMeshImportData->bConvertScene = false;
+		 //FbxFactory->ImportUI->SkeletalMeshImportData->bForceFrontXAxis = DazImportData.bFaceCharacterRight;
+		 FbxFactory->ImportUI->SkeletalMeshImportData->bImportMeshesInBoneHierarchy = true;
+		 FbxFactory->ImportUI->MeshTypeToImport = FBXIT_SkeletalMesh;
 	 }
 	 //UFbxFactory::EnableShowOption();
 	 UAutomatedAssetImportData* FbxImportData = NewObject<UAutomatedAssetImportData>(UAutomatedAssetImportData::StaticClass());
@@ -2448,6 +2001,196 @@ void FDazToUnrealModule::OnConvertToEpicSkeletonClicked(FSoftObjectPath EpicMesh
 {
 	USkeletalMesh* TargetEpicSkeletalMesh = Cast<USkeletalMesh>(EpicMeshObjectPath.TryLoad());
 	UDazToUnrealBlueprintUtils::ConvertToEpicSkeleton(SkeletalMeshToUpdate, TargetEpicSkeletalMesh);
+}
+
+bool FDazToUnrealModule::PreProcessFbxFile(
+	FScopedSlowTask &Progress,
+	FString &FBXFile,
+	DazAssetType &AssetType, 
+	const UDazToUnrealSettings* CachedSettings,
+	FString &AssetName,
+	DazToUnrealImportData &ImportData,
+	TSharedPtr<FJsonObject> &JsonObject,
+	DazMaterialCombineType &MaterialCombineMethod,
+	TMap<TSharedPtr<FJsonValue>, TSharedPtr<FJsonValue>> &DuplicateMaterials,
+	TMap<FString, TArray<FDUFTextureProperty>> &MaterialProperties,
+	FString &FBXPath,
+	FString &RootBoneName, TArray<FString> &MaterialNames)
+{
+	///////////////////////////////////////////////////////////////////////////////
+	//// Start of FBX preprocessing before actual import
+	///////////////////////////////////////////////////////////////////////////////
+
+	// Load the FBX file
+	FbxManager* SdkManager = FbxManager::Create();
+
+	// create an IOSettings object
+	FbxIOSettings* ios = FbxIOSettings::Create(SdkManager, IOSROOT);
+	SdkManager->SetIOSettings(ios);
+
+	// Create the geometry converter
+	Progress.EnterProgressFrame(1, LOCTEXT("LoadingFBX", "Loading FBX for Updating"));
+	FbxGeometryConverter* GeometryConverter = new FbxGeometryConverter(SdkManager);
+
+	FbxImporter* Importer = FbxImporter::Create(SdkManager, "");
+	const bool bImportStatus = Importer->Initialize(TCHAR_TO_UTF8(*FBXFile));
+	FbxScene* Scene = FbxScene::Create(SdkManager, "");
+	Importer->Import(Scene);
+
+	FbxNode* RootNode = Scene->GetRootNode();
+
+	// Find the root bone.  There should only be one bone off the scene root
+	FbxNode* RootBone = nullptr;
+
+	if (AssetType != DazAssetType::R2x) 
+	{
+		RootBone = FDazToUnrealFbx::FindRootBone(RootBoneName, RootNode, Scene, AssetType, CachedSettings, AssetName);
+
+		FDazToUnrealFbx::RenameDuplicateBones(RootBone);
+
+		FDazToUnrealFbx::DetachGeometryFromSkeleton(RootNode, Scene);
+
+		FDazToUnrealFbx::AddIKBones(RootBone, Scene, CachedSettings);
+
+		// Take twist bones out of the chain
+		if (AssetType == DazAssetType::SkeletalMesh && ImportData.bFixTwistBones)
+		{
+			FDazToUnrealFbx::FixTwistBones(RootBone);
+		}
+
+		Progress.EnterProgressFrame(1, LOCTEXT("CombiningMorphs", "Combining Morphs")); 
+		FDazToUnrealFbx::ProcessMorphs(Scene, CachedSettings, JsonObject);
+	}
+
+	// Get FBX scene materials
+	FbxArray<FbxSurfaceMaterial*> MaterialArray;
+	Scene->FillMaterialArray(MaterialArray);
+
+	// Create a mapping of the names of duplicate (identical) materials
+	if (MaterialCombineMethod != DazMaterialCombineType::NoCombine)
+	{
+		TMap<FString, FString> DuplicateToOriginalName;
+		for (auto DuplicateMaterialPair : DuplicateMaterials)
+		{
+			TSharedPtr<FJsonObject> DuplicateMaterial = DuplicateMaterialPair.Key->AsObject();
+			FString DuplicateMaterialName = DuplicateMaterial->GetStringField(TEXT("Material Name"));
+
+			TSharedPtr<FJsonObject> OriginalMaterial = DuplicateMaterialPair.Value->AsObject();
+			FString OriginalMaterialName = OriginalMaterial->GetStringField(TEXT("Material Name"));
+
+			DuplicateToOriginalName.Add(DuplicateMaterialName, OriginalMaterialName);
+		}
+
+		// Remap FBX Surfaces to remove references to duplicate materials
+		TMap<FString, FbxSurfaceMaterial*> MaterialNameToFbxMaterial;
+		for (int32 MaterialIndex = MaterialArray.Size() - 1; MaterialIndex >= 0; --MaterialIndex)
+		{
+			FbxSurfaceMaterial* Material = MaterialArray[MaterialIndex];
+			FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
+			MaterialNameToFbxMaterial.Add(OriginalMaterialName, Material);
+		}
+
+		for (int32 MeshIndex = Scene->GetGeometryCount() - 1; MeshIndex >= 0; --MeshIndex)
+		{
+			FbxArray<FbxSurfaceMaterial*> NewMaterialArray;
+			FbxGeometry* Geometry = Scene->GetGeometry(MeshIndex);
+			FbxNode* GeometryNode = Geometry->GetNode();
+			int32 MaterialCount = GeometryNode->GetMaterialCount();
+			for (int32 AddIndex = 0; AddIndex < MaterialCount; AddIndex++)
+			{
+				FbxSurfaceMaterial* MaterialToReplace = GeometryNode->GetMaterial(AddIndex);
+				FString MaterialToReplaceName = UTF8_TO_TCHAR(MaterialToReplace->GetName());
+				if (DuplicateToOriginalName.Contains(MaterialToReplaceName) && MaterialNameToFbxMaterial.Contains(DuplicateToOriginalName[MaterialToReplaceName]))
+				{
+					NewMaterialArray.Add(MaterialNameToFbxMaterial[DuplicateToOriginalName[MaterialToReplaceName]]);
+				}
+				else
+				{
+					NewMaterialArray.Add(MaterialToReplace);
+				}
+
+			}
+
+			GeometryNode->RemoveAllMaterials();
+			for (int32 AddIndex = 0; AddIndex < MaterialCount; AddIndex++)
+			{
+				GeometryNode->AddMaterial(NewMaterialArray[AddIndex]);
+			}
+		}
+	}
+
+	// Rename Materials
+// DB 2025-06-11 added to arguments
+//	TArray<FString> MaterialNames;
+	for (int32 MaterialIndex = MaterialArray.Size() - 1; MaterialIndex >= 0; --MaterialIndex)
+	{
+		FbxSurfaceMaterial* Material = MaterialArray[MaterialIndex];
+		FString OriginalMaterialName = UTF8_TO_TCHAR(Material->GetName());
+		FString MaterialFbxObjectName = FDazToUnrealFbx::GetObjectNameForMaterial(Material);
+		FString MaterialObjectName = FDazToUnrealMaterials::GetFriendlyObjectName(FDazToUnrealUtils::SanitizeName(MaterialFbxObjectName), MaterialProperties);
+
+		FString NewMaterialName;
+		if (CachedSettings->UseOriginalMaterialName)
+		{
+			NewMaterialName = OriginalMaterialName;
+		}
+		else
+		{
+			NewMaterialName = MaterialObjectName + TEXT("_") + OriginalMaterialName;
+		}
+
+		NewMaterialName = FDazToUnrealUtils::SanitizeName(NewMaterialName);
+		Material->SetName(TCHAR_TO_UTF8(*NewMaterialName));
+		if (MaterialProperties.Contains(NewMaterialName))
+		{
+			MaterialNames.Add(NewMaterialName);
+			ImportData.MaterialSlotNameToMaterialName.Add(FName(NewMaterialName), FName(FDazToUnrealUtils::SanitizeName(OriginalMaterialName)));
+		}
+		else
+		{
+			// TODO: Not sure this is needed anymore
+			// search all materialproperties for partial match
+			bool bPartialMatchFound = false;
+			for (auto keyvalPair : MaterialProperties)
+			{
+				if (keyvalPair.Key.Contains(TEXT("_") + OriginalMaterialName))
+				{
+					MaterialNames.Add(keyvalPair.Key);
+					ImportData.MaterialSlotNameToMaterialName.Add(FName(keyvalPair.Key), FName(FDazToUnrealUtils::SanitizeName(OriginalMaterialName)));
+					bPartialMatchFound = true;
+					break;
+				}
+			}
+			if (bPartialMatchFound == false)
+			{
+				for (int32 MeshIndex = Scene->GetGeometryCount() - 1; MeshIndex >= 0; --MeshIndex)
+				{
+					FbxGeometry* Geometry = Scene->GetGeometry(MeshIndex);
+					FbxNode* GeometryNode = Geometry->GetNode();
+					if (GeometryNode->GetMaterialIndex(TCHAR_TO_UTF8(*NewMaterialName)) != -1)
+					{
+						UE_LOG(LogDazToUnreal, Warning, TEXT("Material %s not found in material properties, removing geometry..."), *NewMaterialName);
+						Scene->RemoveGeometry(Geometry);
+					}
+				}
+				Scene->RemoveMaterial(Material);
+			}
+		}
+
+	}
+
+	Progress.EnterProgressFrame(1, LOCTEXT("WritingUpdatedFBX", "Writing Updated FBX"));
+	if (FDazToUnrealFbx::SaveUpdatedFbxFile(SdkManager, Scene, RootBone,
+		FBXFile, FBXPath, AssetName, CachedSettings, ImportData) == false) 
+	{
+		return false;
+	}
+
+	///////////////////////////////////////////////////////////////////////////////
+	//// End of FBX preprocessing before actual import
+	///////////////////////////////////////////////////////////////////////////////
+
+	return true;
 }
 
 #undef LOCTEXT_NAMESPACE
