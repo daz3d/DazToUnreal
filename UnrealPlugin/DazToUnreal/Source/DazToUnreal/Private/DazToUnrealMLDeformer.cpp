@@ -164,7 +164,11 @@ void FDazToUnrealMLDeformer::ModelPropertyChange(FPropertyChangedEvent& Property
 				FMLDeformerTrainingInputAnim* TrainingInputAnim = EditorModel->GetTrainingInputAnim(0);
 				if (UAnimSequence* AnimSequence = TrainingInputAnim->GetAnimSequence())
 				{
+#if UE_VERSION_NEWER_THAN(5,5,9)
+					AnimSequence->SetRetargetSourceAsset(DeformerAsset->GetModel()->GetSkeletalMesh());
+#else
 					AnimSequence->RetargetSourceAsset = DeformerAsset->GetModel()->GetSkeletalMesh();
+#endif
 					UEditorAssetSubsystem* EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
 					EditorAssetSubsystem->SaveLoadedAsset(AnimSequence, true);
 				}	
