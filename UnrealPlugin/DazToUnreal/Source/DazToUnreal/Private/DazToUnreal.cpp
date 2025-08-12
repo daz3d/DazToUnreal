@@ -1674,7 +1674,6 @@ the existing skeletal mesh in Unreal.");
 
 			 if (UAnimBlueprint* JointControlAnimBlueprint = FDazToUnrealMorphs::CreateJointControlAnimation(JsonObject, CharacterFolder, AssetName, Skeleton, SkeletalMesh))
 			 {
-				 UAnimInstance* JointControlAnim = Cast<UAnimInstance>(JointControlAnimBlueprint->GetAnimBlueprintGeneratedClass()->ClassDefaultObject);
 				 //if (FDazToUnrealMorphs::IsAutoJCMImport(JsonObject))
 				 {
 					 FString SkeletalMeshPackagePath = NewObject->GetOutermost()->GetPathName() + TEXT(".") + NewObject->GetName();
@@ -1686,6 +1685,7 @@ the existing skeletal mesh in Unreal.");
 #if ENGINE_MAJOR_VERSION > 4
 				 SkeletalMesh->SetPostProcessAnimBlueprint(JointControlAnimBlueprint->GetAnimBlueprintGeneratedClass());
 #else
+				 UAnimInstance* JointControlAnim = Cast<UAnimInstance>(JointControlAnimBlueprint->GetAnimBlueprintGeneratedClass()->ClassDefaultObject);
 				 SkeletalMesh->PostProcessAnimBlueprint = JointControlAnim->GetClass();
 #endif
 			 }
