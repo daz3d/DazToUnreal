@@ -97,7 +97,7 @@ void AssignMaterialFunctionToMaterial(FString MaterialPath, FString FunctionPath
 				return;
 			}
 			if (FunctionCall->MaterialFunction != nullptr) {
-				UE_LOG(LogTemp, Log, TEXT("Material function currently assigned to: %s and will be replaced with: %s"), *FunctionCall->MaterialFunction->GetName());
+				UE_LOG(LogTemp, Log, TEXT("Material function currently assigned to: %s and will be replaced with: %s"), *FunctionCall->MaterialFunction->GetName(), *NewFunction->GetName());
 			}
 
             // Pre-change notification
