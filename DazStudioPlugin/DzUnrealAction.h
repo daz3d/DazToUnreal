@@ -37,6 +37,9 @@ protected:
 	 virtual void exportNodeAnimation(DzNode* Bone, QMap<DzNode*, FbxNode*>& BoneMap, FbxAnimLayer* AnimBaseLayer, float FigureScale) override;
 	 virtual bool postProcessFbx(QString fbxFilePath) override;
 
+	 virtual bool preProcessScene(DzNode* parentNode) override;
+	 virtual bool undoPreProcessScene() override;
+
 	 // DB 2024-04-17: Moved here from DzBridgeAction.h
 	 Q_INVOKABLE virtual void writeMLDeformerData(DzJsonWriter& writer);
 

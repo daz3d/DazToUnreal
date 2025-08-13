@@ -113,7 +113,7 @@ void DzUnrealAction::executeAction()
 			m_MorphNamesToExport.clear();
 			foreach(QString morphName, m_aMorphListOverride)
 			{
-				QString label = m_morphSelectionDialog->GetMorphLabelFromName(morphName);
+				//QString label = MorphTools::GetMorphLabelFromName(morphName, m_pSelectedNode);
 				m_MorphNamesToExport.append(morphName);
 			}
 		}
@@ -212,6 +212,8 @@ void DzUnrealAction::writeConfiguration()
 		 writer.addMember("MaterialCombineMethod", DazToUnrealDialog->getMaterialCombineMethod());
 	 }
 
+	 writeStrandHairInfo(writer, m_oStrandHairExportData);
+
 	 if (m_sAssetType == "Animation")
 	 {
 		 writer.addMember("FixTwistBones", DazToUnrealDialog->getFixTwistBones());
@@ -267,6 +269,8 @@ void DzUnrealAction::writeConfiguration()
 		 writer.addMember("FaceCharacterRight", DazToUnrealDialog->getFaceCharacterRight());
 		 writeMLDeformerData(writer);
 	 }
+
+	 m_oStrandHairExportData.clear();
 
 	 writer.finishObject();
 	 DTUfile.close();
@@ -449,6 +453,50 @@ bool DzUnrealAction::readGui(DZ_BRIDGE_NAMESPACE::DzBridgeDialog* pBridgeDialog)
 
 	return true;
 }
+
+bool DzUnrealAction::preProcessScene(DzNode* parentNode)
+{
+	DzProgress* pProgress = new DzProgress(tr("PreProcessing Scene"), 100, false, true);
+
+	DzBridgeAction::preProcessScene(parentNode);
+
+	QList<DzNode*> aHairNodesList = findAllStrandBasedHair();
+	if (aHairNodesList.count() > 0) {
+		if (m_bCombineStrandHairParts)
+		{
+			QString sHairPostfix = QString("_%1.abc").arg("hair");
+			QString sAbcFilename = QString(m_sDestinationFBX).replace(".fbx", sHairPostfix, Qt::CaseInsensitive);
+			writeHair(sAbcFilename, aHairNodesList, "unreal");
+		}
+		else
+		{
+			foreach(DzNode * pHairNode, aHairNodesList) {
+				if (isStrandBasedHair(pHairNode) == false) continue;
+				QString sHairPostfix = QString("_%1.abc").arg(cleanString(pHairNode->getLabel()));
+				QString sAbcFilename = QString(m_sDestinationFBX).replace(".fbx", sHairPostfix, Qt::CaseInsensitive);
+				writeHair(sAbcFilename, QList<DzNode*>() << pHairNode, "unreal");
+			}
+		}
+	}
+
+	hideAllStrandBasedHair();
+
+	pProgress->finish();
+
+
+	return true;
+}
+
+bool DzUnrealAction::undoPreProcessScene()
+{
+	if (DzBridgeAction::undoPreProcessScene() == false) return false;
+
+	undoHideAllStrandBasedHair();
+
+	return true;
+}
+
+
 
 
 #include "moc_DzUnrealAction.cpp"
