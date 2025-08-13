@@ -14,6 +14,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogDazToUnreal, Log, All);
 class FToolBarBuilder;
 class FMenuBuilder;
 struct FDUFTextureProperty;
+class FJsonValue;
 
 // 2025-06-13, DB: Refactoring ImportFromDaz()
 class UDazToUnrealSettings;
@@ -74,6 +75,8 @@ public:
 		FString& FBXPath,
 		FString& RootBoneName, TArray<FString>& MaterialNames);
 	
+	bool ImportGroom(FString sGroomFilename, FString sImportLocation, TSharedPtr<FJsonObject> JsonObject);
+
 private:
 	
 	void AddToolbarExtension(FToolBarBuilder& Builder);

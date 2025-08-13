@@ -574,8 +574,9 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 		if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DazMLDeformerImportFolder)) return nullptr;
 #endif
 	}
-	
-	if (AssetType == DazAssetType::R2x) {
+
+	bool placeholder_cachesetting_installcommon = true;
+	if (AssetType == DazAssetType::R2x || placeholder_cachesetting_installcommon) {
 		FDazToUnrealUtils::InstallPluginContentToProject();
 	}
 
@@ -1371,6 +1372,18 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 					 }
 				 }
 			 }
+		 }
+	 }
+
+	 // DB 2025-08-12: Groom Asset Import
+	 TArray<TSharedPtr<FJsonValue>> StrandHairInfoArray = JsonObject->GetArrayField(TEXT("Strand Hair Info"));
+	 for (int i=0; i < StrandHairInfoArray.Num(); i++)
+	 {
+		 TSharedPtr<FJsonObject> StrandHairInfo = StrandHairInfoArray[i]->AsObject();
+		 if (StrandHairInfo)
+		 {
+			 FString sGroomFilePath = StrandHairInfo->GetStringField(TEXT("File"));
+			 ImportGroom(sGroomFilePath, ImportData.ImportLocation, JsonObject);
 		 }
 	 }
 
@@ -2192,6 +2205,44 @@ bool FDazToUnrealModule::PreProcessFbxFile(
 
 	return true;
 }
+
+bool FDazToUnrealModule::ImportGroom(FString sGroomFilename, FString sDestinationGamePath, TSharedPtr<FJsonObject> JsonObject)
+{
+	if (!FModuleManager::Get().IsModuleLoaded(TEXT("AlembicHairTranslatorModule")))
+	{
+		if (!FModuleManager::Get().LoadModule(TEXT("AlembicHairTranslatorModule")))
+		{
+			UE_LOG(LogTemp, Error, TEXT("DazToUnreal: AlembicHairTranslatorModule (Alembic Groom Importer) module is not loaded and could not be loaded. Enable the plugin in the Editor before importing."));
+			return false;
+		}
+	}
+
+	//// Import assets
+	FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
+	TArray<FString> FileNames;
+	FileNames.Add(sGroomFilename);
+
+	UAutomatedAssetImportData* ImportData = NewObject<UAutomatedAssetImportData>(UAutomatedAssetImportData::StaticClass());
+	ImportData->FactoryName = TEXT("GroomImportFactory");
+	ImportData->Filenames = FileNames;
+	ImportData->DestinationPath = sDestinationGamePath;
+	ImportData->bReplaceExisting = true;
+
+	TArray<UObject*> ImportedAssets;
+	try
+	{
+		ImportedAssets = AssetToolsModule.Get().ImportAssetsAutomated(ImportData);
+		// ImportedAssets = AssetToolsModule.Get().ImportAssets(FileNames, sDestinationGamePath);
+	}
+	catch (...)
+	{
+		UE_LOG(LogTemp, Warning, TEXT(">> Importing Groom Assets failed."));
+		return false;
+	}
+
+	return true;
+}
+
 
 #undef LOCTEXT_NAMESPACE
 

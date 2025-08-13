@@ -46,7 +46,7 @@
 		{
 			"Name": "MLDeformerFramework",
 			"Enabled": true,
-			"Optional": false
+			"Optional": true
 		},
 		{
 			"Name": "NNI",

@@ -87,7 +87,11 @@ void AssignMaterialFunctionToMaterial(FString MaterialPath, FString FunctionPath
     }
 
     // Iterate through expressions and find the function call node
-    for (UMaterialExpression* Expr : Material->GetExpressions())
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+	for (UMaterialExpression* Expr : Material->GetExpressions())
+#else
+	for (UMaterialExpression* Expr : Material->Expressions)
+#endif
     {
         if (UMaterialExpressionMaterialFunctionCall* FunctionCall = Cast<UMaterialExpressionMaterialFunctionCall>(Expr))
         {

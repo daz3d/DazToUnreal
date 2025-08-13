@@ -1,6 +1,12 @@
 # build_unreal_plugin.py
 import os
+import sys
 import subprocess
+
+def print_usage():
+    print("Usage: python build_unreal_plugins.py [UE_VERSION]")
+    print("Supported UE_VERSION: UE425, UE426, UE427, UE50, UE51, UE52, UE53, UE54, UE55, UE56")
+    print("If no version is specified, all versions will be built.")
 
 engine_path_map = {
     "UE425": "C:/Epic Games/UE_4.25/Engine/",
@@ -57,10 +63,24 @@ def build_plugin(ue_version):
 
     return proc.returncode
 
-def main():
+def main(argv):
     global package_path
 
-    ue_version_list = ["UE425", "UE426", "UE427", "UE50", "UE51", "UE52", "UE53", "UE54", "UE55", "UE56"]
+    print("DEBUG: argv:", argv)
+    # parse argv to read ue_version string
+    if len(argv) == 0:
+        target_version = "all"
+    elif len(argv) > 0:
+        target_version = argv[0]
+
+    if target_version.lower() == "all":
+        ue_version_list = ["UE425", "UE426", "UE427", "UE50", "UE51", "UE52", "UE53", "UE54", "UE55", "UE56"]
+    elif target_version not in engine_path_map:
+        print_usage()
+        return 1
+    else:
+        ue_version_list = [target_version]
+
     success_list = []
     fail_list = []
 
@@ -83,5 +103,5 @@ def main():
     return 0
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
     print("Script complete.")

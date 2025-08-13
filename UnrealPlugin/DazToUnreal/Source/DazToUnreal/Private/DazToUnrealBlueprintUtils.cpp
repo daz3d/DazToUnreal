@@ -2,9 +2,14 @@
 #include "ReferenceSkeleton.h"
 #include "Animation/Skeleton.h"
 #include "AssetNotifications.h"
-#include "AssetRegistry/AssetRegistryModule.h"
 #include "Widgets/Notifications/SNotificationList.h"
 #include "Framework/Notifications/NotificationManager.h"
+
+#if ENGINE_MAJOR_VERSION >= 5
+#include "AssetRegistry/AssetRegistryModule.h"
+#else
+#include "AssetRegistryModule.h"
+#endif
 
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION == 2
 #include "IKRigDefinition.h"
