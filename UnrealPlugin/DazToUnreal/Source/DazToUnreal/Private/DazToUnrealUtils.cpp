@@ -394,7 +394,12 @@ void FDazToUnrealUtils::InstallPluginContentToProject()
     }
 
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+
+#if (ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION <= 27)
+	AssetRegistryModule.Get().ScanPathsSynchronous({ DazCommonFolder }, true);
+#else
 	AssetRegistryModule.Get().ScanPathsSynchronous({ FullCommonFolder }, true);
+#endif
 
 	AssignMaterialFunctionToMaterial(
 		DazCommonFolder + TEXT("/Materials/BasePBRSkinMaterial.BasePBRSkinMaterial"),
@@ -457,7 +462,11 @@ void FDazToUnrealUtils::InstallPluginContentToProject()
 		DazCommonFolder + TEXT("/Materials/DazParameters.DazParameters")
 	);
 
+#if (ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION <= 27)
+	AssetRegistryModule.Get().ScanPathsSynchronous({ DazCommonFolder }, true);
+#else
 	AssetRegistryModule.Get().ScanPathsSynchronous({ FullCommonFolder }, true);
+#endif
 
 	UnMountPak(PakPlatformFile, FullPakPath);
 

@@ -72,6 +72,16 @@
 			"Name": "LiveLinkControlRig",
 			"Enabled": true,
 			"Optional": true
+		},
+		{
+			"Name": "Groom",
+			"Enabled": true,
+			"Optional": true
+		},
+		{
+			"Name": "AlembicHairTranslatorModule",
+			"Enabled": true,
+			"Optional": true
 		}
 	]
 }

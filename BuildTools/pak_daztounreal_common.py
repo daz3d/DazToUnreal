@@ -2,8 +2,9 @@
 
 
 import sys, os
+from subprocess import list2cmdline
 
-ue_path = "C:/Epic_Games/UE_4.25/"
+ue_path = r"C:/Epic Games/UE_4.25/"
 platform = "Win64"
 unreal_pak_executable = os.path.join(ue_path, "Engine/Binaries/", platform, "UnrealPak").replace("\\", "/")
 if "win" in platform.lower():
@@ -84,7 +85,15 @@ def main(args):
     print(f"DEBUG: pak_content_file: {pak_content_file}")
 
     # Call the UnrealPak command to create the pak file
-    command = f'"{unreal_pak_executable}" "{output_pakfile_path}" -create="{pak_content_file}"'
+    # command = f'"{unreal_pak_executable}" "{output_pakfile_path}" -create="{pak_content_file}"'
+    # print(f"DEBUG: command: {command}")
+
+    args = [
+        unreal_pak_executable,
+        output_pakfile_path,
+        "-create=" + pak_content_file
+    ]
+    command = list2cmdline(args)
     print(f"DEBUG: command: {command}")
     result = os.system(command)
     if result != 0:
