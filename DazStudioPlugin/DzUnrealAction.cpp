@@ -462,6 +462,7 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 
 	QList<DzNode*> aHairNodesList = findAllStrandBasedHair();
 	if (aHairNodesList.count() > 0) {
+        QDir().mkpath(m_sDestinationPath);
 		if (m_bCombineStrandHairParts)
 		{
 			QString sHairPostfix = QString("_%1.abc").arg("hair");
