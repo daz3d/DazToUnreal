@@ -71,10 +71,20 @@ public:
 		TSharedPtr<FJsonObject>& JsonObject,
 		DazMaterialCombineType& MaterialCombineMethod,
 		TMap<TSharedPtr<FJsonValue>, TSharedPtr<FJsonValue>>& DuplicateMaterials,
-		TMap<FString, TArray<FDUFTextureProperty>>& MaterialProperties,
+		TMap<FString, TArray<FDUFTextureProperty>>& DtuMaterialsTable,
 		FString& FBXPath,
 		FString& RootBoneName, TArray<FString>& MaterialNames);
-	
+		
+	bool CreateRelatedMaterials(
+		TArray<FString> UnrealMaterialsToCreate,
+		USubsurfaceProfile* MasterSubsurfaceProfile,
+		TMap<FString, TArray<FDUFTextureProperty>>& DtuMaterialsTable,
+		FString BaseMaterialName,
+		FString ChildMaterialFolder,
+		FString CharacterMaterialFolder,
+		FString CharacterTexturesFolder,
+		DazCharacterType CharacterType);
+
 	bool ImportGroom(FString sGroomFilename, FString sImportLocation, TSharedPtr<FJsonObject> JsonObject);
 
 private:
@@ -162,11 +172,6 @@ private:
 	/** Imports the modified FBX file*/
 	UObject* ImportFBXAsset(const DazToUnrealImportData& DazImportData);
 
-	/** Function for creating the Material Instances for the model*/
-	//bool CreateMaterials(const FString CharacterMaterialFolder, const FString CharacterTexturesFolder, const TArray<FString>& MaterialNames, TMap<FString, TArray<FDUFTextureProperty>> MaterialProperties, const DazCharacterType CharacterType);
-
-	/** Set material properties that will be set on the Material Instances*/
-	//void SetMaterialProperty(const FString& MaterialName, const FString& PropertyName, const FString& PropertyType, const FString& PropertyValue, TMap<FString, TArray<FDUFTextureProperty>>& MaterialProperties);
 	FString GetSubSurfaceAlphaTexture(const DazCharacterType CharacterType, const FString& MaterialName);
 
 	/** Converts a hex string to a Linear color.*/
