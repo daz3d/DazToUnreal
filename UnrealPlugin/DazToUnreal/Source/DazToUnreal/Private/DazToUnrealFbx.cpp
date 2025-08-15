@@ -2,6 +2,7 @@
 
 #include "DazToUnrealSettings.h"
 #include "DazToUnrealUtils.h"
+#include "Misc/EngineVersionComparison.h"
 
 void FDazToUnrealFbx::RenameDuplicateBones(FbxNode* RootNode)
 {
@@ -601,7 +602,11 @@ bool FDazToUnrealFbx::SaveUpdatedFbxFile(FbxManager* SdkManager, FbxScene* Scene
 	if (ExistingMesh) {
 		USkeletalMesh* ExistingSkeletalMesh = Cast<USkeletalMesh>(ExistingMesh);
 		if (ExistingSkeletalMesh) {
+#if UE_VERSION_NEWER_THAN(4, 26, 99)
+			ExistingBoneCount = ExistingSkeletalMesh->GetRefSkeleton().GetNum();
+#else
 			ExistingBoneCount = ExistingSkeletalMesh->RefSkeleton.GetNum();
+#endif
 		}
 	}
 	if (ExistingBoneCount != -1 && ExistingBoneCount != FbxBoneCount)
@@ -613,7 +618,11 @@ the existing skeletal mesh in Unreal.");
 		UE_LOG(LogTemp, Error, TEXT("%s"), *ErrorMessage);
 		FText DialogText = FText::FromString(ErrorMessage);
 		FText DialogTitle = FText::FromString(TEXT("DazToUnreal Import Error"));
+#if UE_VERSION_NEWER_THAN(5, 2, 99)
+		FMessageDialog::Open(EAppMsgType::Ok, DialogText, DialogTitle);
+#else
 		FMessageDialog::Open(EAppMsgType::Ok, DialogText, &DialogTitle);
+#endif
 		Exporter->Destroy();
 		return false;
 	}

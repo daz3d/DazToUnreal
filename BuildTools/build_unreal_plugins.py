@@ -19,7 +19,7 @@ def is_mac():
 def load_config():
     global plugin_path, output_path, engine_path_map, compiler_path_map
     if is_windows():
-        config_path = "build_unreal_plugins.json"
+        config_path = "build_unreal_plugins_win.json"
     elif is_mac():
         config_path = "build_unreal_plugins_mac.json"
     else:

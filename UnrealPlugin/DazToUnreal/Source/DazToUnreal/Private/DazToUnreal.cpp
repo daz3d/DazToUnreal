@@ -610,7 +610,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 {
 		 FString LevelPath = CharacterFolder / AssetName + FString("_Level");
 		 FString TemplatePath = TEXT("/Engine/Content/Maps/Templates/Template_Default");
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+#if UE_VERSION_NEWER_THAN(5, 0, 99)
 		 if (ULevelEditorSubsystem* LevelEditorSubsystem = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
 		 {
 			 LevelEditorSubsystem->NewLevelFromTemplate(LevelPath, TemplatePath);
@@ -624,7 +624,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 		 //UEditorLevelLibrary::NewLevel(LevelPath);
 #endif
 		 FDazToUnrealEnvironment::ImportEnvironment(JsonObject);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION > 0
+#if UE_VERSION_NEWER_THAN(5, 0, 99)
 		 if (ULevelEditorSubsystem* LevelEditorSubsystem = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
 		 {
 			 LevelEditorSubsystem->SaveCurrentLevel();
@@ -1208,7 +1208,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 {
 		 if (USkeletalMesh* SkeletalMesh = Cast<USkeletalMesh>(NewObject))
 		 {
-#if ENGINE_MAJOR_VERSION > 4
+#if UE_VERSION_NEWER_THAN(4, 26, 99)
 			 USkeleton* Skeleton = SkeletalMesh->GetSkeleton();
 #else
 			 USkeleton* Skeleton = SkeletalMesh->Skeleton;
@@ -1224,7 +1224,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 					 UE_LOG(LogDazToUnreal, Log, TEXT("Creating AutoJCM Control Rig with command: %s"), *CreateJCMControlRigCommand);
 					 GEngine->Exec(NULL, *CreateJCMControlRigCommand);
 				 }
-#if ENGINE_MAJOR_VERSION > 4
+#if UE_VERSION_NEWER_THAN(4, 26, 99)
 				 SkeletalMesh->SetPostProcessAnimBlueprint(JointControlAnimBlueprint->GetAnimBlueprintGeneratedClass());
 #else
 				 UAnimInstance* JointControlAnim = Cast<UAnimInstance>(JointControlAnimBlueprint->GetAnimBlueprintGeneratedClass()->ClassDefaultObject);
@@ -1278,9 +1278,9 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 // DB 2023-Aug-15: Auto-generate LOD meshes
 #define LOD_METHOD_UNREAL_BUILTIN 2
 	 TSharedPtr<FJsonObject> LodSettingsObject = JsonObject->GetObjectField(TEXT("LOD Settings"));
-	 bool bGenerateLODs = LodSettingsObject->GetBoolField("Generate LODs");
-	 int nLodMethod = LodSettingsObject->GetIntegerField("LOD Method");
-	 int targetNumLODs = LodSettingsObject->GetIntegerField("Number of LODs");
+	 bool bGenerateLODs = LodSettingsObject->GetBoolField(TEXT("Generate LODs"));
+	 int nLodMethod = LodSettingsObject->GetIntegerField(TEXT("LOD Method"));
+	 int targetNumLODs = LodSettingsObject->GetIntegerField(TEXT("Number of LODs"));
 
 	 if (bGenerateLODs == true && nLodMethod == LOD_METHOD_UNREAL_BUILTIN)
 	 {
@@ -1662,7 +1662,7 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImpo
 		  {
 				if (DazImportData.bSetPostProcessAnimation && CachedSettings->SkeletonPostProcessAnimation.Contains(SkeletonPath))
 				{
-#if ENGINE_MAJOR_VERSION > 4
+#if UE_VERSION_NEWER_THAN(4, 26, 99)
 					SkeletalMesh->SetPostProcessAnimBlueprint(CachedSettings->SkeletonPostProcessAnimation[SkeletonPath].TryLoadClass<UAnimInstance>());
 #else
 					SkeletalMesh->PostProcessAnimBlueprint = CachedSettings->SkeletonPostProcessAnimation[SkeletonPath].TryLoadClass<UAnimInstance>();
@@ -1672,7 +1672,7 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImpo
 				//Get the new skeleton
 				if (!Skeleton)
 				{
-#if ENGINE_MAJOR_VERSION > 4
+#if UE_VERSION_NEWER_THAN(4, 26, 99)
 					Skeleton = SkeletalMesh->GetSkeleton();
 #else
 					 Skeleton = SkeletalMesh->Skeleton;
