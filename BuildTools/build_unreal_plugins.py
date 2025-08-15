@@ -2,34 +2,75 @@
 import os
 import sys
 import subprocess
+import json
+
+global plugin_path, output_path, runuat_path, package_path
 
 def print_usage():
     print("Usage: python build_unreal_plugins.py [UE_VERSION]")
     print("Supported UE_VERSION: UE425, UE426, UE427, UE50, UE51, UE52, UE53, UE54, UE55, UE56")
     print("If no version is specified, all versions will be built.")
 
-engine_path_map = {
-    "UE425": "C:/Epic Games/UE_4.25/Engine/",
-    "UE426": "C:/Epic Games/UE_4.26/Engine/",
-    "UE427": "C:/Epic Games/UE_4.27/Engine/",
-    "UE50": "C:/Epic Games/UE_5.0/Engine/",
-    "UE51": "C:/Epic Games/UE_5.1/Engine/",
-    "UE52": "C:/Epic Games/UE_5.2/Engine/",
-    "UE53": "C:/Epic Games/UE_5.3/Engine/",
-    "UE54": "C:/Epic Games/UE_5.4/Engine/",
-    "UE55": "C:/Epic Games/UE_5.5/Engine/",
-    "UE56": "C:/Epic Games/UE_5.6/Engine/"
-}
+def is_windows():
+    return sys.platform.startswith('win')
+def is_mac():
+    return sys.platform.startswith('darwin')
 
-global runuat_path, plugin_path, package_path
+def load_config():
+    global plugin_path, output_path, engine_path_map, compiler_path_map
+    if is_windows():
+        config_path = "build_unreal_plugins.json"
+    elif is_mac():
+        config_path = "build_unreal_plugins_mac.json"
+    else:
+        print("ERROR: Unsupported platform")
+        sys.exit(1)
+    with open(config_path, "r") as f:
+        config = json.load(f)
+        plugin_path = config["plugin_path"]
+        output_path = config["output_path"]
+        engine_path_map = config["engine_path_map"]
+        if is_mac():
+            compiler_path_map = config["compiler_path_map"]
+        else:
+            compiler_path_map = {}
+
+def switch_msvc_version(msvc_ver):
+    global compiler_path_map
+    if msvc_ver not in compiler_path_map or compiler_path_map[msvc_ver] == "":
+        print(f"ERROR: Unsupported MSVC version: {msvc_ver}")
+        return False
+    msvc_path = compiler_path_map[msvc_ver]
+    pass
+    return True
+
+def reset_msvc_version():
+    pass
+
+def switch_xcode_version(xcode_ver):
+    global compiler_path_map
+    if xcode_ver not in compiler_path_map or compiler_path_map[xcode_ver] == "":
+        print(f"ERROR: Unsupported Xcode version: {xcode_ver}")
+        return False
+    xcode_path = compiler_path_map[xcode_ver]
+    # os.system(f"sudo xcode-select -s {xcode_path}")
+    # set DEVELOPER_DIR
+    os.environ["DEVELOPER_DIR"] = xcode_path
+    return True
+
+def reset_xcode_version():
+    # os.system("sudo xcode-select -s /Applications/Xcode.app/Contents/Developer")
+    # reset DEVELOPER_DIR
+    os.environ["DEVELOPER_DIR"] = "/Applications/Xcode.app/Contents/Developer"
 
 def setup_paths(ue_version):
     global runuat_path, plugin_path, package_path
     engine_path = engine_path_map[ue_version]
     relative_runuat_path = "Build/BatchFiles/RunUAT.bat"
     runuat_path = os.path.join(engine_path, relative_runuat_path)
-    plugin_path  = "C:/Github/DazToUnreal-daz3d/UnrealPlugin/DazToUnreal/DazToUnreal.uplugin"
-    package_path = f"C:/UE_DEPLOY/{ue_version}/DazToUnreal"
+    if not os.path.exists(runuat_path):
+        runuat_path = runuat_path.replace(".bat", ".sh")
+    package_path = f"{output_path}/{ue_version}/DazToUnreal"
 
 def build_plugin(ue_version):
     global runuat_path, plugin_path, package_path
@@ -51,10 +92,44 @@ def build_plugin(ue_version):
         f"-Plugin={plugin_path}",
         f"-Package={package_path}",
         "-Rocket",
-        "-set:GameConfigurations=Development;Shipping",
-        # Optional: target platform(s). Uncomment if you want to constrain.
-        # "-TargetPlatforms=Win64",
+        "-set:GameConfigurations=Development;Shipping"
     ]
+
+    if is_windows():
+        if ue_version.startswith("UE4"):
+            if not switch_msvc_version("v141"):
+                return 1
+        if ue_version.startswith("UE5"):
+            if ue_version == "UE50" or ue_version == "UE51":
+                if not switch_msvc_version("v141"):
+                    return 1
+            if ue_version == "UE52":
+                if not switch_msvc_version("v142"):
+                    return 1
+            else:
+                if not switch_msvc_version("v143"):
+                    return 1
+
+    if is_mac():
+        if ue_version.startswith("UE4"):
+            if not switch_xcode_version("13.2.1"):
+                return 1
+        if ue_version.startswith("UE5"):
+            if ue_version== "UE50":
+                if not switch_xcode_version("13.2.1"):
+                    return 1
+            elif ue_version == "UE51":
+                if not switch_xcode_version("13.4.1"):
+                    return 1
+                args += ['-VeryVerbose']
+            elif ue_version == "UE56":
+                if not switch_xcode_version("15.4"):
+                    return 1
+                args += ['-TargetPlatforms=Mac','-Architecture_Mac="arm64+x86_64"','-VeryVerbose']
+            else:
+                if not switch_xcode_version("15.3"):
+                    return 1
+                args += ['-TargetPlatforms=Mac','-Architecture_Mac="arm64+x86_64"']
 
     print(f"DEBUG: args: {args}", flush=True)
 
@@ -65,6 +140,8 @@ def build_plugin(ue_version):
 
 def main(argv):
     global package_path
+
+    load_config()
 
     print("DEBUG: argv:", argv)
     # parse argv to read ue_version string
@@ -94,6 +171,9 @@ def main(argv):
         else:
             print(f"Successfully built Unreal plugin to: {package_path}\n")
             success_list += [ue_version]
+
+    if is_mac():
+        reset_xcode_version()
 
     if success_list:
         print(f"Successfully built plugins for: {success_list}")

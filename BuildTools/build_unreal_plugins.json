@@ -1,0 +1,21 @@
+{
+    "plugin_path": "C:/Github/DazToUnreal-daz3d/UnrealPlugin/DazToUnreal/DazToUnreal.uplugin",
+    "output_path": "C:/UE_DEPLOY/",
+    "engine_path_map": {
+        "UE425": "C:/Epic Games/UE_4.25/Engine/",
+        "UE426": "C:/Epic Games/UE_4.26/Engine/",
+        "UE427": "C:/Epic Games/UE_4.27/Engine/",
+        "UE50": "C:/Epic Games/UE_5.0/Engine/",
+        "UE51": "C:/Epic Games/UE_5.1/Engine/",
+        "UE52": "C:/Epic Games/UE_5.2/Engine/",
+        "UE53": "C:/Epic Games/UE_5.3/Engine/",
+        "UE54": "C:/Epic Games/UE_5.4/Engine/",
+        "UE55": "C:/Epic Games/UE_5.5/Engine/",
+        "UE56": "C:/Epic Games/UE_5.6/Engine/"
+    },
+    "compiler_path_map": {
+        "v141": "C:/Program Files (x86)/Microsoft Visual Studio/2017/Community/VC/Tools/MSVC/14.16.27023",
+        "v142": "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.29.30133",
+        "v143": "C:/Program Files (x86)/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.38.31931",
+    }
+}

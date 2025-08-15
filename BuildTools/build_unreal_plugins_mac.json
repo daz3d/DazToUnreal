@@ -1,0 +1,22 @@
+{
+    "plugin_path": "/Users/dbui/Developer/Github/DazToUnreal/UnrealPlugin/DazToUnreal/DazToUnreal.uplugin",
+    "output_path": "/Users/dbui/Developer/UE_DEPLOY/",
+    "engine_path_map": {
+        "UE425": "/Volumes/SSD_4TB/Epic_Games/UE_4.25/Engine/",
+        "UE426": "/Volumes/SSD_4TB/Epic_Games/UE_4.26/Engine/",
+        "UE427": "/Volumes/SSD_4TB/Epic_Games/UE_4.27/Engine/",
+        "UE50": "/Volumes/SSD_4TB/Epic_Games/UE_5.0/Engine/",
+        "UE51": "/Volumes/SSD_4TB/Epic_Games/UE_5.1/Engine/",
+        "UE52": "/Volumes/SSD_4TB/Epic_Games/UE_5.2/Engine/",
+        "UE53": "/Volumes/SSD_4TB/Epic_Games/UE_5.3/Engine/",
+        "UE54": "/Volumes/SSD_4TB/Epic_Games/UE_5.4/Engine/",
+        "UE55": "/Volumes/SSD_4TB/Epic_Games/UE_5.5/Engine/",
+        "UE56": "/Applications/Epic_Games/UE_5.6/Engine/"
+    },
+    "compiler_path_map": {
+        "13.2.1": "/Volumes/SSD_4TB/Applications/Xcode_13.2.1.app/Contents/Developer",
+        "13.4.1": "/Volumes/SSD_4TB/Applications/Xcode_13.4.1.app/Contents/Developer",
+        "15.3": "/Applications/Xcode.app/Contents/Developer",
+        "15.4": ""
+    }
+}
