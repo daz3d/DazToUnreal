@@ -30,10 +30,7 @@ def load_config():
         plugin_path = config["plugin_path"]
         output_path = config["output_path"]
         engine_path_map = config["engine_path_map"]
-        if is_mac():
-            compiler_path_map = config["compiler_path_map"]
-        else:
-            compiler_path_map = {}
+        compiler_path_map = config["compiler_path_map"]
 
 def switch_msvc_version(msvc_ver):
     global compiler_path_map
