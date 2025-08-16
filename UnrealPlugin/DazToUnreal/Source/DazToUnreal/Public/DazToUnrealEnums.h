@@ -12,14 +12,15 @@ enum DazCharacterType
 
 enum DazAssetType
 {
+	UNKNOWN,
 	SkeletalMesh,
 	StaticMesh,
 	Animation,
 	Environment,
 	Pose,
 	MLDeformer,
-	UNKNOWN,
-	R2x
+	R2x,
+	SkeletalMesh_v2
 };
 
 enum DazMaterialCombineType

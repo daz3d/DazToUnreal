@@ -30,6 +30,7 @@
 #include "DzBridgeSubdivisionDialog.h"
 
 #include "MLDeformer.h"
+#include "FbxTools.h"
 
 DzUnrealAction::DzUnrealAction() :
 	 DzBridgeAction(tr("Send to &Unreal..."), tr("Send the selected node to Unreal."))
@@ -201,7 +202,9 @@ void DzUnrealAction::writeConfiguration()
 	 DzJsonWriter writer(&DTUfile);
 	 writer.startObject(true);
 
+	 if (m_sAssetType == "SkeletalMesh") m_sAssetType = "SkeletalMesh_v2";
 	 writeDTUHeader(writer);
+	if (m_sAssetType == "SkeletalMesh_v2") m_sAssetType = "SkeletalMesh";
 
 	 if (m_sAssetType == "SkeletalMesh")
 	 {
@@ -359,8 +362,89 @@ QString DzUnrealAction::readGuiRootFolder()
 	return rootFolder;
 }
 
+bool CompareMaterials(DzMaterial* A, DzMaterial* B)
+{
+	// compare maps
+	QList<DzTexturePtr> aMapListA;
+	QList<DzTexturePtr> aMapListB;
+	A->getAllMaps(aMapListA);
+	B->getAllMaps(aMapListB);
+
+	if (aMapListA.count() != aMapListB.count()) return false;
+	for (int i=0; i < aMapListA.count(); i++) {
+		bool bMatchFound = false;
+		for (int j=0; j < aMapListB.count(); j++) {
+			DzTexturePtr pMapA = aMapListA[i];
+			DzTexturePtr pMapB = aMapListB[j];
+			if (pMapA->getFilename() == pMapB->getFilename()) {
+				bMatchFound = true;
+				break;
+			}
+		}
+		if (bMatchFound == false) return false;
+	}
+	
+	if (A->getDiffuseColor() != B->getDiffuseColor()) return false;
+
+/*
+	DzColorProperty* pPropertyA = qobject_cast<DzColorProperty*>( A->findProperty("Diffuse Color") );
+	DzColorProperty* pPropertyB = qobject_cast<DzColorProperty*>( B->findProperty("Diffuse Color") );
+	if (pPropertyA && pPropertyB) {
+		if (pPropertyA->getColorValue() != pPropertyB->getColorValue()) return false;
+		DzTexture* pMapA = pPropertyA->getMapValue();
+		DzTexture* pMapB = pPropertyB->getMapValue();
+		if (pMapA && pMapB) {
+			if (pMapA->getFilename() != pMapB->getFilename()) return false;			
+		}
+		else if (pMapA || pMapB) return false;
+	}
+	else if (pPropertyA || pPropertyB) return false;
+*/
+
+	return true;
+}
+
+// Returns a map of material to the material it's a duplicate of.
+QMap<DzMaterial*, DzMaterial*> FindDuplicateMaterials(QList<DzMaterial*> &MaterialList)
+{
+	QStringList aPreferedNameList;
+	aPreferedNameList << "head" << "upper";
+	
+	QMap<DzMaterial*, DzMaterial*> Duplicates;
+	for (int i = 0; i < MaterialList.count(); i++)
+	{
+		DzMaterial* Material = MaterialList[i];
+		QString MaterialName = Material->getName();
+
+		for (int j = i + 1; j < MaterialList.count(); j++)
+		{
+			DzMaterial* CompareMaterial = MaterialList[j];
+			QString CompareMaterialName = CompareMaterial->getName();
+
+			if ( CompareMaterials(Material, CompareMaterial) && !Duplicates.contains(MaterialList[j]) )
+			{
+				bool bPreferenceOverride = false;
+				foreach (QString sPriorityName, aPreferedNameList) {
+					if (CompareMaterialName.toLower().contains(sPriorityName)) {
+						bPreferenceOverride = true;
+						break;
+					}
+				}
+				printf("DEBUG: FindDuplicateMaterials() duplicate: %s, original: %s\n", CompareMaterialName.toLocal8Bit().constData(), MaterialName.toLocal8Bit().constData());
+				if (bPreferenceOverride) {
+					Duplicates.insert(Material, CompareMaterial);
+				} else {
+					Duplicates.insert(CompareMaterial, Material);					
+				}
+			}
+		}
+	}
+	return Duplicates;
+}
+
 bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 {
+	m_bConvertFbxJointsEnabled = true;
 	bool bResult = DzBridgeAction::postProcessFbx(fbxFilePath);
 
 	if (!bResult)
@@ -369,7 +453,30 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 	}
 
 	// Insert Unreal specific Fbx Post-processing here
+	QList<DzMaterial*> aMaterialsList;
+	DzNode* pNode = m_pSelectedNode;
+	DzNodeList aMeshNodes;
+	if (pNode->getObject()) aMeshNodes << pNode;
+	foreach (QObject* pObj, pNode->getNodeChildren(true)) {
+		DzNode* pChildNode = qobject_cast<DzNode*>(pObj);
+		if (pChildNode && pChildNode->getObject()) {
+			aMeshNodes << pChildNode;
+		}
+	}
+	foreach (DzNode* pNode, aMeshNodes) {
+		if (pNode->getObject()) {
+			if (DzShape* pShape = pNode->getObject()->getCurrentShape()) {
+				for (int i=0; i < pShape->getNumMaterials(); i++) {
+					aMaterialsList << pShape->getMaterial(i);
+				}				
+			}
+		}		
+	}
 
+	QMap<DzMaterial *, DzMaterial *> DuplicateMaterials = FindDuplicateMaterials(aMaterialsList);
+	QList<QString> MaterialSlotNames;
+	FbxTools::PreProcessFbxFile(fbxFilePath, m_sAssetName, DuplicateMaterials, MaterialSlotNames);
+		
 	return true;
 }
 
@@ -458,8 +565,6 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 {
 	DzProgress* pProgress = new DzProgress(tr("PreProcessing Scene"), 100, false, true);
 
-	DzBridgeAction::preProcessScene(parentNode);
-
 	QList<DzNode*> aHairNodesList = findAllStrandBasedHair();
 	if (aHairNodesList.count() > 0) {
         QDir().mkpath(m_sDestinationPath);
@@ -481,6 +586,10 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 	}
 
 	hideAllStrandBasedHair();
+
+	m_bConvertRigEnabled = true;
+	m_sExportRigMode = "unreal";
+	DzBridgeAction::preProcessScene(parentNode);
 
 	pProgress->finish();
 

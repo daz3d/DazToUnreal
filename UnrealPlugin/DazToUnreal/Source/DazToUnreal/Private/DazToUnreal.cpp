@@ -477,6 +477,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 		 AssetType = DazAssetType::MLDeformer;
 	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("R2x"))
 		 AssetType = DazAssetType::R2x;
+	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("SkeletalMesh_v2"))
+		 AssetType = DazAssetType::SkeletalMesh_v2;
 	 else
 		 AssetType = DazAssetType::UNKNOWN;
 
@@ -604,6 +606,10 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 if (!JsonObject->TryGetBoolField(TEXT("FaceCharacterRight"), ImportData.bFaceCharacterRight))
 	 {
 		 ImportData.bFaceCharacterRight = CachedSettings->ZeroRootRotationOnImport;
+	 }
+	 if (AssetType == DazAssetType::SkeletalMesh_v2) {
+		// Override Source Path
+		ImportData.SourcePath = FBXFile;
 	 }
 
 	 if (AssetType == DazAssetType::Environment)
@@ -736,15 +742,19 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 // Find duplicate materials
 	 TMap<TSharedPtr<FJsonValue>, TSharedPtr<FJsonValue>> DuplicateMaterials;
 	 TArray<TSharedPtr<FJsonValue>> matList = JsonObject->GetArrayField(TEXT("Materials"));
-	 if (MaterialCombineMethod == DazMaterialCombineType::CombineIdentical)
-	 {
-		 DuplicateMaterials = FDazToUnrealMaterials::FindDuplicateMaterials(matList);
-	 }
 
-	 // Combine All Materials
-	 if (MaterialCombineMethod == DazMaterialCombineType::CombineAll)
+	 if (AssetType != DazAssetType::SkeletalMesh_v2)
 	 {
-		 DuplicateMaterials = FDazToUnrealMaterials::CombineToOneMaterial(matList);
+		if (MaterialCombineMethod == DazMaterialCombineType::CombineIdentical)
+		{
+			DuplicateMaterials = FDazToUnrealMaterials::FindDuplicateMaterials(matList);
+		}
+
+		// Combine All Materials
+		if (MaterialCombineMethod == DazMaterialCombineType::CombineAll)
+		{
+			DuplicateMaterials = FDazToUnrealMaterials::CombineToOneMaterial(matList);
+		}
 	 }
 
 	 // Load material values
@@ -1026,12 +1036,20 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 // DB 2025-06-11 added to arguments
 	 FString RootBoneName = TEXT("");
 	 TArray<FString> MaterialSlotNames;
-	 if (PreProcessFbxFile(Progress,
-			FBXFile, AssetType, CachedSettings, AssetName, ImportData, JsonObject,
-			MaterialCombineMethod, DuplicateMaterials, DtuMaterialsTable, FBXPath,
-			RootBoneName, MaterialSlotNames) == false)
+
+	 if (AssetType != DazAssetType::SkeletalMesh_v2)
 	 {
-		return nullptr;
+		if (PreProcessFbxFile(Progress,
+				FBXFile, AssetType, CachedSettings, AssetName, ImportData, JsonObject,
+				MaterialCombineMethod, DuplicateMaterials, DtuMaterialsTable, FBXPath,
+				RootBoneName, MaterialSlotNames) == false)
+		{
+			return nullptr;
+		}
+	 }
+	 else
+	 {
+		DtuMaterialsTable.GenerateKeyArray(MaterialSlotNames);
 	 }
 
 	 // If this is a character, determine the type.
@@ -1062,7 +1080,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 
 	 // Import Textures
 	 Progress.EnterProgressFrame(1, LOCTEXT("ImportingTextures", "Importing Textures"));
-	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh || AssetType == DazAssetType::R2x)
+	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh || AssetType == DazAssetType::R2x || AssetType == DazAssetType::SkeletalMesh_v2)
 	 {
 		  TArray<FString> TexturesFilesToImport;
 		  m_targetTextureLookupTable.Reset();
@@ -1087,7 +1105,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 
 	 // Create Intermediate Materials
 	 Progress.EnterProgressFrame(1, LOCTEXT("CreatingMaterials", "Creating Materials"));
-	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh || AssetType == DazAssetType::R2x)
+	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh || AssetType == DazAssetType::R2x || AssetType == DazAssetType::SkeletalMesh_v2)
 	 {
 		 // Create a default Master Subsurface Profile if needed
 		 USubsurfaceProfile* MasterSubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceBaseProfileForCharacter(CharacterMaterialFolder, DtuMaterialsTable);
@@ -1099,21 +1117,22 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 			FString ChildMaterialFolder = CharacterMaterialFolder;
 			for (FString ChildMaterialName : MaterialSlotNames)
 			{
-					if (DtuMaterialsTable.Contains(ChildMaterialName))
+				if (DtuMaterialsTable.Contains(ChildMaterialName))
+				{
+					for (FDUFTextureProperty ChildProperty : DtuMaterialsTable[ChildMaterialName])
 					{
-						for (FDUFTextureProperty ChildProperty : DtuMaterialsTable[ChildMaterialName])
+						if ((ChildProperty.ObjectName + TEXT("_BaseMat")) == BaseMaterialName)
 						{
-							if ((ChildProperty.ObjectName + TEXT("_BaseMat")) == BaseMaterialName)
+							ChildMaterialFolder = CharacterMaterialFolder / ChildProperty.ObjectName;
+							if (BatchConversionMode != 0)
 							{
-									ChildMaterialFolder = CharacterMaterialFolder / ChildProperty.ObjectName;
-									if (BatchConversionMode != 0)
-									{
-										ChildMaterialFolder = CharacterMaterialFolder;
-									}
-									RelatedMaterialNamesList.AddUnique(ChildMaterialName);
+								ChildMaterialFolder = CharacterMaterialFolder;
 							}
+							RelatedMaterialNamesList.AddUnique(ChildMaterialName);
+							break;
 						}
 					}
+				}
 			}
 
 			// Create Related Materials
@@ -1539,7 +1558,7 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImpo
 #endif
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_Animation;
 	 }
-	 if (DazImportData.AssetType == DazAssetType::R2x)
+	 if (DazImportData.AssetType == DazAssetType::R2x || DazImportData.AssetType== DazAssetType::SkeletalMesh_v2)
 	 {
 		 FbxFactory->ImportUI->bImportAsSkeletal = true;
 		 FbxFactory->ImportUI->Skeleton = Skeleton;
