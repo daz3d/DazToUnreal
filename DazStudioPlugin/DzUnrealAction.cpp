@@ -12,6 +12,7 @@
 #include <dzobject.h>
 #include <dzpresentation.h>
 #include <dznumericproperty.h>
+#include <dzfloatproperty.h>
 #include <dzimageproperty.h>
 #include <dzcolorproperty.h>
 #include <dpcimages.h>
@@ -362,44 +363,126 @@ QString DzUnrealAction::readGuiRootFolder()
 	return rootFolder;
 }
 
-bool CompareMaterials(DzMaterial* A, DzMaterial* B)
+bool CompareProperties(DzColorProperty* A, DzColorProperty* B)
 {
-	// compare maps
-	QList<DzTexturePtr> aMapListA;
-	QList<DzTexturePtr> aMapListB;
-	A->getAllMaps(aMapListA);
-	B->getAllMaps(aMapListB);
-
-	if (aMapListA.count() != aMapListB.count()) return false;
-	for (int i=0; i < aMapListA.count(); i++) {
-		bool bMatchFound = false;
-		for (int j=0; j < aMapListB.count(); j++) {
-			DzTexturePtr pMapA = aMapListA[i];
-			DzTexturePtr pMapB = aMapListB[j];
-			if (pMapA->getFilename() == pMapB->getFilename()) {
-				bMatchFound = true;
-				break;
-			}
-		}
-		if (bMatchFound == false) return false;
-	}
-	
-	if (A->getDiffuseColor() != B->getDiffuseColor()) return false;
-
-/*
-	DzColorProperty* pPropertyA = qobject_cast<DzColorProperty*>( A->findProperty("Diffuse Color") );
-	DzColorProperty* pPropertyB = qobject_cast<DzColorProperty*>( B->findProperty("Diffuse Color") );
-	if (pPropertyA && pPropertyB) {
-		if (pPropertyA->getColorValue() != pPropertyB->getColorValue()) return false;
-		DzTexture* pMapA = pPropertyA->getMapValue();
-		DzTexture* pMapB = pPropertyB->getMapValue();
+	if (A && B) {
+		if (A->getColorValue() != B->getColorValue()) return false;
+		DzTexture* pMapA = A->getMapValue();
+		DzTexture* pMapB = B->getMapValue();
 		if (pMapA && pMapB) {
-			if (pMapA->getFilename() != pMapB->getFilename()) return false;			
+			if (pMapA->getFilename() != pMapB->getFilename()) return false;
 		}
 		else if (pMapA || pMapB) return false;
 	}
-	else if (pPropertyA || pPropertyB) return false;
-*/
+	else if (A || B) return false;
+
+	return true;
+}
+
+bool CompareProperties(DzFloatProperty* A, DzFloatProperty* B)
+{
+	if (A && B) {
+		if (A->getValue() != B->getValue()) return false;
+	}
+	else if (A || B) return false;
+
+	return true;
+}
+
+bool CompareProperties(DzImageProperty* A, DzImageProperty* B)
+{
+	if (A && B) {
+		DzTexture* pImageA = A->getValue();
+		DzTexture* pImageB = B->getValue();
+		if (pImageA && pImageB) {
+			if (pImageA->getFilename() != pImageB->getFilename()) return false;
+		}
+		else if (pImageA || pImageB) return false;
+	}
+	else if (A || B) return false;
+
+	return true;
+}
+
+bool CompareProperties(DzProperty* A, DzProperty* B)
+{
+	if (A && B) {
+		if (A->getName() != B->getName()) return false;
+		if (A->getLabel() != B->getLabel()) return false;
+		if (A->className() != B->className()) return false;
+		if (A->inherits("DzColorProperty")) {
+			DzColorProperty* pColorA = qobject_cast<DzColorProperty*>(A);
+			DzColorProperty* pColorB = qobject_cast<DzColorProperty*>(B);
+			return CompareProperties(pColorA, pColorB);
+		}
+		else if (A->inherits("DzImageProperty")) {
+			DzImageProperty* pImageA = qobject_cast<DzImageProperty*>(A);
+			DzImageProperty* pImageB = qobject_cast<DzImageProperty*>(B);
+			return CompareProperties(pImageA, pImageB);
+		}
+		else if (A->inherits("DzFloatProperty")) {
+			DzFloatProperty* pFloatA = qobject_cast<DzFloatProperty*>(A);
+			DzFloatProperty* pFloatB = qobject_cast<DzFloatProperty*>(B);
+			return CompareProperties(pFloatA, pFloatB);
+		}
+		else {
+			dzApp->log("DzUnrealAction.cpp: CompareProperties(): unhandled property type: " + A->className());
+		}
+	}
+	else if (A || B) return false;
+
+	return true;
+}
+
+bool CompareMaterials(DzMaterial* A, DzMaterial* B)
+{
+	// *** REQUIRES EXTERNAL C++ RUNTIME MEMORY CALLS *** 
+	//// compare maps
+	//QList<DzTexturePtr> aMapListA;
+	//QList<DzTexturePtr> aMapListB;
+	//A->getAllMaps(aMapListA);
+	//B->getAllMaps(aMapListB);
+	//if (aMapListA.count() != aMapListB.count()) return false;
+	//for (int i=0; i < aMapListA.count(); i++) {
+	//	bool bMatchFound = false;
+	//	for (int j=0; j < aMapListB.count(); j++) {
+	//		DzTexturePtr pMapA = aMapListA[i];
+	//		DzTexturePtr pMapB = aMapListB[j];
+	//		if (pMapA->getFilename() == pMapB->getFilename()) {
+	//			bMatchFound = true;
+	//			break;
+	//		}
+	//	}
+	//	if (bMatchFound == false) return false;
+	//}
+
+	if (A && B)
+	{
+		if (A->getDiffuseColor() != B->getDiffuseColor()) return false;
+
+		int numPropertiesA = A->getNumProperties();
+		int numPropertiesB = B->getNumProperties();
+		if (numPropertiesA != numPropertiesB) return false;
+
+		// nonsequential comparison, in case A and B properties are out of order
+		for (int i = 0; i < numPropertiesA; i++)
+		{
+			bool bMatchFound = false;
+			DzProperty* pPropertyA = A->getProperty(i);
+			for (int j = 0; j < numPropertiesB; j++)
+			{
+				DzProperty* pPropertyB = B->getProperty(j);
+				if (CompareProperties(pPropertyA, pPropertyB) == true)
+				{
+					bMatchFound = true;
+					break;
+				}
+			}
+			if (bMatchFound == false) return false;
+		}
+
+	}
+	else if (A || B) return false;
 
 	return true;
 }
