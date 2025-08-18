@@ -85,6 +85,9 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	setWindowTitle(tr("Unreal Export Options"));
 	this->wHelpMenuButton->show();
 
+	m_wExportRigRowLabel->setVisible(true);
+	m_wExportRigCombobox->setVisible(true);
+
 	m_wAutoJCMCheckBox->setVisible(true);
 	m_wFakeDualQuatCheckBox->setVisible(true);
 

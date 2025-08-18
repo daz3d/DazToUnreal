@@ -1,0 +1,174 @@
+// DAZ Studio version 4.22.0.16 filetype DAZ Script
+//
+// DB: 2024-12-24: Added crashfix for null parent condition
+// Version 4
+//
+
+(function(){
+	
+	var actionMgr = MainWindow.getActionMgr();
+	var circularChecker = [];
+	var doneList = [];
+	
+	function triggerAction( nm ){
+	    action = actionMgr.findAction( nm );
+	    action.trigger()
+	}
+		
+	// function to replace node a with full branch of node b
+	function replaceAwithB( a, b, recursive )
+	{
+	    // get num nodes
+	    var numNodes = Scene.getNumNodes();
+	
+	    Scene.selectAllNodes( false );
+	    b.select( true );
+	    if (recursive)
+	    {
+	        print("ERROR: Attempted Duplicating node hierarchy: " + b.getLabel() + ", using single node duplication instead...");
+	        // Duplicate target node
+	//        triggerAction("DzDuplicateNodeHierarchyAction");
+	        triggerAction("DzDuplicateNodeAction");
+	    }
+	    else
+	    {
+	        // Duplicate target node
+	        triggerAction("DzDuplicateNodeAction");
+	    }
+	    b.select( false );
+	    
+	    // select new node or node hierarchy
+	    var newNode = Scene.getNode( numNodes );
+	    newNode.select( true );
+	
+	    // Copy the properties and transforms
+	//    newNode.copyFrom(a);
+	    newNode.setWSPos(a.getWSPos());
+	    newNode.setWSRot(a.getWSRot());
+	    newNode.setWSScale(a.getWSScale());
+	    newNode.setLabel(a.getLabel());
+	    
+	    // parent to the same parent
+	    var parent = a.getNodeParent();
+		if (parent != undefined || parent != null)
+		{
+			parent.addNodeChild(newNode);
+			parent.removeNodeChild(a);	
+		}
+	
+	    // Remove the old node
+	    Scene.removeNode(a);
+	    doneList.push(a);
+	    
+	}
+		
+	function replaceInstanceWithTarget( instance )
+	{
+	    if (instance == null)
+	    {
+	        return;
+	    }
+	    if (doneList.indexOf(instance) != -1)
+	    {
+	            return;
+	    }
+	    doneList.push(instance);
+	    // check if in circular reference
+	    if (circularChecker.indexOf(instance) != -1)
+	    {
+	        return;
+	    }
+	    circularChecker.push(instance);
+	
+	    // recurse through children of instance
+	    var numChildren = instance.getNumNodeChildren();
+	    for (var i = 0; i < numChildren; i++)
+	    {
+	        var child = instance.getNodeChild(i);
+	        replaceInstanceWithTarget(child);
+	    }
+	
+	    if (instance.inherits("DzInstanceNode") == false)
+	    {
+	        circularChecker.pop();
+	        return;
+	    }
+	    var target = instance.getTarget();
+	    if( target )
+	    {
+	//        replaceInstanceWithTarget(target);
+	
+	        // check if target is a circular reference
+	        var bTargetIsCircular = circularChecker.indexOf(target) != -1;
+	        var sInstanceMode = instance.getCopyModeControl().getStringValue();
+	        var bRecursive = false;
+	        if (sInstanceMode.indexOf("Children") != -1)
+	        {
+	            if (!bTargetIsCircular) bRecursive = true;
+	            else print("ERROR: Circular reference detected: " + target.getLabel() + ", disabling recursive duplication...");
+	        }
+	        replaceAwithB( instance, target, bRecursive );
+	    }
+	    circularChecker.pop();
+	
+	}
+	
+	// Function to replace instances with full copies of their target nodes
+	function replaceInstancesWithCopies() {
+	    // Get all nodes in the scene
+	    var allNodes = Scene.getNodeList();
+	    var numNodes = allNodes.length;
+	
+	    print("DEBUG: Number of nodes in the scene: " + numNodes);
+	
+	    var numInstances = 0;
+	    for (var i=0; i<numNodes; i++) {
+	        var node = allNodes[i];
+	        if (node.inherits("DzInstanceNode")) {
+	            numInstances++;
+	        }
+	    }
+	    print("DEBUG: Number of instances in the scene: " + numInstances);
+	
+	    // Iterate through all nodes in reverse order
+	    for (var i = numNodes - 1; i >= 0; i--) {
+	        var node = allNodes[i];
+	        // check if already processed
+	        if (doneList.indexOf(node) != -1)
+	        {
+	            continue;
+	        }
+	
+	        // Check if the node is an instance
+	        if (node.inherits("DzInstanceNode")) {
+	            // Get the target node
+	            var targetNode = node.getTarget();
+	
+	            if (targetNode) {
+	                // recursively look for instances in all descendents of node
+	                replaceInstanceWithTarget(node);
+	            }
+	        }
+	    }
+	
+	    // remove processed instances
+	    for (var i = doneList.length; i > 0; i--)
+	    {
+	        var node = doneList[i];
+	        Scene.removeNode(node);
+	    }
+	}
+
+	function main() {
+		// Run the function to replace instances with full copies
+		replaceInstancesWithCopies();
+				
+		// Print completion message
+		print("Bake instances for full scene done.");
+//		MessageBox.information("Bake instances for full scene done.", "Script done", "OK");
+
+	}	
+	
+	main();	
+
+})();
