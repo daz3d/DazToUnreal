@@ -525,6 +525,64 @@ QMap<DzMaterial*, DzMaterial*> FindDuplicateMaterials(QList<DzMaterial*> &Materi
 	return Duplicates;
 }
 
+bool GetAllMaterialsByMeshName(DzNode* pNode, QMap<QString, QList<DzMaterial*>>& oMeshNameLookupTable)
+{
+
+	DzNodeList aMeshNodes;
+	if (pNode->getObject()) aMeshNodes << pNode;
+	foreach(QObject * pObj, pNode->getNodeChildren(true)) {
+		DzNode* pChildNode = qobject_cast<DzNode*>(pObj);
+		if (pChildNode && pChildNode->getObject()) {
+			aMeshNodes << pChildNode;
+		}
+	}
+
+	foreach(DzNode * pNode, aMeshNodes) {
+		QString sMeshName = pNode->getName();
+		QList<DzMaterial*> aMaterialsList;
+
+		if (pNode->getObject()) {
+			if (DzShape* pShape = pNode->getObject()->getCurrentShape()) {
+				for (int i = 0; i < pShape->getNumMaterials(); i++) {
+					QString sMeshName = pNode->getName();
+					aMaterialsList << pShape->getMaterial(i);
+				}
+			}
+		}
+
+		oMeshNameLookupTable.insert(sMeshName, aMaterialsList);
+	}
+
+	return true;
+
+}
+
+QList<DzMaterial*> GetAllMaterials(DzNode* pNode)
+{
+	QList<DzMaterial*> aMaterialsList;
+
+	DzNodeList aMeshNodes;
+	if (pNode->getObject()) aMeshNodes << pNode;
+	foreach(QObject * pObj, pNode->getNodeChildren(true)) {
+		DzNode* pChildNode = qobject_cast<DzNode*>(pObj);
+		if (pChildNode && pChildNode->getObject()) {
+			aMeshNodes << pChildNode;
+		}
+	}
+
+	foreach(DzNode * pNode, aMeshNodes) {
+		if (pNode->getObject()) {
+			if (DzShape* pShape = pNode->getObject()->getCurrentShape()) {
+				for (int i = 0; i < pShape->getNumMaterials(); i++) {
+					aMaterialsList << pShape->getMaterial(i);
+				}
+			}
+		}
+	}
+
+	return aMaterialsList;
+}
+
 bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 {
 	m_bConvertFbxJointsEnabled = true;
@@ -536,26 +594,7 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 	}
 
 	// Insert Unreal specific Fbx Post-processing here
-	QList<DzMaterial*> aMaterialsList;
-	DzNode* pNode = m_pSelectedNode;
-	DzNodeList aMeshNodes;
-	if (pNode->getObject()) aMeshNodes << pNode;
-	foreach (QObject* pObj, pNode->getNodeChildren(true)) {
-		DzNode* pChildNode = qobject_cast<DzNode*>(pObj);
-		if (pChildNode && pChildNode->getObject()) {
-			aMeshNodes << pChildNode;
-		}
-	}
-	foreach (DzNode* pNode, aMeshNodes) {
-		if (pNode->getObject()) {
-			if (DzShape* pShape = pNode->getObject()->getCurrentShape()) {
-				for (int i=0; i < pShape->getNumMaterials(); i++) {
-					aMaterialsList << pShape->getMaterial(i);
-				}				
-			}
-		}		
-	}
-
+	QList<DzMaterial*> aMaterialsList = GetAllMaterials(m_pSelectedNode);
 	QMap<DzMaterial *, DzMaterial *> DuplicateMaterials = FindDuplicateMaterials(aMaterialsList);
 	QList<QString> MaterialSlotNames;
 	FbxTools::PreProcessFbxFile(fbxFilePath, m_sAssetName, DuplicateMaterials, MaterialSlotNames);
