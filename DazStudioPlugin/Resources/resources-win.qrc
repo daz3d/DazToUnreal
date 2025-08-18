@@ -1,6 +1,23 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource prefix="/DazBridgeUnreal">
-        <file alias="banner.jpg">banner.jpg</file>
-    </qresource>
+		<file alias="bake_all_pivots_nogui.dsa">Scripts/bake_all_pivots_nogui.dsa</file>
+		<file alias="bake_all_instances_nogui.dsa">Scripts/bake_all_instances_nogui.dsa</file>
+		<file alias="bake_rfn_nogui.dsa">Scripts/bake_rfn_nogui.dsa</file>
+
+		<file alias="banner.jpg">banner.jpg</file>
+
+		<file alias="bone_converter_aArgs.dsa">Scripts/bone_converter_aArgs.dsa</file>
+		<file alias="g9_to_metahuman.json">Scripts/g9_to_metahuman.json</file>
+		<file alias="g9_to_unreal_manny.json">Scripts/g9_to_unreal_manny.json</file>
+		<file alias="g9_to_unity.json">Scripts/g9_to_unity.json</file>
+		<file alias="g9_to_mixamo.json">Scripts/g9_to_mixamo.json</file>
+		<file alias="g8_to_metahuman.json">Scripts/g8_to_metahuman.json</file>
+		<file alias="g8_to_unreal.json">Scripts/g8_to_unreal.json</file>
+		<file alias="g8_to_mixamo.json">Scripts/g8_to_mixamo.json</file>
+		<file alias="g8_to_unity.json">Scripts/g8_to_unity.json</file>
+
+		<file alias="g9_unreal_apose_fixed_4.fbx">g9_unreal_apose_fixed_4.fbx</file>
+
+	</qresource>
 </RCC>

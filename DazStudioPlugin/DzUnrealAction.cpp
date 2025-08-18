@@ -58,6 +58,8 @@ DzUnrealAction::DzUnrealAction() :
 	 // DB, 2022-Aug-29: Force LOD method to Unreal Built-in
 	 m_eLodMethod = (DzBridgeAction::ELodMethod) ELodMethod::Unreal_Builtin;
 
+	m_sEmbeddedFolderPath = ":/DazBridgeUnreal";
+
 }
 
 void DzUnrealAction::executeAction()
@@ -585,19 +587,57 @@ QList<DzMaterial*> GetAllMaterials(DzNode* pNode)
 
 bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 {
-	m_bConvertFbxJointsEnabled = true;
-	bool bResult = DzBridgeAction::postProcessFbx(fbxFilePath);
+	bool bCustomRigConversion = false;
+	QString sTrueRigMode = "";
 
+	m_bDetachGeometry = false;
+	if (m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman") {
+		bCustomRigConversion = true;
+		sTrueRigMode = m_sExportRigMode;
+		m_bConvertFbxJointsEnabled = false;
+		m_sExportRigMode = "";
+	}
+	else
+	{
+		bCustomRigConversion = false;
+		m_bConvertFbxJointsEnabled = true;
+	}
+	bool bResult = DzBridgeAction::postProcessFbx(fbxFilePath);
+	if (bCustomRigConversion) {
+		m_sExportRigMode = sTrueRigMode;
+		m_bConvertFbxJointsEnabled = true;
+	}
 	if (!bResult)
 	{
 		return false;
 	}
 
+	QString sArchiveFilename = "/g9_unreal_apose_fixed_4.fbx";
+	QString sEmbeddedArchivePath = m_sEmbeddedFolderPath + sArchiveFilename;
+	QFile srcFile(sEmbeddedArchivePath);
+	QString tempPathArchive = dzApp->getTempPath() + sArchiveFilename;
+	bool replace=true;
+	DzBridgeNameSpace::DzBridgeAction::copyFile(&srcFile, &tempPathArchive, replace);
+	srcFile.close();	
+	
+	if (m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman")
+	{
+		bool bResult = postProcessRigConversion(m_sExportRigMode, fbxFilePath);
+		if (!bResult)
+		{
+			return false;
+		}
+	}
+	else
+	{
+		FbxTools::PostProcessRigForUnreal(fbxFilePath);
+	}
+	
 	// Insert Unreal specific Fbx Post-processing here
 	QList<DzMaterial*> aMaterialsList = GetAllMaterials(m_pSelectedNode);
 	QMap<DzMaterial *, DzMaterial *> DuplicateMaterials = FindDuplicateMaterials(aMaterialsList);
 	QList<QString> MaterialSlotNames;
-	FbxTools::PreProcessFbxFile(fbxFilePath, m_sAssetName, DuplicateMaterials, MaterialSlotNames);
+	FbxTools::PostProcessMaterialsForUnreal(fbxFilePath, m_sAssetName, DuplicateMaterials, MaterialSlotNames);
 		
 	return true;
 }
@@ -710,7 +750,7 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 	hideAllStrandBasedHair();
 
 	m_bConvertRigEnabled = true;
-	m_sExportRigMode = "unreal";
+//	m_sExportRigMode = "unreal";
 	DzBridgeAction::preProcessScene(parentNode);
 
 	pProgress->finish();
