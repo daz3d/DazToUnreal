@@ -194,6 +194,8 @@ void DzUnrealAction::writeConfiguration()
 	if (m_pSelectedNode == nullptr)
 		return;
 
+	undoHideAllStrandBasedHair();
+
 	DzUnrealDialog* DazToUnrealDialog = qobject_cast<DzUnrealDialog*>(m_bridgeDialog);
 
 	QTextStream* pCSVStream = nullptr;
@@ -763,7 +765,7 @@ bool DzUnrealAction::undoPreProcessScene()
 {
 	if (DzBridgeAction::undoPreProcessScene() == false) return false;
 
-	undoHideAllStrandBasedHair();
+//	undoHideAllStrandBasedHair();
 
 	return true;
 }
