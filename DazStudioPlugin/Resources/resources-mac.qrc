@@ -18,6 +18,7 @@
 		<file alias="g8_to_unity.json">Scripts/g8_to_unity.json</file>
 
 		<file alias="g9_unreal_apose_fixed_4.fbx">g9_unreal_apose_fixed_4.fbx</file>
+		<file alias="writePolylineIndexes.dsa">Scripts/writePolylineIndexes.dsa</file>
 
 	</qresource>
 </RCC>
