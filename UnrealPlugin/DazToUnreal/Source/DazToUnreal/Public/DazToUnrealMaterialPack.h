@@ -13,6 +13,7 @@ enum class EDazMaterialType : uint8
 	Masked,
 	Skin,
 	Hair,
+	StrandHair,
 	Scalp,
 	EyeMoisture,
 	Cornea,

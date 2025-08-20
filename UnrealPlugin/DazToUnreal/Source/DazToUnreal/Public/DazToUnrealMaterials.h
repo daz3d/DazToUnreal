@@ -19,6 +19,8 @@ struct FDUFTextureProperty
 	FString ObjectName;
 	FString ShaderName;
 	FString MaterialAssetName;
+	bool bHasDForceInfo;
+	bool bIsStrandAsset;
 
 	inline bool operator==(const FDUFTextureProperty& rhs) const
 	{

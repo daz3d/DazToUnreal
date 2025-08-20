@@ -734,6 +734,39 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 		  SubdivisionLevels.Add(subdivision->GetStringField(TEXT("Asset Name")), subdivision->GetIntegerField(TEXT("Value")));
 	 }
 
+	 // Load dforce and strand hair info
+	 TMap<FString, FString> StrandAssetNameToParentNodeMap;
+	 TMap<FString, FString> StrandAssetNameToLabelMap;
+	 TMap<FString, TArray<TSharedPtr<FJsonValue>>> DforceAssetNameToDforceMaterialsMap;
+	 TArray<TSharedPtr<FJsonValue>> strandHairInfoList = JsonObject->GetArrayField(TEXT("Strand Hair Info"));
+	 for (int32 i=0; i < strandHairInfoList.Num(); i++)
+	 {
+		 TSharedPtr<FJsonObject> strandHairInfo = strandHairInfoList[i]->AsObject();
+		 // Process strand hair info
+		 FString StrandHairFile = strandHairInfo->GetStringField(TEXT("File"));
+		 TArray<TSharedPtr<FJsonValue>> strandHairNodeInfo = strandHairInfo->GetArrayField(TEXT("Node Info"));
+		 for (int32 j = 0; j < strandHairNodeInfo.Num(); j++)
+		 {
+			 TSharedPtr<FJsonObject> strandHairNode = strandHairNodeInfo[j]->AsObject();
+			 FString NodeName = strandHairNode->GetStringField(TEXT("Asset Name"));
+			 FString NodeLabel = strandHairNode->GetStringField(TEXT("Asset Label"));
+			 FString ParentNodeName = strandHairNode->GetStringField(TEXT("Parent Name"));
+			 FString ParentNodeLabel = strandHairNode->GetStringField(TEXT("Parent Label"));
+			 StrandAssetNameToParentNodeMap.Add(NodeName, ParentNodeName);
+			 StrandAssetNameToLabelMap.Add(FDazToUnrealUtils::SanitizeName(NodeName), NodeLabel);
+		 }
+	 }
+	 TArray<TSharedPtr<FJsonValue>> dforceList = JsonObject->GetArrayField(TEXT("dForce"));
+	 for (int32 i = 0; i < dforceList.Num(); i++)
+	 {
+		 TSharedPtr<FJsonObject> dforceInfo = dforceList[i]->AsObject();
+		 // Process dforce info
+		 FString DforceAssetName = dforceInfo->GetStringField(TEXT("Asset Name"));
+		 FString DforceAssetLabel = dforceInfo->GetStringField(TEXT("Asset Label"));
+		 TArray<TSharedPtr<FJsonValue>> DForceMaterialList = dforceInfo->GetArrayField(TEXT("dForce-Materials"));
+		 DforceAssetNameToDforceMaterialsMap.Add(FDazToUnrealUtils::SanitizeName(DforceAssetName), DForceMaterialList);
+	 }
+
 	 // Use the maps file to find the textures to load
 	 TMap<FString, FString> TextureFileSourceToTarget;
 	 TArray<FString> BaseMaterialNamesList;
@@ -932,6 +965,11 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 
 				MaterialName = FDazToUnrealUtils::SanitizeName(MaterialName);
 
+				// Check Strand Hair and Dforce
+				FString AssetNameLookup = FDazToUnrealUtils::SanitizeName(material->GetStringField(TEXT("Asset Name")));
+				bool bIsStrandAsset = (StrandAssetNameToLabelMap.Contains(AssetNameLookup));
+				bool bHasDForceInfo = (DforceAssetNameToDforceMaterialsMap.Contains(AssetNameLookup));
+
 				// DB 2021-Dec-16: TexturePath and TextureName moved to "per property" execution below
 //				FString TexturePath = material->GetStringField(TEXT("Texture"));
 //				FString TextureName = FDazToUnrealUtils::SanitizeName(FPaths::GetBaseFilename(TexturePath));
@@ -959,6 +997,9 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 					Property.ShaderName = ShaderName;
 					FString sMaterialAssetName = material->GetStringField(TEXT("Asset Name"));
 					Property.MaterialAssetName = FDazToUnrealUtils::SanitizeName(sMaterialAssetName);
+					Property.bHasDForceInfo = bHasDForceInfo;
+					Property.bIsStrandAsset = bIsStrandAsset;
+
 					if (Property.Type == TEXT("Texture"))
 					{
 						Property.Type = TEXT("Color");
@@ -984,6 +1025,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 							Property.Value = TEXT("true");
 						}
 					}
+
 
 					DtuMaterialsTable[MaterialName].Add(Property);
 					if (!TextureName.IsEmpty())

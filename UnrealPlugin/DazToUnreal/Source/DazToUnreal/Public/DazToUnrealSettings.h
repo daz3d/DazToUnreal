@@ -316,6 +316,7 @@ public:
 		if (MaterialType == EDazMaterialType::Masked) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseMaskedMaterial.BaseMaskedMaterial"));
 		if (MaterialType == EDazMaterialType::Skin) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseSSSSkinMaterial.BaseSSSSkinMaterial"));
 		if (MaterialType == EDazMaterialType::Hair) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseHairMaterial.BaseHairMaterial"));
+		if (MaterialType == EDazMaterialType::StrandHair) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseStrandHairMaterial.BaseStrandHairMaterial"));
 		if (MaterialType == EDazMaterialType::Scalp) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseScalpMaterial.BaseScalpMaterial"));
 		if (MaterialType == EDazMaterialType::EyeMoisture) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseAlphaMaterial.BaseAlphaMaterial"));
 		if (MaterialType == EDazMaterialType::Cornea) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseAlphaMaterial.BaseAlphaMaterial"));

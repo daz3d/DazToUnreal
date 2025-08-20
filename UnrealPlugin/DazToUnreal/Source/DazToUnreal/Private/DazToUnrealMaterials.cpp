@@ -35,6 +35,7 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 
 	FString AssetType = "";
 	FString ShaderName = "";
+	bool bIsStrandAsset = false;
 	FString Seperator;
 	if ( CachedSettings->UseOriginalMaterialName)
 	{
@@ -51,6 +52,7 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 		{
 			AssetType = Property.Value;
 			ShaderName = Property.ShaderName;
+			bIsStrandAsset = Property.bIsStrandAsset;
 		}
 	}
 
@@ -63,6 +65,10 @@ FSoftObjectPath FDazToUnrealMaterials::GetBaseMaterial(FString MaterialName, TAr
 		if (MaterialName.EndsWith(Seperator + TEXT("scalp")))
 		{
 			BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::Scalp);
+		}
+		if (bIsStrandAsset)
+		{
+			BaseMaterialAssetPath = CachedSettings->FindMaterial(ShaderName, EDazMaterialType::StrandHair);
 		}
 	}
 	else if (AssetType == TEXT("Follower/Attachment/Head/Face/Eyelashes"))

@@ -1,0 +1,62 @@
+// DAZ Studio version 4.24.0.3 filetype DAZ Script
+
+function writePolylineIndexesByMaterial(sNodeName, sOutputFilename)
+{
+    var oNode = Scene.findNode(sNodeName);
+	if (oNode == null) return false;
+    if (oNode.getObject() == null) return false;
+
+    var oMesh = oNode.getObject().getCachedGeom();
+    if (oMesh == null) return false;
+    
+	var numMats = oMesh.getNumMaterialGroups();
+    if (nMaterialIndex >= numMats) return false;
+
+    var oFile = DzFile(sOutputFilename);
+    if (!oFile.open(DzFile.WriteOnly | DzFile.Truncate)) return false;
+
+    for (var nMaterialIndex=0; nMaterialIndex < numMats; nMaterialIndex++)
+    {
+        var oMaterialGroup = oMesh.getMaterialGroup(nMaterialIndex);
+        if (oMaterialGroup == null) return false;
+
+        var oPolylineIndexList = oMaterialGroup.getPolylineMembers();
+        var sLineData = oPolylineIndexList.toString();
+        sLineData = sLineData.replace("[", "").replace("]", "");
+        oFile.writeLine(sLineData);
+    }
+
+    oFile.close();
+
+    return true;
+}
+
+function writePolylineVertexIndexes(sNodeName, sOutputFilename)
+{
+    var oNode = Scene.findNode(sNodeName);
+    if (oNode == null) return false;
+    if (oNode.getObject() == null) return false;
+
+    var oMesh = oNode.getObject().getCachedGeom();
+    if (oMesh == null) return false;
+
+    var oFile = DzFile(sOutputFilename);
+    if (!oFile.open(DzFile.WriteOnly | DzFile.Truncate)) return false;
+
+    for (var nPolylineIndex=0; nPolylineIndex < oMesh.getNumPolylines(); nPolylineIndex++)
+    {
+        var oPolylineIndexList = oMesh.getPolylineVertexIndices(nPolylineIndex);
+        var sLineData = oPolylineIndexList.toString();
+        oFile.writeLine(sLineData);
+    }
+
+    oFile.close();
+
+    return true;
+}
+
+var oNode = Scene.getPrimarySelection();
+var sNodeName = oNode.getName();
+var sFilename = App.getTempFilename() + "_dump.txt";
+//if (writePolylineVertexIndexes(sNodeName, sFilename) == false) print("FAILED!");
+writePolylineIndexesByMaterial(sNodeName, sFilename)
