@@ -85,6 +85,9 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	setWindowTitle(tr("Unreal Export Options"));
 	this->wHelpMenuButton->show();
 
+	// set default export rig mode
+	int nUnrealIndex = m_wExportRigCombobox->findData("unreal"); // based on data value instead of text label
+	m_wExportRigCombobox->setCurrentIndex(nUnrealIndex);
 	m_wExportRigRowLabel->setVisible(true);
 	m_wExportRigCombobox->setVisible(true);
 
