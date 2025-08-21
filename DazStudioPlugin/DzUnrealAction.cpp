@@ -430,7 +430,7 @@ bool CompareProperties(DzProperty* A, DzProperty* B)
 			return CompareProperties(pFloatA, pFloatB);
 		}
 		else {
-			dzApp->log("DzUnrealAction.cpp: CompareProperties(): unhandled property type: " + A->className());
+//			dzApp->log("DzUnrealAction.cpp: CompareProperties(): unhandled property type: " + A->className());
 		}
 	}
 	else if (A || B) return false;
