@@ -2056,20 +2056,20 @@ bool FDazToUnrealModule::PreProcessFbxFile(
 	{
 		RootBone = FDazToUnrealFbx::FindRootBone(RootBoneName, RootNode, Scene, AssetType, CachedSettings, AssetName);
 
-		FDazToUnrealFbx::RenameDuplicateBones(RootBone);
+		// FDazToUnrealFbx::RenameDuplicateBones(RootBone);
 
-		FDazToUnrealFbx::DetachGeometryFromSkeleton(RootNode, Scene);
+		// FDazToUnrealFbx::DetachGeometryFromSkeleton(RootNode, Scene);
 
-		FDazToUnrealFbx::AddIKBones(RootBone, Scene, CachedSettings);
+		// FDazToUnrealFbx::AddIKBones(RootBone, Scene, CachedSettings);
 
 		// Take twist bones out of the chain
 		if (AssetType == DazAssetType::SkeletalMesh && ImportData.bFixTwistBones)
 		{
-			FDazToUnrealFbx::FixTwistBones(RootBone);
+			// FDazToUnrealFbx::FixTwistBones(RootBone);
 		}
 
 		Progress.EnterProgressFrame(1, LOCTEXT("CombiningMorphs", "Combining Morphs")); 
-		FDazToUnrealFbx::ProcessMorphs(Scene, CachedSettings, JsonObject);
+		// FDazToUnrealFbx::ProcessMorphs(Scene, CachedSettings, JsonObject);
 	}
 
 	// Get FBX scene materials
