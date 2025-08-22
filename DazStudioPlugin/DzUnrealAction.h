@@ -28,7 +28,8 @@ protected:
 	 int m_nPort;
 
 	 void executeAction();
-	 Q_INVOKABLE void writeConfiguration();
+	 Q_INVOKABLE void writeConfiguration() override;
+	 Q_INVOKABLE void writeDTUHeader(DzJsonWriter& writer) override;
 	 void setExportOptions(DzFileIOSettings& ExportOptions);
 	 Q_INVOKABLE virtual bool readGui(DZ_BRIDGE_NAMESPACE::DzBridgeDialog*) override;
 

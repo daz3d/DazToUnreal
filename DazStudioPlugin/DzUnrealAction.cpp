@@ -190,6 +190,55 @@ void DzUnrealAction::executeAction()
 
 }
 
+void DzUnrealAction::writeDTUHeader(DzJsonWriter& writer)
+{
+	QString sAssetId = "";
+	QString sContentType = QString("Unknown");
+	QString sImportName = "";
+
+	if (m_pSelectedNode)
+	{
+		sAssetId = m_pSelectedNode->getAssetId();
+		sImportName = m_pSelectedNode->getName();
+		DzPresentation* presentation = m_pSelectedNode->getPresentation();
+		if (presentation)
+		{
+			sContentType = presentation->getType();
+		}
+	}
+
+	writer.addMember("DTU Version", 4);
+	writer.addMember("Asset Name", m_sAssetName);
+	writer.addMember("Import Name", sImportName); // Blender Compatibility
+
+	if (m_bConvertRigEnabled &&
+		(m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman") &&
+		m_sAssetType == "SkeletalMesh")
+	{
+		writer.addMember("Asset Type", QString("SkeletalMesh_v2"));
+	}
+	else
+	{
+		writer.addMember("Asset Type", m_sAssetType);
+	}
+
+	writer.addMember("Use Experimental Animation Transfer", m_bAnimationUseExperimentalTransfer);
+	writer.addMember("Asset Id", sAssetId); // Unity Compatibility
+	writer.addMember("Content Type", sContentType);
+	writer.addMember("FBX File", m_sDestinationFBX);
+	QString CharacterBaseFBX = m_sDestinationFBX;
+	CharacterBaseFBX.replace(".fbx", "_base.fbx");
+	writer.addMember("Base FBX File", CharacterBaseFBX);
+	QString CharacterHDFBX = m_sDestinationFBX;
+	CharacterHDFBX.replace(".fbx", "_HD.fbx");
+	writer.addMember("HD FBX File", CharacterHDFBX);
+	writer.addMember("Import Folder", m_sDestinationPath);
+	// DB Dec-21-2021: additional metadata
+	writer.addMember("Product Name", m_sProductName);
+	writer.addMember("Product Component Name", m_sProductComponentName);
+
+}
+
 void DzUnrealAction::writeConfiguration()
 {
 	if (m_pSelectedNode == nullptr)
@@ -208,9 +257,7 @@ void DzUnrealAction::writeConfiguration()
 	 DzJsonWriter writer(&DTUfile);
 	 writer.startObject(true);
 
-	 if (m_sAssetType == "SkeletalMesh") m_sAssetType = "SkeletalMesh_v2";
 	 writeDTUHeader(writer);
-	if (m_sAssetType == "SkeletalMesh_v2") m_sAssetType = "SkeletalMesh";
 
 	 if (m_sAssetType == "SkeletalMesh")
 	 {
