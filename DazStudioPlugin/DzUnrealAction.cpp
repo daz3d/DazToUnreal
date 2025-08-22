@@ -60,7 +60,7 @@ DzUnrealAction::DzUnrealAction() :
 	 m_eLodMethod = (DzBridgeAction::ELodMethod) ELodMethod::Unreal_Builtin;
 
 	m_sEmbeddedFolderPath = ":/DazBridgeUnreal";
-
+	m_bDetachGeometry = true;
 }
 
 void DzUnrealAction::executeAction()
@@ -637,47 +637,38 @@ QList<DzMaterial*> GetAllMaterials(DzNode* pNode)
 
 bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 {
-	bool bCustomRigConversion = false;
-	QString sTrueRigMode = "";
-
-	m_bDetachGeometry = false;
-	if (m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman") {
-		bCustomRigConversion = true;
+	bool bResult = false;
+	
+	if ( m_sAssetType == "SkeletalMesh" &&
+		(m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman") )
+	{
+		QString sTrueRigMode = "";
 		sTrueRigMode = m_sExportRigMode;
 		m_bConvertFbxJointsEnabled = false;
 		m_sExportRigMode = "";
-	}
-	else
-	{
-		bCustomRigConversion = false;
-		m_bConvertFbxJointsEnabled = true;
-	}
-	bool bResult = DzBridgeAction::postProcessFbx(fbxFilePath);
-	if (bCustomRigConversion) {
+		m_bDetachGeometry = false;
+		bResult = DzBridgeAction::postProcessFbx(fbxFilePath);
 		m_sExportRigMode = sTrueRigMode;
 		m_bConvertFbxJointsEnabled = true;
-	}
-	if (!bResult)
-	{
-		return false;
-	}
+		if (!bResult)
+		{
+			return false;
+		}
 
-	QString sArchiveFilename = "/g9_unreal_apose_fixed_4.fbx";
-	QString sEmbeddedArchivePath = m_sEmbeddedFolderPath + sArchiveFilename;
-	QFile srcFile(sEmbeddedArchivePath);
-	QString tempPathArchive = dzApp->getTempPath() + sArchiveFilename;
-	bool replace=true;
-	DzBridgeNameSpace::DzBridgeAction::copyFile(&srcFile, &tempPathArchive, replace);
-	srcFile.close();	
-	
-	if (m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman")
-	{
+		QString sArchiveFilename = "/g9_unreal_apose_fixed_4.fbx";
+		QString sEmbeddedArchivePath = m_sEmbeddedFolderPath + sArchiveFilename;
+		QFile srcFile(sEmbeddedArchivePath);
+		QString tempPathArchive = dzApp->getTempPath() + sArchiveFilename;
+		bool replace = true;
+		DzBridgeNameSpace::DzBridgeAction::copyFile(&srcFile, &tempPathArchive, replace);
+		srcFile.close();
+
 		QScopedPointer<DzScript> Script(new DzScript());
 		QString sScriptFilename = "bake_all_pivots_nogui.dsa";
 		QString sEmbeddedFilepath = m_sEmbeddedFolderPath + "/" + sScriptFilename;
 		ExecuteEmbeddedScript(Script, sEmbeddedFilepath);
 
-		bool bResult = postProcessRigConversion(m_sExportRigMode, fbxFilePath);
+		bResult = postProcessRigConversion(m_sExportRigMode, fbxFilePath);
 		if (!bResult)
 		{
 			return false;
@@ -685,7 +676,13 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 	}
 	else
 	{
-		FbxTools::PostProcessRigForUnreal(fbxFilePath, m_bFixTwistBones);
+		//FbxTools::PostProcessRigForUnreal(fbxFilePath, m_bFixTwistBones);
+		bResult = DzBridgeAction::postProcessFbx(fbxFilePath);
+		if (!bResult)
+		{
+			return false;
+		}
+
 	}
 	
 	// Insert Unreal specific Fbx Post-processing here
@@ -694,7 +691,7 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 	QList<QString> MaterialSlotNames;
 	FbxTools::PostProcessMaterialsForUnreal(fbxFilePath, m_sAssetName, DuplicateMaterials, MaterialSlotNames);
 		
-	return true;
+	return bResult;
 }
 
 // DB 2024-04-17: Moved here from DzBridgeAction.cpp
