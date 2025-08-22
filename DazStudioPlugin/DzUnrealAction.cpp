@@ -24,6 +24,7 @@
 #include "idzsceneasset.h"
 #include "dzuri.h"
 #include "dzprogress.h"
+#include "dzscript.h"
 
 #include "DzUnrealAction.h"
 #include "DzUnrealDialog.h"
@@ -624,6 +625,11 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 	
 	if (m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman")
 	{
+		QScopedPointer<DzScript> Script(new DzScript());
+		QString sScriptFilename = "bake_all_pivots_nogui.dsa";
+		QString sEmbeddedFilepath = m_sEmbeddedFolderPath + "/" + sScriptFilename;
+		ExecuteEmbeddedScript(Script, sEmbeddedFilepath);
+
 		bool bResult = postProcessRigConversion(m_sExportRigMode, fbxFilePath);
 		if (!bResult)
 		{
@@ -632,7 +638,7 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 	}
 	else
 	{
-		FbxTools::PostProcessRigForUnreal(fbxFilePath);
+		FbxTools::PostProcessRigForUnreal(fbxFilePath, m_bFixTwistBones);
 	}
 	
 	// Insert Unreal specific Fbx Post-processing here
