@@ -467,6 +467,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 DazAssetType AssetType = DazAssetType::StaticMesh;
 	 if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("SkeletalMesh"))
 		 AssetType = DazAssetType::SkeletalMesh;
+	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("StaticMesh"))
+		 AssetType = DazAssetType::StaticMesh;
 	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Animation"))
 		 AssetType = DazAssetType::Animation;
 	 else if (JsonObject->GetStringField(TEXT("Asset Type")) == TEXT("Environment"))
@@ -1089,10 +1091,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 			return nullptr;
 		}
 	 }
-	 else
-	 {
-		DtuMaterialsTable.GenerateKeyArray(MaterialSlotNames);
-	 }
+	
+	 DtuMaterialsTable.GenerateKeyArray(MaterialSlotNames);
 
 	 // If this is a character, determine the type.
 	 DazCharacterType CharacterType = DazCharacterType::Unknown;
@@ -1122,7 +1122,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 
 	 // Import Textures
 	 Progress.EnterProgressFrame(1, LOCTEXT("ImportingTextures", "Importing Textures"));
-	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh || AssetType == DazAssetType::R2x || AssetType == DazAssetType::SkeletalMesh_v2)
+	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh || AssetType == DazAssetType::R2x || AssetType == DazAssetType::SkeletalMesh_v2 || AssetType == DazAssetType::UNKNOWN)
 	 {
 		  TArray<FString> TexturesFilesToImport;
 		  m_targetTextureLookupTable.Reset();
@@ -1147,7 +1147,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 
 	 // Create Intermediate Materials
 	 Progress.EnterProgressFrame(1, LOCTEXT("CreatingMaterials", "Creating Materials"));
-	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh || AssetType == DazAssetType::R2x || AssetType == DazAssetType::SkeletalMesh_v2)
+	 if (AssetType == DazAssetType::SkeletalMesh || AssetType == DazAssetType::StaticMesh || AssetType == DazAssetType::R2x || AssetType == DazAssetType::SkeletalMesh_v2 || AssetType == DazAssetType::UNKNOWN)
 	 {
 		 // Create a default Master Subsurface Profile if needed
 		 USubsurfaceProfile* MasterSubsurfaceProfile = FDazToUnrealMaterials::CreateSubsurfaceBaseProfileForCharacter(CharacterMaterialFolder, DtuMaterialsTable);
@@ -1578,7 +1578,7 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImpo
 	 	  FbxFactory->ImportUI->SkeletalMeshImportData->bImportMeshesInBoneHierarchy = true;
 		  FbxFactory->ImportUI->MeshTypeToImport = FBXIT_SkeletalMesh;
 	 }
-	 if (DazImportData.AssetType == DazAssetType::StaticMesh)
+	 if (DazImportData.AssetType == DazAssetType::StaticMesh || DazImportData.AssetType == DazAssetType::UNKNOWN)
 	 {
 		  FbxFactory->ImportUI->bImportAsSkeletal = false;
 		  FbxFactory->ImportUI->bImportMaterials = true;
@@ -2072,6 +2072,8 @@ bool FDazToUnrealModule::PreProcessFbxFile(
 		// FDazToUnrealFbx::ProcessMorphs(Scene, CachedSettings, JsonObject);
 	}
 
+/**
+
 	// Get FBX scene materials
 	FbxArray<FbxSurfaceMaterial*> FbxMaterialArray;
 	Scene->FillMaterialArray(FbxMaterialArray);
@@ -2151,7 +2153,8 @@ bool FDazToUnrealModule::PreProcessFbxFile(
 
 		NewMaterialName = FDazToUnrealUtils::SanitizeName(NewMaterialName);
 		FbxMaterial->SetName(TCHAR_TO_UTF8(*NewMaterialName));
-		if (DtuMaterialsTable.Contains(NewMaterialName))
+		// if (DtuMaterialsTable.Contains(NewMaterialName))
+		if (DtuMaterialsTable.Contains(OriginalMaterialName))
 		{
 			MaterialSlotNames.Add(NewMaterialName);
 			ImportData.MaterialSlotNameToMaterialName.Add(FName(NewMaterialName), FName(FDazToUnrealUtils::SanitizeName(OriginalMaterialName)));
@@ -2188,6 +2191,8 @@ bool FDazToUnrealModule::PreProcessFbxFile(
 		}
 
 	}
+
+**/
 
 	Progress.EnterProgressFrame(1, LOCTEXT("WritingUpdatedFBX", "Writing Updated FBX"));
 	if (FDazToUnrealFbx::SaveUpdatedFbxFile(SdkManager, Scene, RootBone,

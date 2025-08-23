@@ -638,9 +638,18 @@ QList<DzMaterial*> GetAllMaterials(DzNode* pNode)
 bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 {
 	bool bResult = false;
+
+	QString sGeneration = m_pSelectedNode->getName();
+	bool bIsG9 = (sGeneration == "Genesis9");
+	bool bIsG8or81 = (sGeneration.contains("Genesis8"));
+	bool bIsG3 = (sGeneration.contains("Genesis3"));
+	bool bIsG2 = (sGeneration.contains("Genesis2"));
+	bool bIsG1 = (sGeneration == "Genesis");
+	bool bIsSupportedFigure = (m_pSelectedNode->inherits("DzFigure") && (bIsG9 || bIsG8or81 || bIsG3 || bIsG2 || bIsG1));
 	
 	if ( m_sAssetType == "SkeletalMesh" &&
-		(m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman") )
+		(m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman") &&
+		bIsSupportedFigure)
 	{
 		QString sTrueRigMode = "";
 		sTrueRigMode = m_sExportRigMode;
