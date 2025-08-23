@@ -689,7 +689,10 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 	QList<DzMaterial*> aMaterialsList = GetAllMaterials(m_pSelectedNode);
 	QMap<DzMaterial *, DzMaterial *> DuplicateMaterials = FindDuplicateMaterials(aMaterialsList);
 	QList<QString> MaterialSlotNames;
-	FbxTools::PostProcessMaterialsForUnreal(fbxFilePath, m_sAssetName, DuplicateMaterials, MaterialSlotNames);
+
+	DzUnrealDialog* DazToUnrealDialog = qobject_cast<DzUnrealDialog*>(m_bridgeDialog);
+	int nCombineMethod = DazToUnrealDialog->getMaterialCombineMethodAsInt();
+	FbxTools::PostProcessMaterialsForUnreal(fbxFilePath, m_sAssetName, DuplicateMaterials, MaterialSlotNames, nCombineMethod);
 		
 	return bResult;
 }

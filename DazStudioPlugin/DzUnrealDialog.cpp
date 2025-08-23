@@ -123,9 +123,9 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 
 	combineMaterialMethodComboBox = new QComboBox(commonSettingsGroupBox);
 	combineMaterialMethodComboBox->setWhatsThis("How to combine Materials in Unreal");
-	combineMaterialMethodComboBox->addItem("Combine Identical");
-	combineMaterialMethodComboBox->addItem("No Combine");
-	combineMaterialMethodComboBox->addItem("Combine All");
+	combineMaterialMethodComboBox->addItem("Combine Identical", 1);
+	combineMaterialMethodComboBox->addItem("No Combine", 0);
+	combineMaterialMethodComboBox->addItem("Combine All", 2);
 	combineMaterialMethodComboBox->setCurrentIndex(0);
 	commonSettingsLayout->addRow("Material Combine Method", combineMaterialMethodComboBox);
 

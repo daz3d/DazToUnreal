@@ -63,6 +63,10 @@ public:
 		return combineMaterialMethodComboBox ? combineMaterialMethodComboBox->currentText() : QString("Combine Identical");
 	}
 
+	int getMaterialCombineMethodAsInt() {
+		return combineMaterialMethodComboBox ? combineMaterialMethodComboBox->itemData(combineMaterialMethodComboBox->currentIndex()).toInt() : 1;
+	}
+
 	// Settings
 	Q_INVOKABLE void resetToDefaults() override;
 	Q_INVOKABLE void saveSettings() override;
