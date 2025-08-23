@@ -645,9 +645,11 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 	bool bIsG3 = (sGeneration.contains("Genesis3"));
 	bool bIsG2 = (sGeneration.contains("Genesis2"));
 	bool bIsG1 = (sGeneration == "Genesis");
-	bool bIsSupportedFigure = (m_pSelectedNode->inherits("DzFigure") && (bIsG9 || bIsG8or81 || bIsG3 || bIsG2 || bIsG1));
+	bool bIsSupportedFigure = (m_pSelectedNode->inherits("DzFigure") && (bIsG9 || bIsG8or81 || bIsG3 || bIsG2 || bIsG1) );
 	
 	if ( m_sAssetType == "SkeletalMesh" &&
+		m_bConvertRigEnabled &&
+		!m_bEnableMorphs && !m_EnableSubdivisions &&
 		(m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman") &&
 		bIsSupportedFigure)
 	{
@@ -791,30 +793,51 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 {
 	DzProgress* pProgress = new DzProgress(tr("PreProcessing Scene"), 100, false, true);
 
-	QList<DzNode*> aHairNodesList = findAllStrandBasedHair();
-	if (aHairNodesList.count() > 0) {
-        QDir().mkpath(m_sDestinationPath);
-		if (m_bCombineStrandHairParts)
-		{
-			QString sHairPostfix = QString("_%1.abc").arg("hair");
-			QString sAbcFilename = QString(m_sDestinationFBX).replace(".fbx", sHairPostfix, Qt::CaseInsensitive);
-			writeHair(sAbcFilename, aHairNodesList, "unreal");
-		}
-		else
-		{
-			foreach(DzNode * pHairNode, aHairNodesList) {
-				if (isStrandBasedHair(pHairNode) == false) continue;
-				QString sHairPostfix = QString("_%1.abc").arg(cleanString(pHairNode->getLabel()));
+	if (m_sAssetType == "SkeletalMesh" || m_sAssetType == "StaticMesh")
+	{
+		QList<DzNode*> aHairNodesList = findAllStrandBasedHair();
+		if (aHairNodesList.count() > 0) {
+			QDir().mkpath(m_sDestinationPath);
+			if (m_bCombineStrandHairParts)
+			{
+				QString sHairPostfix = QString("_%1.abc").arg("hair");
 				QString sAbcFilename = QString(m_sDestinationFBX).replace(".fbx", sHairPostfix, Qt::CaseInsensitive);
-				writeHair(sAbcFilename, QList<DzNode*>() << pHairNode, "unreal");
+				writeHair(sAbcFilename, aHairNodesList, "unreal");
+			}
+			else
+			{
+				foreach(DzNode * pHairNode, aHairNodesList) {
+					if (isStrandBasedHair(pHairNode) == false) continue;
+					QString sHairPostfix = QString("_%1.abc").arg(cleanString(pHairNode->getLabel()));
+					QString sAbcFilename = QString(m_sDestinationFBX).replace(".fbx", sHairPostfix, Qt::CaseInsensitive);
+					writeHair(sAbcFilename, QList<DzNode*>() << pHairNode, "unreal");
+				}
 			}
 		}
 	}
 
+	QString sGeneration = parentNode->getName();
+	bool bIsG9 = (sGeneration == "Genesis9");
+	bool bIsG8or81 = (sGeneration.contains("Genesis8"));
+	bool bIsG3 = (sGeneration.contains("Genesis3"));
+	bool bIsG2 = (sGeneration.contains("Genesis2"));
+	bool bIsG1 = (sGeneration == "Genesis");
+	bool bIsSupportedFigure = (m_pSelectedNode->inherits("DzFigure") && (bIsG9 || bIsG8or81 || bIsG3 || bIsG2 || bIsG1) );	
+	if (parentNode &&
+		parentNode->inherits("DzFigure") &&
+		m_sAssetType == "SkeletalMesh" &&
+		!m_bEnableMorphs && !m_EnableSubdivisions &&
+		bIsSupportedFigure)
+	{
+		m_bConvertRigEnabled = true;
+	}
+	else
+	{
+		m_bConvertRigEnabled = false;		
+	}
+	
 	hideAllStrandBasedHair();
 
-	m_bConvertRigEnabled = true;
-//	m_sExportRigMode = "unreal";
 	DzBridgeAction::preProcessScene(parentNode);
 
 	pProgress->finish();
