@@ -1647,7 +1647,26 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImpo
 	 }
 	 else
 	 {
-		  ImportedAssets = AssetToolsModule.Get().ImportAssetsAutomated(FbxImportData);
+		ImportedAssets = AssetToolsModule.Get().ImportAssetsAutomated(FbxImportData);
+		// ERROR CHECK
+		if (ImportedAssets.Num() == 0)
+		{
+			UE_LOG(LogDazToUnreal, Warning, TEXT("DazToUnreal: ERROR: automated FBX import failed, attempting interactive import..."));
+			UAssetImportTask* AssetImportTask = NewObject<UAssetImportTask>();
+			AssetImportTask->Filename = FbxImportData->Filenames[0];
+			AssetImportTask->DestinationPath = FbxImportData->DestinationPath;
+			AssetImportTask->Options = FbxFactory->ImportUI;
+			AssetImportTask->Factory = FbxFactory;
+			AssetImportTask->bAutomated = false;
+			TArray< UAssetImportTask* > ImportTasks;
+			ImportTasks.Add(AssetImportTask);
+			AssetToolsModule.Get().ImportAssetTasks(ImportTasks);
+			for (FString ImportedPath : AssetImportTask->ImportedObjectPaths)
+			{
+					FSoftObjectPath SoftObjectPath(ImportedPath);
+					ImportedAssets.Add(SoftObjectPath.TryLoad());
+			}
+		}
 	 }
 
 	 FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
