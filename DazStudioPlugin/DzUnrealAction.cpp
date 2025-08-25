@@ -33,6 +33,7 @@
 
 #include "MLDeformer.h"
 #include "FbxTools.h"
+#include "OpenFBXInterface.h"
 
 DzUnrealAction::DzUnrealAction() :
 	 DzBridgeAction(tr("Send to &Unreal..."), tr("Send the selected node to Unreal."))
@@ -649,7 +650,7 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 	
 	if ( m_sAssetType == "SkeletalMesh" &&
 		m_bConvertRigEnabled &&
-		!m_bEnableMorphs && !m_EnableSubdivisions &&
+//		!m_bEnableMorphs && !m_EnableSubdivisions &&
 		(m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman") &&
 		bIsSupportedFigure)
 	{
@@ -695,6 +696,27 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 		}
 
 	}
+
+	OpenFBXInterface* openFBX = OpenFBXInterface::GetInterface();
+	FbxScene* pScene = openFBX->CreateScene("Base Mesh Scene");
+	if (exLoadFbxScene(pScene, fbxFilePath) == false) {
+		pScene->Destroy();
+		return false;
+	}	
+	// Rename Morphs to Morph Labels
+	FbxTools::RenameMorphs(pScene, m_AvailableMorphsTable, true);	
+	if (openFBX->SaveScene(pScene, fbxFilePath, -1, m_bEmbedTexturesInOutputFile) == false)
+	{
+		QString sFbxErrorMessage = QObject::tr("ERROR: DazToUnreal: openFBX->SaveScene():\n\n")
+			+ QString("File: \"%1\"\n\n").arg(fbxFilePath)
+			+ QString("FbxStatusCode: %1\n").arg(openFBX->GetErrorCode())
+			+ QString("Error Message: %1\n\n").arg(openFBX->GetErrorString());
+		dzApp->log(sFbxErrorMessage);
+		if (m_nNonInteractiveMode == 0) QMessageBox::warning(0, QObject::tr("Error"),
+			QObject::tr("An error occurred while processing the Fbx file:\n\n") + sFbxErrorMessage, QMessageBox::Ok);
+		return false;
+	}
+	pScene->Destroy();
 	
 	// Insert Unreal specific Fbx Post-processing here
 	QList<DzMaterial*> aMaterialsList = GetAllMaterials(m_pSelectedNode);
@@ -826,8 +848,11 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 	if (parentNode &&
 		parentNode->inherits("DzFigure") &&
 		m_sAssetType == "SkeletalMesh" &&
-		!m_bEnableMorphs && !m_EnableSubdivisions &&
-		bIsSupportedFigure)
+//		!m_bEnableMorphs && !m_EnableSubdivisions &&
+		bIsSupportedFigure &&
+		!m_sExportRigMode.isEmpty() &&
+		m_sExportRigMode != "" &&
+		m_sExportRigMode != "--")
 	{
 		m_bConvertRigEnabled = true;
 	}
@@ -838,8 +863,53 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 	
 	hideAllStrandBasedHair();
 
-	DzBridgeAction::preProcessScene(parentNode);
+	if (m_bConvertRigEnabled && bIsSupportedFigure) {
+		bool bGenerateProxyMeshResult = false;
+		m_sMvcProxyMeshFilePath = getTempBasefilename() + "_mvc_proxy_mesh.fbx";
+		bGenerateProxyMeshResult = generateProxyMesh(parentNode, m_sMvcProxyMeshFilePath, false);
+		if (bGenerateProxyMeshResult == false || validateProxyMeshVerts(m_sMvcProxyMeshFilePath, sGeneration) == false) {
+			pProgress->cancel();
+			pProgress->finish();
+			return false;
+		}
+	}
 
+	bool bConvertRigBackup = m_bConvertRigEnabled;
+	m_bConvertRigEnabled = false;
+	DzBridgeAction::preProcessScene(parentNode);
+	m_bConvertRigEnabled = bConvertRigBackup;
+
+	if (m_bConvertRigEnabled && m_bEnableMorphs) 
+	{		
+		// ARKit_facs_ctrl_ARKitEnable
+		exSetArkitCorrectives(1.0, parentNode);
+
+		m_sFacsProxyFilePath = getTempBasefilename() + "_facs_proxy.fbx";
+		bool bGenerateProxyMeshResult = generateProxyMesh(parentNode, m_sFacsProxyFilePath, true);
+		if (bGenerateProxyMeshResult == false) {
+			pProgress->cancel();
+			pProgress->finish();
+			return false;
+		}
+
+		// load and fix mouth close
+		QString sSourceFilename = m_sFacsProxyFilePath; // store original filename as source
+		QString sOutputFilename = QString(m_sFacsProxyFilePath).replace(".fbx", "-fixed.fbx", Qt::CaseInsensitive); // rename to "-fixed.fbx" for output filename
+		if (fixMouthCloseBlendshape(parentNode, sSourceFilename, sOutputFilename) == false) {
+//			pProgress->cancel();
+//			pProgress->finish();
+//			return false;
+			// no op
+		} else {
+			m_sFacsProxyFilePath = sOutputFilename;
+		}
+		
+		// disable normal morph export pathway
+		m_bEnableMorphs = false;
+	}
+
+	DzBridgeAction::preProcessRigConversion(parentNode);
+	
 	pProgress->finish();
 
 
