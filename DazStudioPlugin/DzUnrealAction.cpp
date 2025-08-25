@@ -893,83 +893,11 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 			return false;
 		}
 		
+		// Retarget Blendshape Mesh to Base Figure Skeleton
 		QStringList aProxyRigList;
 		QString sFileBasePath = getTempBasefilename() + "_morph_rig";
 		generateMorphProxyRigs(parentNode, sFileBasePath, m_MorphNamesToExport, aProxyRigList);
-
-		// Retarget Blendshape Mesh to Base Figure Skeleton
-		OpenFBXInterface *openFbx = OpenFBXInterface::GetInterface();
-		FbxScene *pMorphProxyScene = openFbx->CreateScene("Morph Proxy Scene");
-		printf("DEBUG: Loading Morph Proxy File: %s to retarget blendshapes...\n", m_sFacsProxyFilePath.toLocal8Bit().constData());
-		exLoadFbxScene(pMorphProxyScene, m_sFacsProxyFilePath);
-		QString sBaseRigFile = sFileBasePath + "_base.fbx";
-		QList<FbxNode*> aMeshList;
-		FbxTools::GetAllMeshes(pMorphProxyScene->GetRootNode(), aMeshList);
-		foreach (QString sMorphRigFile, aProxyRigList)
-		{
-			QString sMorphName = QString(sMorphRigFile).replace(sFileBasePath + "_", "").replace(".fbx", "");
-			if (sMorphName == "base") continue;
-			// 1. load and pose with morph rig
-			FbxPose* pMorphPose = FbxPose::Create(openFbx->GetManager(), "Morph Bind Pose");
-			FbxTools::LoadAndPose(sMorphRigFile, pMorphProxyScene);
-			// 2. bake pose to bind matrix
-			foreach(FbxNode* pFbxNode, aMeshList) {
-				FbxTools::BakePoseToBindMatrix(pFbxNode->GetMesh(), pMorphPose);
-			}
-			// 3. load and pose to base rig
-			FbxPose* pBasePose = FbxPose::Create(openFbx->GetManager(), "Base Rig Pose");
-			FbxTools::LoadAndPose(sBaseRigFile, pMorphProxyScene);
-			// 4. bake vertex buffer to pose
-			foreach(FbxNode* pFbxNode, aMeshList) {
-				bool bMeshRetargeted = false;
-				FbxMesh* pMesh = pFbxNode->GetMesh();
-				FbxAMatrix matrix = pFbxNode->EvaluateGlobalTransform();
-				// get blendshape vertex buffer corresponding with morphpose
-				int numBlendshapes = pMesh->GetDeformerCount(FbxDeformer::eBlendShape);
-				for (int nBlendshapeIndex = 0; nBlendshapeIndex < numBlendshapes; ++nBlendshapeIndex)
-				{
-					FbxBlendShape* pBlendShape = static_cast<FbxBlendShape*>(pMesh->GetDeformer(nBlendshapeIndex, FbxDeformer::eBlendShape));
-					if (pBlendShape == nullptr) continue;
-					printf("DEBUG: Searching blendshape for morph (%s): blendshape name: %s\n", sMorphName.toLocal8Bit().constData(), pBlendShape->GetName());
-					int numChannels = pBlendShape->GetBlendShapeChannelCount();
-					for (int nChannelIndex = 0; nChannelIndex < numChannels; ++nChannelIndex)
-					{
-						FbxBlendShapeChannel* pChannel = pBlendShape->GetBlendShapeChannel(nChannelIndex);
-						if (pChannel == nullptr) continue;
-						// CHECK CHANNEL NAME
-						QString sChannelName = QString(pChannel->GetName());
-						printf("DEBUG: Searching channel for morph (%s): channel name: %s\n", sMorphName.toLocal8Bit().constData(), pChannel->GetName());
-						if (sChannelName.contains(sMorphName) == false) continue;
-						if (sChannelName.contains(sMorphName))
-						{
-							bMeshRetargeted = true;
-							int numShapes = pChannel->GetTargetShapeCount();
-							for (int nShapeIndex = 0; nShapeIndex < numShapes; ++nShapeIndex)
-							{
-								FbxShape* pTargetShape = pChannel->GetTargetShape(nShapeIndex);
-								if (pTargetShape) 
-								{
-									printf("DEBUG: Retargeting blendshape/targetshape[%i] %s to base figure rig...\n", nShapeIndex, pTargetShape->GetName());
-									FbxVector4* pTargetShapeVertexBuffer = pTargetShape->GetControlPoints();
-									if (pTargetShapeVertexBuffer == NULL) continue;
-									FbxTools::BakePoseToVertexBuffer(pTargetShapeVertexBuffer, &matrix, pBasePose, pMesh);
-								}
-								// perform for ALL shapes in channel
-							}
-							// stop searching other channels
-							break;
-						}
-					}
-					// stop searching other blendshapes
-					if (bMeshRetargeted) break;
-				}
-			}
-			// ???===> figure out evaluation matrix to combine above steps and bake vertex buffer with custom transform matrix instead of pose
-		}
-		// save and close
-		printf("DEBUG: Saving Morph Proxy File after blendshape retargeting: %s\n", m_sFacsProxyFilePath.toLocal8Bit().constData());
-		openFbx->SaveScene(pMorphProxyScene, m_sFacsProxyFilePath);
-		pMorphProxyScene->Destroy();
+		retargetBlendshapesToBaseRig(aProxyRigList, sFileBasePath);
 		
 		// load and fix mouth close
 		QString sSourceFilename = m_sFacsProxyFilePath; // store original filename as source
