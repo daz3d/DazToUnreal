@@ -7,6 +7,8 @@
 // Daz Studio.
 // Usage: Select a Genesis 8 or 9 figure in DAZ Studio before running this script.
 
+// bone_converter Version 2: ignore unmapped nodes, only explicitly delete nodes; if there is unmapped node collistion, rename original to "_original"
+
 (function( aArgs ){
 
 var aBoneMapFiles = [];
@@ -20,7 +22,6 @@ function processArguments() {
     print("processArguments(): Sanity Checking...");
 //    print("DEBUG: aArgs= " + aArgs + ", aArgs.length= " + aArgs.length);
     if (!aArgs || Array.isArray(aArgs) == false || aArgs.length == 0) {
-        App.log("bone_converter_aArgs.dsa, processArguments(): CRITCIAL ERROR: Arguments are not an array; continuing with default values.");
         return false;
     }
     for( var i = 0, nArgs = aArgs.length; i < nArgs; i += 1 ){
@@ -52,7 +53,7 @@ function recursiveTraverseNodes(node) {
 // Retrieves all bones of the selected figure.
 function getBones(figure) {
     var aBoneList = recursiveTraverseNodes(figure);
-    print("DEBUG: bonelist.length= " + aBoneList.length);
+    // print("DEBUG: bonelist.length= " + aBoneList.length);
     return aBoneList;
 }
 
@@ -68,21 +69,51 @@ function renameBones(figure, mapping) {
     //     aSafeList.push(val);
     // }
 
+    // create lookup table for original bone names
+    var aOriginalBoneNames = [];
+    for (var i = 0; i < aBoneList.length; i++)
+    {
+        aOriginalBoneNames.push(aBoneList[i].name);
+    }
+
     for (var i = 0; i < aBoneList.length; i++) 
     {
         var bone = aBoneList[i];
-        print("DEBUG: processing bone: " + bone.name);
+        // print("DEBUG: processing bone: " + bone.name);
         var key = bone.name;
         if (mapping.hasOwnProperty(key)) {
-        	print("DEBUG: renaming bone: " + key);
-            bone.setName(mapping[key]);
-            bone.setLabel(mapping[key])
-            aRenamedBones.push(bone);
+            var value = mapping[key];
+            if (value == key) {
+                continue;
+            }
+            if (typeof(value) == "string")
+            {
+                // check if existing original bone with name==value
+                if (arrayContainsValue(aOriginalBoneNames, value)) {
+                    // rename original bone
+                    original_bone_index = aOriginalBoneNames.indexOf(value);
+                    original_bone = aBoneList[original_bone_index];
+                    original_bone_new_name = value + "__original";
+                    // print("DEBUG: renaming original bone to " + original_bone_new_name);
+                    original_bone.setName(original_bone_new_name);
+                    original_bone.setLabel(original_bone_new_name);
+                }
+                // print("DEBUG: renaming bone: " + key + " to " + value);
+                bone.setName(value);
+                bone.setLabel(value);
+                aRenamedBones.push(bone);
+            }
+            else if (typeof(value) == "number") {
+                if (value == -1) {
+                    // print("DEBUG: marking bone for deletion: " + key);
+                    aBonesToDelete.push(bone);
+                }
+            }
         }
-        else if (!arrayContainsValue(aSafeList, key)) {
-            print("DEBUG: marking bone for deletion: " + key);
-            aBonesToDelete.push(bone);
-        }
+        // else if (!arrayContainsValue(aSafeList, key)) {
+        //     print("DEBUG: marking bone for deletion: " + key);
+        //     aBonesToDelete.push(bone);
+        // }
     }
 }
 
@@ -120,23 +151,41 @@ function deleteUnmappedBones() {
         var bone = aBonesToDelete[i];
         // final sanity check
         if (!arrayContainsValue(aRenamedBones, bone)) {
-            print("DEBUG: deleting bone: " + bone.name);
+            // print("DEBUG: deleting bone: " + bone.name);
             deleteBone(bone);
         }
     }
 }
 
-// Validates if the selected figure is a Genesis 8 or 9 figure.
+// Validates if the selected figure is compatible.
 function isValidFigure(figure) {
     // Implement validation logic here, possibly checking figure's type or name.
-    return true; // Placeholder for validation logic
+    if (figure.inherits("DzFigure") == false) return false;
+    var sGeneration = figure.getName();
+    var bIsG9 = (sGeneration == "Genesis9");
+    var bIsG8 = (sGeneration.indexOf("Genesis8") == 0);
+    var bIsG3 = (sGeneration.indexOf("Genesis3") == 0);
+    var bIsG2 = (sGeneration.indexOf("Genesis2") == 0);
+    var bIsG1 = (sGeneration == "Genesis");
+
+    if (bIsG9 || bIsG8 || bIsG3 || bIsG2 || bIsG1) {
+        return true;
+    }
+
+    return false; // Placeholder for validation logic
 }
 
 // Main script execution function.
 function main() {
+    print("bone_converter2: Starting script...");
+
     var selectedFigure = Scene.getPrimarySelection(); // Assuming getSelectedNode() retrieves the currently selected figure.
     if (!selectedFigure || !isValidFigure(selectedFigure)) {
-//        MessageBox.information("Please select a valid Genesis 8 or 9 figure.", "Invalid selection", "OK");
+        var sFigureName = "Invalid Object";
+        if (selectedFigure) sFigureName = selectedFigure.getName();
+        var sMesg = "ERROR: bone_converter2: Invalid figure selected: " + sFigureName + ", aborting script.";
+        App.log(sMesg);
+        // MessageBox.information("Please select a valid Genesis 8 or 9 figure.", "Invalid selection", "OK");
         return;
     }
 
