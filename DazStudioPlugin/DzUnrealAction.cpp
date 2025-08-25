@@ -566,10 +566,11 @@ QMap<DzMaterial*, DzMaterial*> FindDuplicateMaterials(QList<DzMaterial*> &Materi
 						break;
 					}
 				}
-				printf("DEBUG: FindDuplicateMaterials() duplicate: %s, original: %s\n", CompareMaterialName.toLocal8Bit().constData(), MaterialName.toLocal8Bit().constData());
 				if (bPreferenceOverride) {
+					printf("DEBUG: FindDuplicateMaterials() duplicate: %s, original: %s (preferred name override)\n", MaterialName.toLocal8Bit().constData(), CompareMaterialName.toLocal8Bit().constData());
 					Duplicates.insert(Material, CompareMaterial);
 				} else {
+					printf("DEBUG: FindDuplicateMaterials() duplicate: %s, original: %s\n", CompareMaterialName.toLocal8Bit().constData(), MaterialName.toLocal8Bit().constData());
 					Duplicates.insert(CompareMaterial, Material);					
 				}
 			}
@@ -884,13 +885,17 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 		// ARKit_facs_ctrl_ARKitEnable
 		exSetArkitCorrectives(1.0, parentNode);
 
-		m_sFacsProxyFilePath = getTempBasefilename() + "_facs_proxy.fbx";
+		m_sFacsProxyFilePath = getTempBasefilename() + "_morph_proxy.fbx";
 		bool bGenerateProxyMeshResult = generateProxyMesh(parentNode, m_sFacsProxyFilePath, true);
 		if (bGenerateProxyMeshResult == false) {
 			pProgress->cancel();
 			pProgress->finish();
 			return false;
 		}
+		
+		QStringList aProxyRigList;
+		QString sFileBasePath = getTempBasefilename() + "_morph_rig";
+		generateMorphProxyRigs(parentNode, sFileBasePath, m_MorphNamesToExport, aProxyRigList);
 
 		// load and fix mouth close
 		QString sSourceFilename = m_sFacsProxyFilePath; // store original filename as source
