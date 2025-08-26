@@ -652,7 +652,7 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 	if ( m_sAssetType == "SkeletalMesh" &&
 		m_bConvertRigEnabled &&
 //		!m_bEnableMorphs && !m_EnableSubdivisions &&
-		(m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman") &&
+//		(m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman") &&
 		bIsSupportedFigure)
 	{
 		QString sTrueRigMode = "";
@@ -903,9 +903,6 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 		QString sSourceFilename = m_sFacsProxyFilePath; // store original filename as source
 		QString sOutputFilename = QString(m_sFacsProxyFilePath).replace(".fbx", "-fixed.fbx", Qt::CaseInsensitive); // rename to "-fixed.fbx" for output filename
 		if (fixMouthCloseBlendshape(parentNode, sSourceFilename, sOutputFilename) == false) {
-//			pProgress->cancel();
-//			pProgress->finish();
-//			return false;
 			// no op
 		} else {
 			m_sFacsProxyFilePath = sOutputFilename;
