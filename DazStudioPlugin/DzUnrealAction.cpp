@@ -885,8 +885,8 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 		// ARKit_facs_ctrl_ARKitEnable
 		exSetArkitCorrectives(1.0, parentNode);
 
-		m_sFacsProxyFilePath = getTempBasefilename() + "_morph_proxy.fbx";
-		bool bGenerateProxyMeshResult = generateProxyMesh(parentNode, m_sFacsProxyFilePath, true);
+		m_sMorphProxyFilePath = getTempBasefilename() + "_morph_proxy.fbx";
+		bool bGenerateProxyMeshResult = generateProxyMesh(parentNode, m_sMorphProxyFilePath, true);
 		if (bGenerateProxyMeshResult == false) {
 			pProgress->cancel();
 			pProgress->finish();
@@ -894,18 +894,117 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 		}
 		
 		// Retarget Blendshape Mesh to Base Figure Skeleton
-		QStringList aProxyRigList;
 		QString sFileBasePath = getTempBasefilename() + "_morph_rig";
-		generateMorphProxyRigs(parentNode, sFileBasePath, m_MorphNamesToExport, aProxyRigList);
-		retargetBlendshapesToBaseRig(aProxyRigList, sFileBasePath, sGeneration + ".Shape");
+		generateMorphProxyRigs(parentNode, sFileBasePath, m_MorphNamesToExport, m_aMorphProxyRigList);
+		retargetBlendshapesToBaseRig(m_aMorphProxyRigList, sFileBasePath, sGeneration + ".Shape");
 		
 		// load and fix mouth close
-		QString sSourceFilename = m_sFacsProxyFilePath; // store original filename as source
-		QString sOutputFilename = QString(m_sFacsProxyFilePath).replace(".fbx", "-fixed.fbx", Qt::CaseInsensitive); // rename to "-fixed.fbx" for output filename
+		QString sSourceFilename = m_sMorphProxyFilePath; // store original filename as source
+		QString sOutputFilename = QString(m_sMorphProxyFilePath).replace(".fbx", "-fixed.fbx", Qt::CaseInsensitive); // rename to "-fixed.fbx" for output filename
 		if (fixMouthCloseBlendshape(parentNode, sSourceFilename, sOutputFilename) == false) {
 			// no op
 		} else {
-			m_sFacsProxyFilePath = sOutputFilename;
+			m_sMorphProxyFilePath = sOutputFilename;
+		}
+
+		QString sPoseFilename = "/g9_unreal_apose_fixed_4.fbx";
+		QString sEmbeddedFilePath = m_sEmbeddedFolderPath + sPoseFilename;
+		QFile srcFile(sEmbeddedFilePath);
+		QString sTempPoseFilePath = dzApp->getTempPath() + sPoseFilename;
+		bool replace = true;
+		DzBridgeNameSpace::DzBridgeAction::copyFile(&srcFile, &sTempPoseFilePath, replace);
+		srcFile.close();
+
+		QString sUnrealMannyRigFile = "g9_to_unreal_manny.json";
+		QString sG8UnrealRigFile = "g8_to_unreal.json";
+		QString sMetahumanRigFile = "g9_to_metahuman.json";
+		QString sG8MetahumanRigFile = "g8_to_metahuman.json";
+		QString sUnityRigFile = "g9_to_unity.json";
+		QString sG8UnityRigFile = "g8_to_unity.json";
+		QString sMixamoRigFile = "g9_to_mixamo.json";
+		QString sG8MixamoRigFile = "g8_to_mixamo.json";
+		// Legacy support
+		QString sG2UnrealMannyRigFile = "g2_to_unreal.json";
+
+		QStringList aScriptFilelist = (QStringList() <<
+			sUnrealMannyRigFile << sG8UnrealRigFile <<
+			sMetahumanRigFile << sG8MetahumanRigFile <<
+			sUnityRigFile <<
+			sMixamoRigFile << sG8MixamoRigFile <<
+			sG2UnrealMannyRigFile
+			);
+		// copy 
+		foreach(auto sScriptFilename, aScriptFilelist)
+		{
+			bool replace = true;
+			QString sEmbeddedFilepath = m_sEmbeddedFolderPath + "/" + sScriptFilename;
+			QFile srcFile(sEmbeddedFilepath);
+			QString tempFilepath = dzApp->getTempPath() + "/" + sScriptFilename;
+			DZ_BRIDGE_NAMESPACE::DzBridgeAction::copyFile(&srcFile, &tempFilepath, replace);
+			srcFile.close();
+		}
+
+		// Compile arguments
+		QString sConfigFile;
+		if (m_sExportRigMode == "metahuman") {
+			if (bIsG9) {
+				sConfigFile = dzApp->getTempPath() + "/" + sMetahumanRigFile;
+			} else {
+				sConfigFile = dzApp->getTempPath() + "/" + sG8MetahumanRigFile;
+			}
+		}
+		else if (m_sExportRigMode == "unreal") {
+			if (bIsG9) {
+				sConfigFile = dzApp->getTempPath() + "/" + sUnrealMannyRigFile;
+			}
+			else if (bIsG2 || bIsG1) {
+				sConfigFile = dzApp->getTempPath() + "/" + sG2UnrealMannyRigFile;
+			}
+			else {
+				sConfigFile = dzApp->getTempPath() + "/" + sG8UnrealRigFile;
+			}
+		}
+		else if (m_sExportRigMode == "unity") {
+			if (bIsG9) {
+				sConfigFile = dzApp->getTempPath() + "/" + sUnityRigFile;
+			}
+			else {
+				sConfigFile = dzApp->getTempPath() + "/" + sG8UnityRigFile;
+			}
+		}
+		else if (m_sExportRigMode == "mixamo") {
+			if (bIsG9) {
+				sConfigFile = dzApp->getTempPath() + "/" + sMixamoRigFile;
+			}
+			else {
+				sConfigFile = dzApp->getTempPath() + "/" + sG8MixamoRigFile;
+			}
+		}
+
+		// post-process proxy rigs
+		foreach (QString sMorphRigFile, m_aMorphProxyRigList)
+		{
+			QString sMorphName = QString(sMorphRigFile).replace(sFileBasePath + "_", "").replace(".fbx", "");
+			if (sMorphName == "base") continue;
+			FbxTools::ProxyMeshBoneRenamer(sMorphRigFile, sConfigFile);
+			FbxTools::UnrealJointFixCallback2 oUnrealJointFixer;
+			postProcessRigConversion(sMorphRigFile, "", "", "", &oUnrealJointFixer, sTempPoseFilePath, "", "", "", "", false);
+			OpenFBXInterface* openFBX = OpenFBXInterface::GetInterface();
+			FbxScene* pScene = openFBX->CreateScene("Base Mesh Scene");
+			if (exLoadFbxScene(pScene, sMorphRigFile) == false) {
+				continue;
+			}
+			FbxNode* RootNode = pScene->GetRootNode();
+			QList<FbxNode*> aMeshList;
+			FbxTools::GetAllMeshes(RootNode, aMeshList);
+			foreach(FbxNode* pNode, aMeshList) {
+				pScene->RemoveNode(pNode);
+			}
+			QString sMorphPoseFile = m_sDestinationPath + "/" + sMorphName + "_pose.fbx";
+			if (openFBX->SaveScene(pScene, sMorphPoseFile, -1, false) == false)
+			{
+			}
+			pScene->Destroy();
 		}
 		
 		// disable normal morph export pathway
