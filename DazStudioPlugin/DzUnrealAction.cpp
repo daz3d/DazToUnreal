@@ -998,7 +998,30 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 			QList<FbxNode*> aMeshList;
 			FbxTools::GetAllMeshes(RootNode, aMeshList);
 			foreach(FbxNode* pNode, aMeshList) {
+				// remove clusters
+				FbxMesh* pMesh = pNode->GetMesh();
+				if (pMesh) {
+					for (int i = 0; i < pMesh->GetDeformerCount(); i++) {
+						FbxDeformer* pDeformer = pMesh->GetDeformer(0);
+						pMesh->RemoveDeformer(0);
+						pDeformer->Destroy();
+					}
+				}
 				pScene->RemoveNode(pNode);
+				pNode->Destroy();
+			}
+			for (int i = 0; i < pScene->GetMaterialCount(); i++) {
+				FbxSurfaceMaterial* pMaterial = pScene->GetMaterial(0);
+				if (pMaterial == nullptr) continue;
+				pScene->RemoveMaterial(pMaterial);
+			}
+			FbxAnimStack* AnimStack = FbxAnimStack::Create(pScene, "AnimStack");
+			FbxAnimLayer* AnimBaseLayer = FbxAnimLayer::Create(pScene, "Layer0");
+			AnimStack->AddMember(AnimBaseLayer);
+			QList<FbxNode*> aBoneList;  FbxTools::GetBoneList(RootNode, aBoneList);
+			FbxTime oTime0(0);
+			foreach(FbxNode* pNode, aBoneList) {
+				FbxTools::AddKeyCurrentNode(pNode, AnimBaseLayer, oTime0);
 			}
 			QString sMorphPoseFile = m_sDestinationPath + "/" + sMorphName + "_pose.fbx";
 			if (openFBX->SaveScene(pScene, sMorphPoseFile, -1, false) == false)
