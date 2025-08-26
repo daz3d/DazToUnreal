@@ -897,7 +897,7 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 		QStringList aProxyRigList;
 		QString sFileBasePath = getTempBasefilename() + "_morph_rig";
 		generateMorphProxyRigs(parentNode, sFileBasePath, m_MorphNamesToExport, aProxyRigList);
-		retargetBlendshapesToBaseRig(aProxyRigList, sFileBasePath);
+		retargetBlendshapesToBaseRig(aProxyRigList, sFileBasePath, sGeneration + ".Shape");
 		
 		// load and fix mouth close
 		QString sSourceFilename = m_sFacsProxyFilePath; // store original filename as source
