@@ -995,7 +995,6 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 				continue;
 			}
 			FbxNode* RootNode = pScene->GetRootNode();
-			pScene->GetPose(0);
 			QList<FbxNode*> aMeshList;
 			FbxTools::GetAllMeshes(RootNode, aMeshList);
 			FbxTools::SetSceneTimeMode(pScene, FbxTime::eFrames30);
