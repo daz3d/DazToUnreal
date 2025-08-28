@@ -986,6 +986,8 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 		foreach (QString sMorphRigFile, m_aMorphProxyRigList)
 		{
 			QString sMorphName = QString(sMorphRigFile).replace(sFileBasePath + "_", "").replace(".fbx", "");
+			QString sMorphLabel = sMorphName;
+			if (sMorphName != "base") sMorphLabel = m_AvailableMorphsTable[sMorphName].Label;
 			FbxTools::ProxyMeshBoneRenamer(sMorphRigFile, sConfigFile);
 			FbxTools::UnrealJointFixCallback2 oUnrealJointFixer;
 			postProcessRigConversion(sMorphRigFile, "", "", "", &oUnrealJointFixer, sTempPoseFilePath, "", "", "", "", false);
@@ -998,21 +1000,31 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 			QList<FbxNode*> aMeshList;
 			FbxTools::GetAllMeshes(RootNode, aMeshList);
 			FbxTools::SetSceneTimeMode(pScene, FbxTime::eFrames30);
-			FbxAnimStack* pAnimStack = FbxAnimStack::Create(pScene, "pAnimStack");
-			FbxAnimLayer* pAnimBaseLayer = FbxAnimLayer::Create(pScene, "Layer0");
+			FbxAnimStack* pAnimStack = FbxAnimStack::Create(pScene, "Take 001");
+			FbxAnimLayer* pAnimBaseLayer = FbxAnimLayer::Create(pScene, "BaseLayer");
 			pAnimStack->AddMember(pAnimBaseLayer);
 			pScene->SetCurrentAnimationStack(pAnimStack);
+			for (int i = 0, n = pScene->GetSrcObjectCount<FbxAnimStack>(); i < n; ++i) {
+				FbxAnimStack* pStack = pScene->GetSrcObject<FbxAnimStack>(i);
+				if (pStack && pStack != pAnimStack) pStack->Destroy();
+			}
 			FbxPose* pBasePose = FbxPose::Create(openFBX->GetManager(), "Base Pose");
 			FbxTools::LoadAndPose(sBaseFigurePose, pScene, 0, false, false, QList<QString>(), pBasePose);
 			QList<FbxNode*> aBoneList;  FbxTools::GetBoneList(RootNode, aBoneList);
 			foreach(FbxNode* pNode, aBoneList) {
-				FbxTools::AddKeyCurrentNode(pNode, pAnimBaseLayer, FbxTools::MakeFrame(0, FbxTime::eFrames30));
+				FbxTools::AddKeyCurrentNode(pNode, pAnimBaseLayer, FbxTools::MakeFrame(0));
 			}
 			FbxPose* pMorphPose = FbxPose::Create(openFBX->GetManager(), "Morph Pose");
 			FbxTools::LoadAndPose(sMorphRigFile, pScene, 0, false, false, QList<QString>(), pMorphPose);
 			foreach(FbxNode* pNode, aBoneList) {
-				FbxTools::AddKeyCurrentNode(pNode, pAnimBaseLayer, FbxTools::MakeFrame(10, FbxTime::eFrames30));
+				FbxTools::AddKeyCurrentNode(pNode, pAnimBaseLayer, FbxTools::MakeFrame(10));
 			}
+			FbxNode* pRootBone = FbxTools::GetRootBone(pScene);
+			if (pRootBone) {
+				FbxTools::AddMorphCurveByName(pRootBone, pAnimBaseLayer, FbxTools::MakeFrame(0), sMorphLabel, 0.0f, true);
+				FbxTools::AddMorphCurveByName(pRootBone, pAnimBaseLayer, FbxTools::MakeFrame(10), sMorphLabel, 1.0f, true);
+			}
+			pScene->SetCurrentAnimationStack(pAnimStack);
 			foreach(FbxNode* pNode, aMeshList) {
 				// remove clusters
 				FbxMesh* pMesh = pNode->GetMesh();
@@ -1031,7 +1043,7 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 				if (pMaterial == nullptr) continue;
 				pScene->RemoveMaterial(pMaterial);
 			}
-			QString sMorphPoseFile = m_sDestinationPath + "/" + sMorphName + "_pose.fbx";
+			QString sMorphPoseFile = m_sDestinationPath + "/" + sMorphLabel + "_pose.fbx";
 			if (openFBX->SaveScene(pScene, sMorphPoseFile, -1, false) == false)
 			{
 			}
