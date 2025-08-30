@@ -120,7 +120,7 @@ def build_plugin(ue_version):
                     return 1
                 args += ['-VeryVerbose']
             elif ue_version == "UE56":
-                if not switch_xcode_version("15.4"):
+                if not switch_xcode_version("16.4"):
                     return 1
                 args += ['-TargetPlatforms=Mac','-Architecture_Mac="arm64+x86_64"','-VeryVerbose']
             else:

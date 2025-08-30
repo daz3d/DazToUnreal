@@ -16,7 +16,7 @@
     "compiler_path_map": {
         "13.2.1": "/Volumes/SSD_4TB/Applications/Xcode_13.2.1.app/Contents/Developer",
         "13.4.1": "/Volumes/SSD_4TB/Applications/Xcode_13.4.1.app/Contents/Developer",
-        "15.3": "/Applications/Xcode.app/Contents/Developer",
-        "15.4": ""
+        "15.3": "/Volumes/SSD_4TB/Applications/Xcode_15.3.app/Contents/Developer",
+        "16.4": "/Applications/Xcode.app/Contents/Developer"
     }
 }
