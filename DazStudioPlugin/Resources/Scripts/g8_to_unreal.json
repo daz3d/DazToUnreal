@@ -1,5 +1,6 @@
 {
     "hip": "pelvis",
+    "pelvis": -1,
     "lThighBend": "thigh_l",
     "lThighTwist": "thigh_twist_01_l",
     "lShin": "calf_l",

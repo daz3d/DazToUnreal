@@ -1,5 +1,6 @@
 {
     "hip": "pelvis",
+    "pelvis": -1,
     "lThigh": "thigh_l",
     "lShin": "calf_l",
     "lFoot": "foot_l",
