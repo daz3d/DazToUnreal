@@ -995,6 +995,7 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 			OpenFBXInterface* openFBX = OpenFBXInterface::GetInterface();
 			FbxScene* pScene = openFBX->CreateScene("Base Mesh Scene");
 			if (exLoadFbxScene(pScene, sMorphRigFile) == false) {
+				pScene->Destroy();
 				continue;
 			}
 			FbxNode* RootNode = pScene->GetRootNode();
@@ -1026,6 +1027,7 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 				FbxTools::AddMorphCurveByName(pRootBone, pAnimBaseLayer, FbxTools::MakeFrame(10), sMorphLabel, 1.0f, true);
 			}
 			pScene->SetCurrentAnimationStack(pAnimStack);
+			FbxTools::ApplyBindPose(pScene, pBasePose);
 			foreach(FbxNode* pNode, aMeshList) {
 				// remove clusters
 				FbxMesh* pMesh = pNode->GetMesh();
