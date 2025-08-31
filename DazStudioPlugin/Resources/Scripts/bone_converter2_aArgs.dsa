@@ -8,6 +8,7 @@
 // Usage: Select a Genesis 8 or 9 figure in DAZ Studio before running this script.
 
 // bone_converter Version 2: ignore unmapped nodes, only explicitly delete nodes; if there is unmapped node collistion, rename original to "_original"
+// bone_converter Version 2.1: added debug output for ignored bones
 
 (function( aArgs ){
 
@@ -114,6 +115,9 @@ function renameBones(figure, mapping) {
         //     print("DEBUG: marking bone for deletion: " + key);
         //     aBonesToDelete.push(bone);
         // }
+        else {
+            print("DEBUG: bone not in mapping, ignoring: " + key);
+        }
     }
 }
 
