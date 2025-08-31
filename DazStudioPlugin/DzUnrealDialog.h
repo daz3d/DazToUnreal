@@ -76,7 +76,7 @@ protected slots:
 	void HandlePortChanged(const QString& port);
 	void HandleTargetPluginInstallerButton() override;
 	void HandleOpenIntermediateFolderButton(QString sFolderPath = "") override;
-	void HandleAssetTypeComboChange(int state) override;
+	void HandleAssetTypeComboChange(int index) override;
 	void HandlePdfButton() override;
 	void HandleYoutubeButton() override;
 	void HandleSupportButton() override;

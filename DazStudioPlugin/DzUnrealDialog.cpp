@@ -642,9 +642,9 @@ void DzUnrealDialog::HandleOpenIntermediateFolderButton(QString sFolderPath)
 	DzBridgeDialog::HandleOpenIntermediateFolderButton(sIntermediateFolder);
 }
 
-void DzUnrealDialog::HandleAssetTypeComboChange(int state)
+void DzUnrealDialog::HandleAssetTypeComboChange(int index)
 {
-	DzBridgeDialog::HandleAssetTypeComboChange(state);
+	DzBridgeDialog::HandleAssetTypeComboChange(index);
 
 	QString assetType = assetTypeCombo->currentText();
 	mlDeformerSettingsGroupBox->setVisible(assetType == "MLDeformer");

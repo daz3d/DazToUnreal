@@ -67,7 +67,8 @@ DzUnrealAction::DzUnrealAction() :
 void DzUnrealAction::executeAction()
 {
 	m_nExecuteActionResult = DZ_OPERATION_FAILED_ERROR;
-	m_eSelectedNodeAssetType = DZ_BRIDGE_NAMESPACE::EAssetType::None;
+	DzNode* pPreviousSelection = m_pSelectedNode;
+	DZ_BRIDGE_NAMESPACE::EAssetType ePreviousAssetType = m_eSelectedNodeAssetType;
 	
 	// Check if the main window has been created yet.
 	 // If it hasn't, alert the user and exit early.
