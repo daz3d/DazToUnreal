@@ -727,8 +727,8 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 
 	DzUnrealDialog* DazToUnrealDialog = qobject_cast<DzUnrealDialog*>(m_bridgeDialog);
 	int nCombineMethod = DazToUnrealDialog->getMaterialCombineMethodAsInt();
-	FbxTools::PostProcessMaterialsForUnreal(fbxFilePath, m_sAssetName, DuplicateMaterials, MaterialSlotNames, nCombineMethod);
-		
+	FbxTools::PostProcessMaterials(fbxFilePath, DuplicateMaterials, MaterialSlotNames, nCombineMethod);
+
 	return bResult;
 }
 

@@ -593,7 +593,7 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 
 	 // Setup Import Data
 	 DazToUnrealImportData ImportData;
-	 ImportData.SourcePath = FPaths::GetPath(FBXFile) / TEXT("UpdatedFBX") / FPaths::GetCleanFilename(FBXPath);
+	 ImportData.SourcePath = FBXFile;
 	 ImportData.ImportLocation = CharacterFolder;
 	 ImportData.AssetType = AssetType;
 	 ImportData.CharacterTypeName = AssetID;
@@ -608,10 +608,6 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 if (!JsonObject->TryGetBoolField(TEXT("FaceCharacterRight"), ImportData.bFaceCharacterRight))
 	 {
 		 ImportData.bFaceCharacterRight = CachedSettings->ZeroRootRotationOnImport;
-	 }
-	 if (AssetType == DazAssetType::SkeletalMesh_v2) {
-		// Override Source Path
-		ImportData.SourcePath = FBXFile;
 	 }
 
 	 if (AssetType == DazAssetType::Environment)
@@ -1081,17 +1077,6 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 FString RootBoneName = TEXT("");
 	 TArray<FString> MaterialSlotNames;
 
-	 if (AssetType != DazAssetType::SkeletalMesh_v2)
-	 {
-		if (PreProcessFbxFile(Progress,
-				FBXFile, AssetType, CachedSettings, AssetName, ImportData, JsonObject,
-				MaterialCombineMethod, DuplicateMaterials, DtuMaterialsTable, FBXPath,
-				RootBoneName, MaterialSlotNames) == false)
-		{
-			return nullptr;
-		}
-	 }
-	
 	 DtuMaterialsTable.GenerateKeyArray(MaterialSlotNames);
 
 	 // If this is a character, determine the type.
