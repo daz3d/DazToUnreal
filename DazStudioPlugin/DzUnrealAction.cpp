@@ -677,11 +677,6 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 		DzBridgeNameSpace::DzBridgeAction::copyFile(&srcFile, &tempPathArchive, replace);
 		srcFile.close();
 
-		QScopedPointer<DzScript> Script(new DzScript());
-		QString sScriptFilename = "bake_all_pivots_nogui.dsa";
-		QString sEmbeddedFilepath = m_sEmbeddedFolderPath + "/" + sScriptFilename;
-		ExecuteEmbeddedScript(Script, sEmbeddedFilepath);
-
 		bResult = postProcessRigConversion(m_sExportRigMode, fbxFilePath);
 		if (!bResult)
 		{
