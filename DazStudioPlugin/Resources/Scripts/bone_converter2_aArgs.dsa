@@ -9,6 +9,7 @@
 
 // bone_converter Version 2: ignore unmapped nodes, only explicitly delete nodes; if there is unmapped node collistion, rename original to "_original"
 // bone_converter Version 2.1: added debug output for ignored bones
+// bone_converter Version 2.2: proceed anyway if more numkeys than matching keys
 
 (function( aArgs ){
 
@@ -220,19 +221,18 @@ function main() {
         }
     }
     if ( bonesMatchingVals == numKeys) {
-        App.log("bone_converter_aArgs.dsa: ERROR: Bones appear to already be converted.");
-        print("bone_converter_aArgs.dsa: ERROR: Bones appear to already be converted.");
+        App.log("bone_converter_aArgs.dsa: ERROR: Bones appear to already be converted. EXITING!");
+        print("bone_converter_aArgs.dsa: ERROR: Bones appear to already be converted. EXITING!");
         return;
     }
     if ( bonesMatchingKeys == 0) {
-        App.log("bone_converter_aArgs.dsa: CRITICAL ERROR: No bones were found in the figure.");
-        print("bone_converter_aArgs.dsa: CRITICAL ERROR: No bones were found in the figure.");
+        App.log("bone_converter_aArgs.dsa: CRITICAL ERROR: No bones were found in the figure. EXITING!");
+        print("bone_converter_aArgs.dsa: CRITICAL ERROR: No bones were found in the figure. EXITING!");
         return;
     }
     if (bonesMatchingKeys < numKeys) {
-        App.log("bone_converter_aArgs.dsa: WARNING: Not all bones were found in the figure.");
-        print("bone_converter_aArgs.dsa: WARNING: Not all bones were found in the figure.");
-        return;
+        App.log("bone_converter_aArgs.dsa: WARNING: Not all bones were found in the figure. PROCEEDING ANYWAY...");
+        print("bone_converter_aArgs.dsa: WARNING: Not all bones were found in the figure. PROCEEDING ANYWAY...");
     }
     renameBones(selectedFigure, mapping);
     deleteUnmappedBones();

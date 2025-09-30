@@ -670,6 +670,7 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 		}
 
 		QString sArchiveFilename = "/g9_unreal_apose_fixed_4.fbx";
+		if (bIsG1) sArchiveFilename = "/g1_unreal_apose_fixed.fbx";
 		QString sEmbeddedArchivePath = m_sEmbeddedFolderPath + sArchiveFilename;
 		QFile srcFile(sEmbeddedArchivePath);
 		QString tempPathArchive = dzApp->getTempPath() + sArchiveFilename;
