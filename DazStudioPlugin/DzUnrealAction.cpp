@@ -656,6 +656,9 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 //		(m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman") &&
 		bIsSupportedFigure)
 	{
+		// bake bind pose
+		m_bBakeMeshesToSingleBindPose = true;
+
 		QString sTrueRigMode = "";
 		sTrueRigMode = m_sExportRigMode;
 		m_bConvertFbxJointsEnabled = false;
