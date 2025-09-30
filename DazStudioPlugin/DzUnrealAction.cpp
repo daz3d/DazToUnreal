@@ -186,6 +186,7 @@ void DzUnrealAction::executeAction()
 		}
 
 		exportProgress->finish();
+		if (m_pSelectedNode) m_pSelectedNode->setLabel(m_pSelectedNode->getLabel() + "_MODIFIED");
 	}
 
 	m_nExecuteActionResult = DZ_NO_ERROR;
