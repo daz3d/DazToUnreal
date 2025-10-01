@@ -7,6 +7,7 @@
 //
 
 (function(){	
+	var nPivotsBaked = 0;
 
 	function unlockProperty(oProperty) {
 		if (oProperty) {
@@ -19,6 +20,11 @@
 		if (!oNode) {
 			return;
 		}
+
+		if ( oNode.getName().indexOf("Eye") > 0) return;
+		if ( oNode.getName().indexOf("Pectoral") > 0) return;
+
+		print("DEBUG: unlocking node transforms for: " + oNode.getName());
 
 		// get transform properties
 		unlockProperty(oNode.getXPosControl());
@@ -73,6 +79,7 @@
 	            geometry.finishEdit();
 	           
 	            updateAllLinkedNodes(geometry, pivotPoint, pivotOrientation);
+				nPivotsBaked += 1;
 	        }
 	    }
 	}
