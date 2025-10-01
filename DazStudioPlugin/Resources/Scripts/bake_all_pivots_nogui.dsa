@@ -1,9 +1,10 @@
 // DAZ Studio version 4.22.0.16 filetype DAZ Script
 //
+// DB: 2025-09-30: Compatibility fix to skip Eye and Pectoral bone when unlocking nodes
 // DB: 2025-07-13: Bugfix nodes with locked or clamped transform properties
 // DB: 2024-12-24: Added support to bake pivot for instances.
 // DB: 2024-09-30: This script bakes the pivot point of the selected node into the geometry of the node.
-// Version 7
+// Version 8
 //
 
 (function(){	
