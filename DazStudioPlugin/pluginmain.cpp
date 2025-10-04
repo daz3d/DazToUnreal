@@ -28,6 +28,9 @@ Documentation and source code are available on <a href = \"https://github.com/da
 DZ_PLUGIN_CLASS_GUID(DzUnrealAction, 99F42CAE-CD02-49BC-A7CE-C0CF4EDD7609);
 NEW_PLUGIN_CUSTOM_CLASS_GUID(DzUnrealDialog, b7c0b573-bd61-452c-92c1-9560459b4e89);
 
+#include "OpenFBXInterface.h"
+DZ_PLUGIN_CLASS_GUID(OpenFBXInterface, 40ee8c5e-5b44-4277-9512-6b56c9028792);
+
 #ifdef UNITTEST_DZBRIDGE
 
 #include "UnitTest_DzUnrealAction.h"

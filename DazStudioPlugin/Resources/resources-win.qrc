@@ -19,7 +19,8 @@
 		<file alias="g2_to_unreal.json">Scripts/g2_to_unreal.json</file>
 
 		<file alias="g9_unreal_apose_fixed_4.fbx">g9_unreal_apose_fixed_4.fbx</file>
-		<file alias="g1_unreal_apose_fixed.fbx">g1_unreal_apose_fixed.fbx</file>
+		<file alias="g9_unreal_apose_fixed.fbx">g9_unreal_apose_fixed.fbx</file>
+    <file alias="g1_unreal_apose_fixed.fbx">g1_unreal_apose_fixed.fbx</file>
 		<file alias="writePolylineIndexes.dsa">Scripts/writePolylineIndexes.dsa</file>
       
 	</qresource>
