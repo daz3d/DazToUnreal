@@ -3,6 +3,10 @@
 #include "GenericPlatform/GenericPlatformFile.h"
 #include "Misc/Paths.h"
 #include "UObject/SoftObjectPath.h"
+
+// REQUIRED TO USE UE_VERSION_NEWER_THAN
+#include "Misc/EngineVersionComparison.h"
+
 // only include in UE 4.26 and later
 #if !(ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION <= 25)
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -361,6 +365,11 @@ void FDazToUnrealUtils::InstallPluginContentToProject()
 	FString DazImportFolder = CachedSettings->ImportDirectory.Path;
 	FString DazCommonFolder = FPaths::Combine(DazImportFolder, TEXT("Common"));
 
+	if (FDazToUnrealModule::BatchConversionMode != 0)
+	{
+		DazCommonFolder = FDazToUnrealModule::OverrideConversionDestPath;
+	}
+
 	FString RelativePakPath = TEXT("Plugins/DazToUnreal/Content/DazToUnreal_Common.pak");
 	FString ProjectPath = FPaths::ProjectDir();
 	FString ProjectContentDir = FPaths::ProjectContentDir();
@@ -531,5 +540,140 @@ FSoftObjectPath FDazToUnrealUtils::FindMaterial(FString ShaderName, EDazMaterial
 
 	// Fall back to a known default if nothing else was found.
 	return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseMaterial.BaseMaterial"));
+}
+
+#include "AssetToolsModule.h"
+void FDazToUnrealUtils::MoveSingleAsset(const FString& SourcePath, const FString& DestinationFolder)
+{
+	FAssetToolsModule& AssetToolsModule = FAssetToolsModule::GetModule();
+	IAssetTools& AssetTools = AssetToolsModule.Get();
+
+	// Load the asset
+	UObject* Asset = LoadObject<UObject>(nullptr, *SourcePath);
+	if (!Asset)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Could not load asset: %s"), *SourcePath);
+		return;
+	}
+
+	FString AbsoluteDestinationFolder = DestinationFolder.Replace(TEXT("/Game/"), *FPaths::ProjectContentDir());
+	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(AbsoluteDestinationFolder)) {
+		UE_LOG(LogDazToUnreal, Error, TEXT("Could not create directory %s"), *AbsoluteDestinationFolder);
+		return;
+	}
+
+	// Example: SourcePath="/Game/DazToUnreal/Common/Materials/BaseMaterial.BaseMaterial"
+	// DestinationFolder="/Game/Raquel/Mesh/Materials"
+	FString AssetName = FPackageName::GetShortName(SourcePath);
+	FString NewPackagePath = DestinationFolder / AssetName;
+
+	TArray<FAssetRenameData> AssetsToRename;
+	AssetsToRename.Emplace(Asset, DestinationFolder, AssetName);
+
+	// Perform move (creates redirectors and updates references)
+	AssetTools.RenameAssets(AssetsToRename);
+
+	UE_LOG(LogTemp, Log, TEXT("Moved asset %s → %s"), *SourcePath, *NewPackagePath);
+}
+
+
+void FDazToUnrealUtils::ReplaceSkeleton(FString AnimPath, FString SkeletonPath)
+{
+	FSoftObjectPath animSoftPath(AnimPath);
+	UAnimSequence* AnimSequence = Cast<UAnimSequence>(animSoftPath.TryLoad());
+
+	FSoftObjectPath softPath(SkeletonPath);
+	USkeleton* pSkeleton = Cast<USkeleton>(softPath.TryLoad());
+
+	AnimSequence->SetSkeleton(pSkeleton);
+	AnimSequence->MarkPackageDirty();
+}
+
+
+#include "EditorLevelLibrary.h"
+#include "LevelEditor.h"
+#if UE_VERSION_NEWER_THAN(5, 0, 99)
+#include "LevelEditorSubsystem.h"
+#endif
+
+void FDazToUnrealUtils::MakeNewFabLevel(const FString& NewMapPath)
+{
+
+	FString LevelPath = NewMapPath;
+	FString TemplatePath = TEXT("/Game/Level_01");
+#if UE_VERSION_NEWER_THAN(5,0,99)
+	if (ULevelEditorSubsystem* LevelEditorSubsystem = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
+	{
+		LevelEditorSubsystem->NewLevelFromTemplate(LevelPath, TemplatePath);
+		LevelEditorSubsystem->LoadLevel(LevelPath);
+	}
+#else
+	UEditorLevelLibrary::NewLevelFromTemplate(LevelPath, TemplatePath);
+#endif
+
+}
+
+void FDazToUnrealUtils::SaveNewFabLevel(const FString& NewMapPath)
+{
+
+	FString LevelPath = NewMapPath;
+	FString TemplatePath = TEXT("/Game/Level_01");
+#if UE_VERSION_NEWER_THAN(5,0,99)
+	if (ULevelEditorSubsystem* LevelEditorSubsystem = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
+	{
+		LevelEditorSubsystem->NewLevelFromTemplate(LevelPath, TemplatePath);
+		//LevelEditorSubsystem->NewLevel(LevelPath);
+
+		// DB - UE 5.x appears to need LoadLevel() after using one of the NewLevel___() functions
+		LevelEditorSubsystem->LoadLevel(LevelPath);
+	}
+#else
+	UEditorLevelLibrary::NewLevelFromTemplate(LevelPath, TemplatePath);
+	//UEditorLevelLibrary::NewLevel(LevelPath);
+#endif
+
+#if UE_VERSION_NEWER_THAN(5, 0, 99)
+	if (ULevelEditorSubsystem* LevelEditorSubsystem = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
+	{
+		LevelEditorSubsystem->SaveCurrentLevel();
+	}
+#else
+	UEditorLevelLibrary::SaveCurrentLevel();
+#endif
+
+}
+
+
+#include "Animation/SkeletalMeshActor.h"
+// #include "Engine/SkeletalMeshActor.h"
+#include "Engine/SkeletalMesh.h"
+#include "Engine/World.h"
+#include "UObject/ConstructorHelpers.h"
+#include "Editor.h"
+#include "EngineUtils.h"
+
+void FDazToUnrealUtils::AssignSkeletalMeshToActor(USkeletalMesh* pMesh)
+{
+	UWorld* pWorld = GEditor->GetEditorWorldContext().World();
+
+	for (TActorIterator<ASkeletalMeshActor> It(pWorld); It; ++It)
+	{
+		ASkeletalMeshActor* pActor = *It;
+		if (pActor)
+		{
+			if ( pActor->GetName().Contains(TEXT("Character")) ||
+				pActor->GetName().Contains(TEXT("Idle")) ||
+				pActor->GetName().Contains(TEXT("Run")) ||
+				pActor->GetName().Contains(TEXT("Walk")) ||
+				pActor->GetName().Contains(TEXT("Fall")) ||
+				pActor->GetName().Contains(TEXT("Jump")) ||
+				pActor->GetName().Contains(TEXT("Land"))
+				)
+			{
+				pActor->GetSkeletalMeshComponent()->SetSkeletalMesh(pMesh);
+				pActor->GetSkeletalMeshComponent()->MarkRenderStateDirty();
+			}
+		}
+	}
 }
 
