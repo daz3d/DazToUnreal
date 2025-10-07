@@ -88,6 +88,8 @@ public:
 
 	bool ImportGroom(FString sGroomFilename, FString sImportLocation, TSharedPtr<FJsonObject> JsonObject);
 
+	void FixForFab(FString sTargetPath, USkeletalMesh* pMesh);
+
 private:
 	
 	void AddToolbarExtension(FToolBarBuilder& Builder);

@@ -62,6 +62,8 @@
 #include "ToolMenuSection.h"
 #include "ContentBrowserMenuContexts.h"
 #include "Animation/PoseAsset.h"
+
+// REQUIRED TO USE UE_VERSION_NEWER_THAN
 #include "Misc/EngineVersionComparison.h"
 
 #if !(ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION <= 25)
@@ -538,10 +540,17 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 FString CharacterMaterialFolder = CharacterFolder / TEXT("Materials");
 	 if (BatchConversionMode != 0)
 	 {
-		 CharacterFolder = DAZImportFolder / BatchConversionDestPath;
-		 CharacterTexturesFolder = DAZImportFolder / BatchConversionDestPath / TEXT("Textures");
-		 CharacterMaterialFolder = DAZImportFolder / BatchConversionDestPath / TEXT("Materials");
-	 }
+		//  CharacterFolder = DAZImportFolder / BatchConversionDestPath;
+		//  CharacterTexturesFolder = DAZImportFolder / BatchConversionDestPath / TEXT("Textures");
+		//  CharacterMaterialFolder = DAZImportFolder / BatchConversionDestPath / TEXT("Materials");
+
+		// Fab overrides
+		DAZImportFolder = TEXT("/Game/") / AssetName;
+		OverrideConversionDestPath = DAZImportFolder;
+		CharacterFolder = DAZImportFolder / TEXT("Mesh");
+		CharacterTexturesFolder = DAZImportFolder / TEXT("Textures");
+		CharacterMaterialFolder = DAZImportFolder / TEXT("Materials");
+	}
 
 	 IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
 
@@ -1392,7 +1401,9 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 		 }
 	 }
 
-	 return NewObject;
+	FixForFab(DAZImportFolder, Cast<USkeletalMesh>(NewObject));
+
+	return NewObject;
 }
 
 // Modified from the FColor::FromHex function
@@ -2318,6 +2329,47 @@ bool FDazToUnrealModule::CreateRelatedMaterials(
 	return true;
 }
 
+void FDazToUnrealModule::FixForFab(FString sTargetPath, USkeletalMesh* pMesh)
+{
+	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
+	FString DazCommonFolder = CachedSettings->ImportDirectory.Path + TEXT("/Common");
+
+	FString GameDemoFolder = sTargetPath + TEXT("/Demo");
+	FString GameMapFolder = sTargetPath + TEXT("/Map");
+
+	FString ProjectContentDir = FPaths::ProjectContentDir();
+	FString FullGameDemoFolder = GameDemoFolder.Replace(TEXT("/Game/"), *ProjectContentDir);
+	FString FullGameMapFolder = GameMapFolder.Replace(TEXT("/Game/"), *ProjectContentDir);
+
+	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(FullGameDemoFolder)) {
+		UE_LOG(LogDazToUnreal, Error, TEXT("Could not create directory %s"), *FullGameDemoFolder);
+		return;
+	}
+	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(FullGameMapFolder)) {
+		UE_LOG(LogDazToUnreal, Error, TEXT("Could not create directory %s"), *FullGameMapFolder);
+		return;
+	}
+
+	FDazToUnrealUtils::MoveSingleAsset(TEXT("/Game/MF_Idle"), GameDemoFolder);
+	FDazToUnrealUtils::MoveSingleAsset(TEXT("/Game/MF_Walk_Fwd"), GameDemoFolder);
+	FDazToUnrealUtils::MoveSingleAsset(TEXT("/Game/MF_Run_Fwd"), GameDemoFolder);
+	FDazToUnrealUtils::MoveSingleAsset(TEXT("/Game/MM_Jump"), GameDemoFolder);
+	FDazToUnrealUtils::MoveSingleAsset(TEXT("/Game/MM_Fall_Loop"), GameDemoFolder);
+	FDazToUnrealUtils::MoveSingleAsset(TEXT("/Game/MM_Land"), GameDemoFolder);
+	FDazToUnrealUtils::MoveSingleAsset(TEXT("/Game/SK_Mannequin"), GameDemoFolder);
+
+	FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MF_Idle"), GameDemoFolder / TEXT("SK_Mannequin"));
+	FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MF_Walk_Fwd"), GameDemoFolder / TEXT("SK_Mannequin"));
+	FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MF_Run_Fwd"), GameDemoFolder / TEXT("SK_Mannequin"));
+	FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Jump"), GameDemoFolder / TEXT("SK_Mannequin"));
+	FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Fall_Loop"), GameDemoFolder / TEXT("SK_Mannequin"));
+	FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Land"), GameDemoFolder / TEXT("SK_Mannequin"));
+
+	FDazToUnrealUtils::MakeNewFabLevel(GameMapFolder / TEXT("Overview"));
+	FDazToUnrealUtils::AssignSkeletalMeshToActor(pMesh);
+	FDazToUnrealUtils::SaveNewFabLevel(GameMapFolder / TEXT("Overview"));
+
+}
 
 
 #undef LOCTEXT_NAMESPACE
