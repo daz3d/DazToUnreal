@@ -1,4 +1,5 @@
 #include "DazToUnrealUtils.h"
+#include "DazToUnreal.h"
 #include "GenericPlatform/GenericPlatformFile.h"
 #include "Misc/Paths.h"
 #include "UObject/SoftObjectPath.h"
@@ -474,3 +475,61 @@ void FDazToUnrealUtils::InstallPluginContentToProject()
 	return;
 
 }
+
+FSoftObjectPath FDazToUnrealUtils::FindMaterial(FString ShaderName, EDazMaterialType MaterialType)
+{
+	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
+
+	for (FSoftObjectPath MaterialPackPath : CachedSettings->MaterialPacks)
+	{
+		if (UDazToUnrealMaterialPack* MaterialPack = Cast<UDazToUnrealMaterialPack>(MaterialPackPath.TryLoad()))
+		{
+			FSoftObjectPath MaterialPath = FDazToUnrealUtils::FindMaterial(ShaderName, MaterialType);
+			if (MaterialPath.IsValid() && !MaterialPath.IsNull())
+			{
+				return MaterialPath;
+			}
+		}
+	}
+
+	FString DazCommonFolder = CachedSettings->ImportDirectory.Path + TEXT("/Common");
+	FString CommonMaterialsFolder = DazCommonFolder + TEXT("/Materials");
+	if (FDazToUnrealModule::BatchConversionMode != 0)
+	{
+		CommonMaterialsFolder = FDazToUnrealModule::OverrideConversionDestPath + TEXT("/Materials");
+	}
+
+	// Hard code the old settings.  This could be done via a built in pack instead, but would need to be made in 4.25.
+	if (MaterialType == EDazMaterialType::Base)
+	{
+		if (ShaderName.Compare(TEXT("Daz Studio Default")) == 0) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/DSDBaseMaterial.DSDBaseMaterial"));
+		if (ShaderName.Compare(TEXT("omUberSurface")) == 0) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/omUberBaseMaterial.omUberBaseMaterial"));
+		if (ShaderName.Compare(TEXT("AoA_Subsurface")) == 0) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/AoASubsurfaceBaseMaterial.AoASubsurfaceBaseMaterial"));
+		if (ShaderName.Compare(TEXT("Iray Uber")) == 0) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/IrayUberBaseMaterial.IrayUberBaseMaterial"));
+		if (ShaderName.Compare(TEXT("PBRSkin")) == 0) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BasePBRSkinMaterial.BasePBRSkinMaterial"));
+	}
+
+	if (MaterialType == EDazMaterialType::Skin)
+	{
+		if (ShaderName.Compare(TEXT("Daz Studio Default")) == 0) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/DSDBaseMaterial.DSDBaseMaterial"));
+		if (ShaderName.Compare(TEXT("omUberSurface")) == 0) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/omUberSkinMaterial.omUberSkinMaterial"));
+		if (ShaderName.Compare(TEXT("AoA_Subsurface")) == 0) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/AoASubsurfaceSkinMaterial.AoASubsurfaceSkinMaterial"));
+		if (ShaderName.Compare(TEXT("Iray Uber")) == 0) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/IrayUberSkinMaterial.IrayUberSkinMaterial"));
+		if (ShaderName.Compare(TEXT("PBRSkin")) == 0) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BasePBRSkinMaterial.BasePBRSkinMaterial"));
+	}
+
+	if(MaterialType == EDazMaterialType::Base) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseMaterial.BaseMaterial"));
+	if (MaterialType == EDazMaterialType::Alpha) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseAlphaMaterial.BaseAlphaMaterial"));
+	if (MaterialType == EDazMaterialType::Masked) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseMaskedMaterial.BaseMaskedMaterial"));
+	if (MaterialType == EDazMaterialType::Skin) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseSSSSkinMaterial.BaseSSSSkinMaterial"));
+	if (MaterialType == EDazMaterialType::Hair) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseHairMaterial.BaseHairMaterial"));
+	if (MaterialType == EDazMaterialType::StrandHair) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseStrandHairMaterial.BaseStrandHairMaterial"));
+	if (MaterialType == EDazMaterialType::Scalp) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseScalpMaterial.BaseScalpMaterial"));
+	if (MaterialType == EDazMaterialType::EyeMoisture) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseAlphaMaterial.BaseAlphaMaterial"));
+	if (MaterialType == EDazMaterialType::Cornea) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseAlphaMaterial.BaseAlphaMaterial"));
+	if (MaterialType == EDazMaterialType::NoDraw) return FSoftObjectPath(CommonMaterialsFolder + TEXT("/NoDrawMaterial.NoDrawMaterial"));
+
+	// Fall back to a known default if nothing else was found.
+	return FSoftObjectPath(CommonMaterialsFolder + TEXT("/BaseMaterial.BaseMaterial"));
+}
+

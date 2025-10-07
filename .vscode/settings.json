@@ -1,0 +1,8 @@
+{
+	"files.associations": {
+		"*.dsx": "xml",
+		"*.dsa": "javascript",
+		"*.dtu": "json",
+		"*.rh": "cpp"
+	}
+}

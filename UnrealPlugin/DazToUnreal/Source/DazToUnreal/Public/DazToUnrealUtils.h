@@ -4,6 +4,9 @@
 #include "UObject/SoftObjectPath.h"
 #include "DazToUnrealEnums.h"
 
+// forward declaration
+enum class EDazMaterialType: uint8;
+
 class FDazToUnrealUtils
 {
 public:
@@ -17,6 +20,7 @@ public:
 	static void DuplicatePluginAsset(FName AssetPathInPlugin, const FString& DestPackagePath);
 	static FString InstallCommonMaterialFromPlugin(FString PluginMaterialPath);
 
+	static FSoftObjectPath FindMaterial(FString ShaderName, EDazMaterialType MaterialType);
 private:
 	static bool IsSkeletonUsed(FSoftObjectPath SkeletonPath);
 };

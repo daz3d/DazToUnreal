@@ -147,6 +147,7 @@ THIRD_PARTY_INCLUDES_END
 
 #define LOCTEXT_NAMESPACE "FDazToUnrealModule"
 
+FString FDazToUnrealModule::OverrideConversionDestPath;
 int FDazToUnrealModule::BatchConversionMode;
 FString FDazToUnrealModule::BatchConversionDestPath;
 TMap<FString, FString> FDazToUnrealModule::AssetIDLookup;

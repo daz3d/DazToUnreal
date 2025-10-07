@@ -29,6 +29,7 @@ struct TextureLookupInfo
 class FDazToUnrealModule : public IModuleInterface//, TSharedFromThis<FDazToUnrealModule>
 {
 public:
+	static FString OverrideConversionDestPath;
 	static int BatchConversionMode;
 	static FString BatchConversionDestPath;
 	static TMap<FString, FString> AssetIDLookup;
