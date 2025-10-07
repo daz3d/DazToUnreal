@@ -34,6 +34,7 @@
 #include "MLDeformer.h"
 #include "FbxTools.h"
 #include "OpenFBXInterface.h"
+#include "BridgeTools.h"
 
 DzUnrealAction::DzUnrealAction() :
 	 DzBridgeAction(tr("Send to &Unreal..."), tr("Send the selected node to Unreal."))
@@ -880,6 +881,8 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 	m_bConvertRigEnabled = false;
 	DzBridgeAction::preProcessScene(parentNode);
 	m_bConvertRigEnabled = bConvertRigBackup;
+
+	BridgeTools::ExpandClothingFit(parentNode);
 
 	if (m_bConvertRigEnabled && m_bEnableMorphs) 
 	{		
