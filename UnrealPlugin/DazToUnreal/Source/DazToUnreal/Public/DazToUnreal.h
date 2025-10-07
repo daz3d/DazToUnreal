@@ -88,7 +88,7 @@ public:
 
 	bool ImportGroom(FString sGroomFilename, FString sImportLocation, TSharedPtr<FJsonObject> JsonObject);
 
-	void FixForFab(FString sTargetPath, USkeletalMesh* pMesh);
+	void FixForFab(FString sTargetPath, FString sSkeletalMeshPath);
 
 private:
 	

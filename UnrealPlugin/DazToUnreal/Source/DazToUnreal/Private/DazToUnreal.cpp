@@ -1401,7 +1401,8 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 		 }
 	 }
 
-	FixForFab(DAZImportFolder, Cast<USkeletalMesh>(NewObject));
+	FString SkeletalMeshPackagePath = NewObject->GetOutermost()->GetPathName() + TEXT(".") + NewObject->GetName();
+	FixForFab(DAZImportFolder, SkeletalMeshPackagePath);
 
 	return NewObject;
 }
@@ -2329,7 +2330,7 @@ bool FDazToUnrealModule::CreateRelatedMaterials(
 	return true;
 }
 
-void FDazToUnrealModule::FixForFab(FString sTargetPath, USkeletalMesh* pMesh)
+void FDazToUnrealModule::FixForFab(FString sTargetPath, FString sSkeletalMeshPath)
 {
 	const UDazToUnrealSettings* CachedSettings = GetDefault<UDazToUnrealSettings>();
 	FString DazCommonFolder = CachedSettings->ImportDirectory.Path + TEXT("/Common");
@@ -2366,8 +2367,54 @@ void FDazToUnrealModule::FixForFab(FString sTargetPath, USkeletalMesh* pMesh)
 	FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Land"), GameDemoFolder / TEXT("SK_Mannequin"));
 
 	FDazToUnrealUtils::MakeNewFabLevel(GameMapFolder / TEXT("Overview"));
-	FDazToUnrealUtils::AssignSkeletalMeshToActor(pMesh);
-	FDazToUnrealUtils::SaveNewFabLevel(GameMapFolder / TEXT("Overview"));
+
+
+	FSoftObjectPath sUESkeletonPath = FSoftObjectPath(GameDemoFolder / TEXT("SK_Mannequin"));
+	USkeleton* pUESkeleton = Cast<USkeleton>(sUESkeletonPath.TryLoad());
+
+	FSoftObjectPath MeshPath = FSoftObjectPath(sSkeletalMeshPath);
+	USkeletalMesh* pMesh = Cast<USkeletalMesh>(MeshPath.TryLoad());
+	USkeleton* pMeshSkeleton = pMesh ? pMesh->GetSkeleton() : nullptr;
+	UE_LOG(LogTemp, Warning, TEXT("Mesh path: %s, Mesh: %s"), *sSkeletalMeshPath, pMesh ? *pMesh->GetName() : TEXT("NULL"));
+
+	FDazToUnrealUtils::AddCompatibleSkeleton(pMeshSkeleton, pUESkeleton);
+
+	FDazToUnrealUtils::AssignSkeletalMeshToActor("Character", pMesh);
+	FDazToUnrealUtils::AssignSkeletalMeshToActor("Idle", pMesh);
+	FDazToUnrealUtils::AssignSkeletalMeshToActor("Run", pMesh);
+	FDazToUnrealUtils::AssignSkeletalMeshToActor("Walk", pMesh);
+	FDazToUnrealUtils::AssignSkeletalMeshToActor("Fall", pMesh);
+	FDazToUnrealUtils::AssignSkeletalMeshToActor("Jump", pMesh);
+	FDazToUnrealUtils::AssignSkeletalMeshToActor("Land", pMesh);
+
+	FSoftObjectPath IdleAnimPath = FSoftObjectPath(GameDemoFolder / TEXT("MF_Idle.MF_Idle"));
+	FSoftObjectPath WalkAnimPath = FSoftObjectPath(GameDemoFolder / TEXT("MF_Walk_Fwd.MF_Walk_Fwd"));
+	FSoftObjectPath RunAnimPath = FSoftObjectPath(GameDemoFolder / TEXT("MF_Run_Fwd.MF_Run_Fwd"));
+	FSoftObjectPath JumpAnimPath = FSoftObjectPath(GameDemoFolder / TEXT("MM_Jump.MM_Jump"));
+	FSoftObjectPath FallAnimPath = FSoftObjectPath(GameDemoFolder / TEXT("MM_Fall_Loop.MM_Fall_Loop"));
+	FSoftObjectPath LandAnimPath = FSoftObjectPath(GameDemoFolder / TEXT("MM_Land.MM_Land"));
+	UAnimSequence* IdleAnim = Cast<UAnimSequence>(IdleAnimPath.TryLoad());
+	UAnimSequence* WalkAnim = Cast<UAnimSequence>(WalkAnimPath.TryLoad());
+	UAnimSequence* RunAnim = Cast<UAnimSequence>(RunAnimPath.TryLoad());
+	UAnimSequence* JumpAnim = Cast<UAnimSequence>(JumpAnimPath.TryLoad());
+	UAnimSequence* FallAnim = Cast<UAnimSequence>(FallAnimPath.TryLoad());
+	UAnimSequence* LandAnim = Cast<UAnimSequence>(LandAnimPath.TryLoad());
+
+	UE_LOG(LogTemp, Warning, TEXT("Idle path: %s, Idle: %s"), *(GameDemoFolder / TEXT("MF_Idle.MF_Idle")), IdleAnim ? *IdleAnim->GetName() : TEXT("NULL"));
+	UE_LOG(LogTemp, Warning, TEXT("Walk path: %s, Walk: %s"), *(GameDemoFolder / TEXT("MF_Walk_Fwd.MF_Walk_Fwd")), WalkAnim ? *WalkAnim->GetName() : TEXT("NULL"));
+	UE_LOG(LogTemp, Warning, TEXT("Run path: %s, Run: %s"), *(GameDemoFolder / TEXT("MF_Run_Fwd.MF_Run_Fwd")), RunAnim ? *RunAnim->GetName() : TEXT("NULL"));
+	UE_LOG(LogTemp, Warning, TEXT("Jump path: %s, Jump: %s"), *(GameDemoFolder / TEXT("MM_Jump.MM_Jump")), JumpAnim ? *JumpAnim->GetName() : TEXT("NULL"));
+	UE_LOG(LogTemp, Warning, TEXT("Fall path: %s, Fall: %s"), *(GameDemoFolder / TEXT("MM_Fall_Loop.MM_Fall_Loop")), FallAnim ? *FallAnim->GetName() : TEXT("NULL"));
+	UE_LOG(LogTemp, Warning, TEXT("Land path: %s, Land: %s"), *(GameDemoFolder / TEXT("MM_Land.MM_Land")), LandAnim ? *LandAnim->GetName() : TEXT("NULL"));
+
+	FDazToUnrealUtils::AssignAnimSequenceToActor("Idle", IdleAnim);
+	FDazToUnrealUtils::AssignAnimSequenceToActor("Walk", WalkAnim);
+	FDazToUnrealUtils::AssignAnimSequenceToActor("Run", RunAnim);
+	FDazToUnrealUtils::AssignAnimSequenceToActor("Jump", JumpAnim);
+	FDazToUnrealUtils::AssignAnimSequenceToActor("Fall", FallAnim);
+	FDazToUnrealUtils::AssignAnimSequenceToActor("Land", LandAnim);
+
+	FDazToUnrealUtils::SaveCurrentLevel();
 
 }
 

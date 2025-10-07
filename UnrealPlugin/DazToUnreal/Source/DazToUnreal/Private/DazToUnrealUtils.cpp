@@ -611,26 +611,19 @@ void FDazToUnrealUtils::MakeNewFabLevel(const FString& NewMapPath)
 	UEditorLevelLibrary::NewLevelFromTemplate(LevelPath, TemplatePath);
 #endif
 
-}
-
-void FDazToUnrealUtils::SaveNewFabLevel(const FString& NewMapPath)
-{
-
-	FString LevelPath = NewMapPath;
-	FString TemplatePath = TEXT("/Game/Level_01");
-#if UE_VERSION_NEWER_THAN(5,0,99)
+#if UE_VERSION_NEWER_THAN(5, 0, 99)
 	if (ULevelEditorSubsystem* LevelEditorSubsystem = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
 	{
-		LevelEditorSubsystem->NewLevelFromTemplate(LevelPath, TemplatePath);
-		//LevelEditorSubsystem->NewLevel(LevelPath);
-
-		// DB - UE 5.x appears to need LoadLevel() after using one of the NewLevel___() functions
-		LevelEditorSubsystem->LoadLevel(LevelPath);
+		LevelEditorSubsystem->SaveCurrentLevel();
 	}
 #else
-	UEditorLevelLibrary::NewLevelFromTemplate(LevelPath, TemplatePath);
-	//UEditorLevelLibrary::NewLevel(LevelPath);
+	UEditorLevelLibrary::SaveCurrentLevel();
 #endif
+
+}
+
+void FDazToUnrealUtils::SaveCurrentLevel()
+{
 
 #if UE_VERSION_NEWER_THAN(5, 0, 99)
 	if (ULevelEditorSubsystem* LevelEditorSubsystem = GEditor->GetEditorSubsystem<ULevelEditorSubsystem>())
@@ -652,7 +645,7 @@ void FDazToUnrealUtils::SaveNewFabLevel(const FString& NewMapPath)
 #include "Editor.h"
 #include "EngineUtils.h"
 
-void FDazToUnrealUtils::AssignSkeletalMeshToActor(USkeletalMesh* pMesh)
+void FDazToUnrealUtils::AssignSkeletalMeshToActor(FString sActorLabel, USkeletalMesh* pMesh)
 {
 	UWorld* pWorld = GEditor->GetEditorWorldContext().World();
 
@@ -661,19 +654,64 @@ void FDazToUnrealUtils::AssignSkeletalMeshToActor(USkeletalMesh* pMesh)
 		ASkeletalMeshActor* pActor = *It;
 		if (pActor)
 		{
-			if ( pActor->GetName().Contains(TEXT("Character")) ||
-				pActor->GetName().Contains(TEXT("Idle")) ||
-				pActor->GetName().Contains(TEXT("Run")) ||
-				pActor->GetName().Contains(TEXT("Walk")) ||
-				pActor->GetName().Contains(TEXT("Fall")) ||
-				pActor->GetName().Contains(TEXT("Jump")) ||
-				pActor->GetName().Contains(TEXT("Land"))
-				)
+			UE_LOG(LogTemp, Log, TEXT("Found SkeletalMeshActor: %s"), *pActor->GetActorLabel ());
+			if (pActor->GetActorLabel ().Contains(sActorLabel))
 			{
+				UE_LOG(LogTemp, Log, TEXT("Assigning SkeletalMesh to Actor: %s"), *pActor->GetActorLabel ());
 				pActor->GetSkeletalMeshComponent()->SetSkeletalMesh(pMesh);
 				pActor->GetSkeletalMeshComponent()->MarkRenderStateDirty();
+				return;
 			}
 		}
 	}
+}
+
+void FDazToUnrealUtils::AssignAnimSequenceToActor(FString sActorLabel, UAnimSequence* pAnim)
+{
+	UWorld* pWorld = GEditor->GetEditorWorldContext().World();
+
+	for (TActorIterator<ASkeletalMeshActor> It(pWorld); It; ++It)
+	{
+		ASkeletalMeshActor* pActor = *It;
+		if (pActor)
+		{
+			UE_LOG(LogTemp, Log, TEXT("Found SkeletalMeshActor: %s"), *pActor->GetActorLabel ());
+			if (pActor->GetActorLabel ().Contains(sActorLabel))
+			{
+				UE_LOG(LogTemp, Log, TEXT("Assigning Animation to Actor: %s"), *pActor->GetActorLabel ());
+				USkeletalMeshComponent* pSkeletalMeshComponent = pActor->GetSkeletalMeshComponent();
+				pSkeletalMeshComponent->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+				pSkeletalMeshComponent->InitializeAnimScriptInstance();
+
+				pSkeletalMeshComponent->AnimationData.AnimToPlay = pAnim;
+				pSkeletalMeshComponent->AnimationData.bSavedPlaying = true;
+				pSkeletalMeshComponent->AnimationData.bSavedLooping = true;
+				pSkeletalMeshComponent->AnimationData.SavedPosition = 0.f;
+
+				pSkeletalMeshComponent->PostEditChange();
+				pSkeletalMeshComponent->MarkRenderStateDirty();
+				return;
+			}
+		}
+	}
+}
+
+#include "Animation/Skeleton.h"
+#include "UObject/Package.h"
+
+bool FDazToUnrealUtils::AddCompatibleSkeleton(USkeleton* pTarget, USkeleton* pCompatible)
+{
+	if (!pTarget || !pCompatible || pTarget == pCompatible)
+		return false;
+
+	const TArray<TSoftObjectPtr<USkeleton>>& aExisting = pTarget->GetCompatibleSkeletons();
+	if (aExisting.Contains(pCompatible))
+		return false;
+
+	pTarget->Modify();
+	pTarget->AddCompatibleSkeleton(pCompatible);
+	pTarget->MarkPackageDirty();
+
+	return true;
 }
 

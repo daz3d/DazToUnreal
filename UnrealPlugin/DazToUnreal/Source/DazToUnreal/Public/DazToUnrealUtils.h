@@ -23,9 +23,11 @@ public:
 	static FSoftObjectPath FindMaterial(FString ShaderName, EDazMaterialType MaterialType);
 	static void MoveSingleAsset(const FString& SourcePath, const FString& DestinationFolder);
 	static void MakeNewFabLevel(const FString& NewMapPath);
-	static void SaveNewFabLevel(const FString& NewMapPath);
+	static void SaveCurrentLevel();
 	static void ReplaceSkeleton(FString AnimPath, FString SkeletonPath);
-	static void AssignSkeletalMeshToActor(USkeletalMesh* pMesh);
+	static void AssignSkeletalMeshToActor(FString sActorLabel, USkeletalMesh* pMesh);
+	static void AssignAnimSequenceToActor(FString sActorLabel, UAnimSequence* pAnim);
+	static bool AddCompatibleSkeleton(USkeleton* pTarget, USkeleton* pCompatible);
 
 private:
 	static bool IsSkeletonUsed(FSoftObjectPath SkeletonPath);
