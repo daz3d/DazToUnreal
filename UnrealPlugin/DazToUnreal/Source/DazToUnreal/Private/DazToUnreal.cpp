@@ -447,6 +447,13 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 		// Exit when batch conversion complete
 		FEditorFileUtils::SaveDirtyPackages(false,false,true);
 		FGenericPlatformMisc::RequestExit(false);
+		// rename the autoexec-jobpool.txt to autoexec-jobpool.txt.done
+		FString jobPoolFilename = FPaths::ProjectDir() / TEXT("autoexec-jobpool.txt");
+		FString jobPoolDoneFilename = FPaths::ProjectDir() / TEXT("autoexec-jobpool.txt.done");
+		if (FPaths::FileExists(jobPoolFilename))
+		{
+			IFileManager::Get().Move(*jobPoolDoneFilename, *jobPoolFilename);
+		}
 	}
 
 	return true;
