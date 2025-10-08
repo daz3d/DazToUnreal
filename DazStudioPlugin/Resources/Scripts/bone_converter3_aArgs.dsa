@@ -11,6 +11,7 @@
 // bone_converter Version 2.1: added debug output for ignored bones
 // bone_converter Version 2.2: proceed anyway if more numkeys than matching keys
 // bone_converter Version 3: add new bones support via "++" and "&" syntax in mapping table, ">>" to indicate parent-child relationship
+// bone_converter Version 3.1: weight map / bone binding transfer to new bones
 
 (function( aArgs ){
 
@@ -167,98 +168,213 @@ function deleteMarkedBones() {
     }
 }
 
-// Adds new bones into bone tree based on oBonesToAddMapping
-function addNewBones(figure) {
-    var aBoneList = getBones(figure); // Assuming getBones() retrieves all bones of the figure
-    var bone_exists = false;
-    var add_bone_expression = null;
-    var expression_01 = null;
-    var parent_bone_name = null;
-    // child bones used in averaging position
-    var child_bone_names = [];
-    var parent_bone = null;
-    var child_bones = [];
-    // additional child bones to reparent to new bone without affecting position
-    var additional_child_bone_names = [];
-    var additional_child_bones = [];
-    var bone = null;
-    var new_bone = null;
+// Function to find bone binding by bone name
+function findBoneBinding(oSkinBinding, sBoneName) {
+    var numBoneBindings = oSkinBinding.getNumBoneBindings();
+    for (var b=0; b<numBoneBindings; b++) {
+        var oBoneBinding = oSkinBinding.getBoneBinding(b);
+        if (oBoneBinding==null) continue;
+        var oBoneNode = oBoneBinding.getBone();
+        if (oBoneNode==null) continue;
+        if (oBoneNode.getName() == sBoneName) {
+            return oBoneBinding;
+        }
+    }
+    return null;
+}
 
-    for (var new_bone_name in oBonesToAddMapping) {
-        if (oBonesToAddMapping.hasOwnProperty(new_bone_name)) {
-            add_bone_expression = oBonesToAddMapping[new_bone_name];
-            expression_01 = add_bone_expression.split(">>")[0].split("&");
-            parent_bone_name = expression_01[0];
-            child_bone_names = expression_01.slice(1);
-            additional_child_bone_names = add_bone_expression.split(">>").slice(1);
-            // check if bone already exists
-            for (var j = 0; j < aBoneList.length; j++) {
-                if (aBoneList[j].name == new_bone_name) {
-                    bone_exists = true;
-                    break;
+function createNewBoneFromExistingBones(oFigure, sNewBoneName, oParentBone, aChildBones) {
+    if (!oParentBone) {
+        print("createNewBoneFromExistingBones(): ERROR: Parent bone is null, cannot create new bone: " + sNewBoneName);
+        return null;
+    }
+
+    // Create a new bone
+    var oNewBone = oParentBone.duplicate(/*propagate*/ false);
+    Scene.addNode(oNewBone);    
+    oNewBone.setName(sNewBoneName);
+    oNewBone.setLabel(sNewBoneName);
+
+    // Set initial values based on parent
+    // oNewBone.setOrigin(oParentBone.getOrigin(), /*makeDefault*/ true);
+    // oNewBone.setEndPoint(oParentBone.getEndPoint(), /*makeDefault*/ true);
+    // oNewBone.setOrientation(oParentBone.getOrientation(), /*makeDefault*/ true);
+
+    // new bone position is average of parent and child(ren)
+    var oNewBoneWSPos = oParentBone.getWSPos();
+    if (aChildBones.length > 0) {
+        var oAvgChildPos = new DzVec3(0,0,0);
+        for (var j = 0; j < aChildBones.length; j++) {
+            oAvgChildPos = oAvgChildPos.add(aChildBones[j].getWSPos());
+        }
+        oAvgChildPos = oAvgChildPos.divide(DzVec3(aChildBones.length, aChildBones.length, aChildBones.length));
+        oNewBoneWSPos = oNewBoneWSPos.add(oAvgChildPos).multiply(DzVec3(0.5, 0.5, 0.5));
+    }
+    // update origin and position
+    oNewBone.setOrigin(oNewBoneWSPos, /*makeDefault*/ true);
+    oNewBone.setWSPos(oNewBoneWSPos);
+
+    ////////////////////////////
+    // Add Skinning
+    oSkinBinding = oFigure.getSkinBinding();
+    var numVertices = oFigure.getObject().getCurrentShape().getGeometry().getNumVertices();
+    // create bone binding for new bone
+    oNewBoneBinding = new DzBoneBinding();
+    oNewBoneBinding.setFigure(oFigure);
+    oNewBoneBinding.setBone(oNewBone);
+    oSkinBinding.addBoneBinding(oNewBoneBinding);
+    oNewBoneBinding.beginEdit();
+    oNewBoneWeightMap = new DzWeightMap();
+    oNewBoneWeightMap.setNumWeights(numVertices);
+    oNewBoneBinding.setWeights(oNewBoneWeightMap);
+    oNewBoneBinding.finishEdit();
+    
+    // give new bone 25% of parent bone's weight
+    var oParentBoneBinding = findBoneBinding(oSkinBinding, oParentBone.name);
+    if (oParentBoneBinding) {
+        oNewBoneBinding.beginEdit();
+        oParentBoneBinding.beginEdit();
+        var oParentWeightMap = oParentBoneBinding.getWeights();
+        var nNumVertices = oParentWeightMap.getNumWeights();
+        oNewBoneWeightMap.beginEdit();
+        oParentWeightMap.beginEdit();
+        for (var v = 0; v < nNumVertices; v++) {
+            var nParentWeight = oParentWeightMap.getFloatWeight(v);
+            if (nParentWeight > 0) {
+                var nNewWeight = nParentWeight * 0.25;
+                var nUpdatedParentWeight = nParentWeight - nNewWeight;
+                oNewBoneWeightMap.setFloatWeight(v, nNewWeight);
+                oParentWeightMap.setFloatWeight(v, nUpdatedParentWeight);
+            }
+        }
+        oNewBoneWeightMap.finishEdit();
+        oParentWeightMap.finishEdit();
+        oNewBoneBinding.finishEdit();
+        oParentBoneBinding.finishEdit();
+    }
+
+    // add new bone 25% of each child's weight
+    oNewBoneBinding.beginEdit();
+    oNewBoneWeightMap.beginEdit();
+    for (var k = 0; k < aChildBones.length; k++) {
+        var oChildBone = aChildBones[k];
+        var oChildBoneBinding = findBoneBinding(oSkinBinding, oChildBone.name);
+        if (oChildBoneBinding) {
+            oChildBoneBinding.beginEdit();
+            var oChildWeightMap = oChildBoneBinding.getWeights();
+            var nNumVertices = oChildWeightMap.getNumWeights();
+            oChildWeightMap.beginEdit();
+            for (var v = 0; v < nNumVertices; v++) {
+                var nChildWeight = oChildWeightMap.getFloatWeight(v);
+                if (nChildWeight > 0) {
+                    var nExistingNewBoneWeight = oNewBoneWeightMap.getFloatWeight(v);
+                    var nNewWeightToAdd = nChildWeight * 0.25;
+                    var nUpdatedChildWeight = nChildWeight - nNewWeightToAdd;
+                    oNewBoneWeightMap.setFloatWeight(v, nNewWeightToAdd + nExistingNewBoneWeight);
+                    oChildWeightMap.setFloatWeight(v, nUpdatedChildWeight);
                 }
             }
-            if (bone_exists) {
-                print("bone_converter_aArgs.dsa: addNewBones(): Bone already exists: " + new_bone_name + ", skipping.");
+            oChildWeightMap.finishEdit();
+            oChildBoneBinding.finishEdit();
+        }
+    }
+    oNewBoneWeightMap.finishEdit();
+    oNewBoneBinding.finishEdit();
+
+    // Set the parent bone
+    if (oParentBone) {
+        oParentBone.addNodeChild(oNewBone, /*inPlace*/ true);
+    }
+
+    // Add child bones
+    for (var i = 0; i < aChildBones.length; i++) {
+        var oChildBone = aChildBones[i];
+        oNewBone.addNodeChild(oChildBone, /*inPlace*/ true);
+    }
+
+
+    return oNewBone;
+}
+
+// Adds new bones into bone tree based on oBonesToAddMapping
+function addNewBones(oFigure) {
+    var aBoneList = getBones(oFigure); // Assuming getBones() retrieves all bones of the figure
+    var sAddBoneExpression = null;
+    var sExpression01 = null;
+    var sParentBoneName = null;
+    // child bones used in averaging position
+    var aChildBoneNames = [];
+    var oParentBone = null;
+    var aChildBones = [];
+    // additional child bones to reparent to new bone without affecting position
+    var aAdditionalChildBoneNames = [];
+    var aAdditionalChildBones = [];
+    var oBone = null;
+    var oNewBone = null;
+
+    for (var sNewBoneName in oBonesToAddMapping) {
+        if (oBonesToAddMapping.hasOwnProperty(sNewBoneName)) {
+            sAddBoneExpression = oBonesToAddMapping[sNewBoneName];
+            sExpression01 = sAddBoneExpression.split(">>")[0].split("&");
+            sParentBoneName = sExpression01[0];
+            aChildBoneNames = sExpression01.slice(1);
+            aAdditionalChildBoneNames = sAddBoneExpression.split(">>").slice(1);
+            // check if bone already exists
+            if (arrayContainsValue(aBoneList, sNewBoneName)) {
+                print("bone_converter_aArgs.dsa: addNewBones(): Bone already exists: " + sNewBoneName + ", skipping.");
                 continue;
             }
             // find parent and child bones
             for (var i = 0; i < aBoneList.length; i++) {
-                bone = aBoneList[i];
-                if (bone.name == parent_bone_name) {
-                    parent_bone = bone;
+                oBone = aBoneList[i];
+                if (oBone.name == sParentBoneName) {
+                    oParentBone = oBone;
                 }
                 else {
-                    // iterate through child_bone_names
-                    for (var k = 0; k < child_bone_names.length; k++) {
-                        if (bone.name == child_bone_names[k]) {
-                            child_bones.push(bone);
-                            break;
-                        }
+                    if (arrayContainsValue(aChildBoneNames, oBone.name)) {
+                        aChildBones.push(oBone);
                     }
-                    for (var m = 0; m < additional_child_bone_names.length; m++) {
-                        if (bone.name == additional_child_bone_names[m]) {
-                            additional_child_bones.push(bone);
-                            break;
-                        }
+                    if (arrayContainsValue(aAdditionalChildBoneNames, oBone.name)) {
+                        aAdditionalChildBones.push(oBone);
                     }
                 }
-                if (parent_bone && child_bones.length == child_bone_names.length &&
-                    additional_child_bones.length == additional_child_bone_names.length) {
+                if (oParentBone && aChildBones.length == aChildBoneNames.length &&
+                    aAdditionalChildBones.length == aAdditionalChildBoneNames.length) {
                     break;
                 }
             }
-            if (parent_bone) {
+            if (oParentBone) {
                 // new bone position is average of parent and child(ren)
-                var new_bone_pos = parent_bone.getWSPos();
-                if (child_bones.length > 0) {
+                var new_bone_pos = oParentBone.getWSPos();
+                if (aChildBones.length > 0) {
                     var avg_child_pos = new DzVec3(0,0,0);
-                    for (var j = 0; j < child_bones.length; j++) {
-                        avg_child_pos = avg_child_pos.add(child_bones[j].getWSPos());
+                    for (var j = 0; j < aChildBones.length; j++) {
+                        avg_child_pos = avg_child_pos.add(aChildBones[j].getWSPos());
                     }
-                    avg_child_pos = avg_child_pos.divide(DzVec3(child_bones.length, child_bones.length, child_bones.length));
+                    avg_child_pos = avg_child_pos.divide(DzVec3(aChildBones.length, aChildBones.length, aChildBones.length));
                     new_bone_pos = new_bone_pos.add(avg_child_pos).multiply(DzVec3(0.5, 0.5, 0.5));
                 }
                 // create new bone
-                new_bone = parent_bone.duplicate(false);
-                new_bone.setName(new_bone_name);
-                new_bone.setLabel(new_bone_name);
-                new_bone.setOrigin(new_bone_pos, /*makeDefault*/ true);
-                new_bone.setWSPos(new_bone_pos);
-                // reparent child bones to new bone
-                for (var k = 0; k < child_bones.length; k++) {
-                    new_bone.addNodeChild(child_bones[k], /*inPlace*/ true)
-                }
-                for (var m = 0; m < additional_child_bones.length; m++) {
-                    new_bone.addNodeChild(additional_child_bones[m], /*inPlace*/ true)
+                // oNewBone = oParentBone.duplicate(false);
+                // oNewBone.setName(new_bone_name);
+                // oNewBone.setLabel(new_bone_name);
+                // oNewBone.setOrigin(new_bone_pos, /*makeDefault*/ true);
+                // oNewBone.setWSPos(new_bone_pos);
+                // // reparent child bones to new bone
+                // for (var k = 0; k < aChildBones.length; k++) {
+                //     oNewBone.addNodeChild(aChildBones[k], /*inPlace*/ true)
+                // }
+                oNewBone = createNewBoneFromExistingBones(oFigure, sNewBoneName, oParentBone, aChildBones);
+                for (var m = 0; m < aAdditionalChildBones.length; m++) {
+                    oNewBone.addNodeChild(aAdditionalChildBones[m], /*inPlace*/ true)
                 }
                 // parent new bone to parent bone
-                parent_bone.addNodeChild(new_bone, /*inPlace*/ true);
-                aBonesAdded.push(new_bone);
-                print("bone_converter_aArgs.dsa: addNewBones(): Added new bone: " + new_bone_name + ", parent: " + parent_bone_name + ", children: " + child_bone_names.join(", "));                
+                oParentBone.addNodeChild(oNewBone, /*inPlace*/ true);
+                aBonesAdded.push(oNewBone);
+                print("bone_converter_aArgs.dsa: addNewBones(): Added new bone: " + sNewBoneName + ", parent: " + sParentBoneName + ", children: " + aChildBoneNames.join(", "));                
             }
             else {
-                print("bone_converter_aArgs.dsa: addNewBones(): ERROR: Could not find parent for new bone: " + new_bone_name + ", skipping.");
+                print("bone_converter_aArgs.dsa: addNewBones(): ERROR: Could not find parent for new bone: " + sNewBoneName + ", skipping.");
                 continue;
             }
         }
