@@ -685,14 +685,18 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 			return false;
 		}
 
-		QString sArchiveFilename = "/g9_unreal_apose_fixed_4.fbx";
-		if (bIsG1 || bIsG2) sArchiveFilename = "/g1_unreal_apose_fixed.fbx";
-		QString sEmbeddedArchivePath = m_sEmbeddedFolderPath + sArchiveFilename;
-		QFile srcFile(sEmbeddedArchivePath);
-		QString tempPathArchive = dzApp->getTempPath() + sArchiveFilename;
-		bool replace = true;
-		DzBridgeNameSpace::DzBridgeAction::copyFile(&srcFile, &tempPathArchive, replace);
-		srcFile.close();
+		QStringList aArchiveFilenameList;
+		aArchiveFilenameList << "/g9_unreal_apose_fixed.fbx";
+		aArchiveFilenameList << "/g1_unreal_apose_fixed.fbx";
+		foreach(QString sArchiveFilename, aArchiveFilenameList)
+		{
+			QString sEmbeddedArchivePath = m_sEmbeddedFolderPath + sArchiveFilename;
+			QFile srcFile(sEmbeddedArchivePath);
+			QString tempPathArchive = dzApp->getTempPath() + sArchiveFilename;
+			bool replace = true;
+			DzBridgeNameSpace::DzBridgeAction::copyFile(&srcFile, &tempPathArchive, replace);
+			srcFile.close();
+		}
 
 		bResult = postProcessRigConversion(m_sExportRigMode, fbxFilePath);
 		if (!bResult)
