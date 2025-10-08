@@ -164,7 +164,18 @@ void DzUnrealAction::executeAction()
 		}
 		exportProgress->step();
 
-		exportHD(exportProgress);
+		bool bExportResult = exportHD(exportProgress);
+		if (bExportResult == false) {
+			exportProgress->finish();
+			if (m_nNonInteractiveMode == 0)
+			{
+				QMessageBox::information(0, "ERROR: DazToUnreal Bridge",
+					tr("An error occured during the export progress, operation failed."), QMessageBox::Abort);
+			}
+			m_nExecuteActionResult = DZ_OPERATION_FAILED_ERROR;
+			return;
+
+		}
 
 		// DB, 2022-June-4: Hotfix for Corrupted Imports due to UDP Packet before UpgradeToHD
 		if (m_EnableSubdivisions)
@@ -1060,12 +1071,12 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 		m_bEnableMorphs = false;
 	}
 
-	DzBridgeAction::preProcessRigConversion(parentNode);
+	bool bRigConversionResult = DzBridgeAction::preProcessRigConversion(parentNode);
 	
 	pProgress->finish();
 
 
-	return true;
+	return bRigConversionResult;
 }
 
 bool DzUnrealAction::undoPreProcessScene()

@@ -7,7 +7,7 @@
 
 		<file alias="banner.jpg">banner.jpg</file>
 
-		<file alias="bone_converter2_aArgs.dsa">Scripts/bone_converter2_aArgs.dsa</file>
+		<file alias="bone_converter3_aArgs.dsa">Scripts/bone_converter3_aArgs.dsa</file>
 		<file alias="g9_to_metahuman.json">Scripts/g9_to_metahuman.json</file>
 		<file alias="g9_to_unreal_manny.json">Scripts/g9_to_unreal_manny.json</file>
 		<file alias="g9_to_unity.json">Scripts/g9_to_unity.json</file>

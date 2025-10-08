@@ -34,6 +34,7 @@
     "abdomenLower": "spine_01",
     "abdomenUpper": "spine_02",
     "chestLower": "spine_03",
+    "++chestLower&chestUpper": "spine_04",
     "chestUpper": "spine_05",
     "lCollar": "clavicle_l",
     "lShldrBend": "upperarm_l",
