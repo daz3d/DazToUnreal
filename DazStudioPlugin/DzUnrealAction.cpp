@@ -926,7 +926,7 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 			m_sMorphProxyFilePath = sOutputFilename;
 		}
 
-		QString sPoseFilename = "/g9_unreal_apose_fixed_4.fbx";
+		QString sPoseFilename = "/g9_unreal_apose_fixed.fbx";
 		QString sEmbeddedFilePath = m_sEmbeddedFolderPath + sPoseFilename;
 		QFile srcFile(sEmbeddedFilePath);
 		QString sTempPoseFilePath = dzApp->getTempPath() + sPoseFilename;
