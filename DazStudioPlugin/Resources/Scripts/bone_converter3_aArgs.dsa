@@ -12,6 +12,7 @@
 // bone_converter Version 2.2: proceed anyway if more numkeys than matching keys
 // bone_converter Version 3: add new bones support via "++" and "&" syntax in mapping table, ">>" to indicate parent-child relationship
 // bone_converter Version 3.1: weight map / bone binding transfer to new bones
+// bone_converter Version 3.2: unlock transforms on new bones
 
 (function( aArgs ){
 
@@ -168,6 +169,27 @@ function deleteMarkedBones() {
     }
 }
 
+// Function to unlock a property
+function unlockProperty(oProperty) {
+    if (oProperty) {
+        oProperty.lock(false);
+        oProperty.setIsClamped(false);
+    }
+}
+
+function unlockNodeTransforms(oNode) {
+    unlockProperty(oNode.getXPosControl());
+    unlockProperty(oNode.getYPosControl());
+    unlockProperty(oNode.getZPosControl());
+    unlockProperty(oNode.getXRotControl());
+    unlockProperty(oNode.getYRotControl());
+    unlockProperty(oNode.getZRotControl());
+    unlockProperty(oNode.getXScaleControl());
+    unlockProperty(oNode.getYScaleControl());
+    unlockProperty(oNode.getZScaleControl());
+    unlockProperty(oNode.getScaleControl());
+}
+
 // Function to find bone binding by bone name
 function findBoneBinding(oSkinBinding, sBoneName) {
     var numBoneBindings = oSkinBinding.getNumBoneBindings();
@@ -252,8 +274,16 @@ function createNewBoneFromExistingBones(oFigure, sNewBoneName, oParentBone, aChi
 
     // Create a new bone
     var oNewBone = oParentBone.duplicate(/*propagate*/ false);
+    // var oNewBone = new DzBone();
+    Scene.addNode(oNewBone);
     oNewBone.setName(sNewBoneName);
     oNewBone.setLabel(sNewBoneName);
+
+    oNewBone.setRotationOrder(oParentBone.getRotationOrder(), true);
+    oNewBone.setOrientation(oParentBone.getOrientation(), true);
+
+    // unlock all transforms and limits
+    // unlockNodeTransforms(oNewBone);
 
     // Set the parent bone
     if (oParentBone) {
@@ -264,11 +294,12 @@ function createNewBoneFromExistingBones(oFigure, sNewBoneName, oParentBone, aChi
     var oNewBoneWSPos = oParentBone.getWSPos();
     if (aChildBones.length > 0) {
         var oAvgChildPos = calculateAveragePosition(aChildBones);
+        oNewBone.setEndPoint(oAvgChildPos, true);
         oNewBoneWSPos = oNewBoneWSPos.add(oAvgChildPos).multiply(DzVec3(0.5, 0.5, 0.5));
     }
     // update origin and position
     oNewBone.setOrigin(oNewBoneWSPos, /*makeDefault*/ true);
-    oNewBone.setWSPos(oNewBoneWSPos);
+    // oNewBone.setWSPos(oNewBoneWSPos);
 
     // Add child bones
     parentInPlaceNodeList(oNewBone, aChildBones);

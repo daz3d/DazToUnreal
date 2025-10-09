@@ -651,6 +651,62 @@ QList<DzMaterial*> GetAllMaterials(DzNode* pNode)
 	return aMaterialsList;
 }
 
+void BetterRigConverter(QString sFbxFilename, QString m_sExportRigMode, bool bIsG9, bool bIsG2, bool bIsG1, FbxTools::ModifyBindPoseCallback* pCustomJointFixer)
+{
+	QString sUnrealMannyRigFile = "g9_to_unreal_manny.json";
+	QString sG8UnrealRigFile = "g8_to_unreal.json";
+	QString sMetahumanRigFile = "g9_to_metahuman.json";
+	QString sG8MetahumanRigFile = "g8_to_metahuman.json";
+	QString sUnityRigFile = "g9_to_unity.json";
+	QString sG8UnityRigFile = "g8_to_unity.json";
+	QString sMixamoRigFile = "g9_to_mixamo.json";
+	QString sG8MixamoRigFile = "g8_to_mixamo.json";
+	// Legacy support
+	QString sG2UnrealMannyRigFile = "g2_to_unreal.json";
+
+	// Compile arguments
+	QString sConfigFile;
+	if (m_sExportRigMode == "metahuman") {
+		if (bIsG9) {
+			sConfigFile = dzApp->getTempPath() + "/" + sMetahumanRigFile;
+		}
+		else {
+			sConfigFile = dzApp->getTempPath() + "/" + sG8MetahumanRigFile;
+		}
+	}
+	else if (m_sExportRigMode == "unreal") {
+		if (bIsG9) {
+			sConfigFile = dzApp->getTempPath() + "/" + sUnrealMannyRigFile;
+		}
+		else if (bIsG2 || bIsG1) {
+			sConfigFile = dzApp->getTempPath() + "/" + sG2UnrealMannyRigFile;
+		}
+		else {
+			sConfigFile = dzApp->getTempPath() + "/" + sG8UnrealRigFile;
+		}
+	}
+	else if (m_sExportRigMode == "unity") {
+		if (bIsG9) {
+			sConfigFile = dzApp->getTempPath() + "/" + sUnityRigFile;
+		}
+		else {
+			sConfigFile = dzApp->getTempPath() + "/" + sG8UnityRigFile;
+		}
+	}
+	else if (m_sExportRigMode == "mixamo") {
+		if (bIsG9) {
+			sConfigFile = dzApp->getTempPath() + "/" + sMixamoRigFile;
+		}
+		else {
+			sConfigFile = dzApp->getTempPath() + "/" + sG8MixamoRigFile;
+		}
+	}
+
+	FbxTools::ProxyMeshBoneRenamer(sFbxFilename, sConfigFile, pCustomJointFixer);
+	//FbxTools::ProxyMeshBoneAdder(sFbxFilename, sConfigFile, pCustomJointFixer);
+
+}
+
 bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 {
 	bool bResult = false;
@@ -669,6 +725,9 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 //		(m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman") &&
 		bIsSupportedFigure)
 	{
+		
+		BetterRigConverter(fbxFilePath, m_sExportRigMode, bIsG9, bIsG2, bIsG1, new FbxTools::UnrealJointFixCallback2());
+
 		// bake bind pose
 		m_bBakeMeshesToSingleBindPose = true;
 
