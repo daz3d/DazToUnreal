@@ -956,7 +956,7 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 	DzBridgeAction::preProcessScene(parentNode);
 	m_bConvertRigEnabled = bConvertRigBackup;
 
-	BridgeTools::ExpandClothingFit(parentNode);
+//	BridgeTools::ExpandClothingFit(parentNode);
 
 	if (m_bConvertRigEnabled && m_bEnableMorphs) 
 	{		
