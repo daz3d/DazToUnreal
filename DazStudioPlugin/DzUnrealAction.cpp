@@ -747,6 +747,7 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 		QStringList aArchiveFilenameList;
 		aArchiveFilenameList << "/g9_unreal_apose_fixed.fbx";
 		aArchiveFilenameList << "/g1_unreal_apose_fixed.fbx";
+		aArchiveFilenameList << "/ue5_apose.fbx";
 		foreach(QString sArchiveFilename, aArchiveFilenameList)
 		{
 			QString sEmbeddedArchivePath = m_sEmbeddedFolderPath + sArchiveFilename;
