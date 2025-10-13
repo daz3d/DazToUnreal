@@ -704,6 +704,7 @@ bool FDazToUnrealUtils::AddCompatibleSkeleton(USkeleton* pTarget, USkeleton* pCo
 	if (!pTarget || !pCompatible || pTarget == pCompatible)
 		return false;
 
+#if UE_VERSION_NEWER_THAN(4, 27, 99)
 	const TArray<TSoftObjectPtr<USkeleton>>& aExisting = pTarget->GetCompatibleSkeletons();
 	if (aExisting.Contains(pCompatible))
 		return false;
@@ -713,5 +714,9 @@ bool FDazToUnrealUtils::AddCompatibleSkeleton(USkeleton* pTarget, USkeleton* pCo
 	pTarget->MarkPackageDirty();
 
 	return true;
+#else
+	return false;
+#endif
+
 }
 

@@ -2391,7 +2391,11 @@ void FDazToUnrealModule::FixForFab(FString sTargetPath, FString sSkeletalMeshPat
 
 	FSoftObjectPath MeshPath = FSoftObjectPath(sSkeletalMeshPath);
 	USkeletalMesh* pMesh = Cast<USkeletalMesh>(MeshPath.TryLoad());
+#if UE_VERSION_NEWER_THAN(4, 26, 99)
 	USkeleton* pMeshSkeleton = pMesh ? pMesh->GetSkeleton() : nullptr;
+#else
+	USkeleton* pMeshSkeleton = pMesh ? pMesh->Skeleton : nullptr;
+#endif
 	UE_LOG(LogTemp, Warning, TEXT("Mesh path: %s, Mesh: %s"), *sSkeletalMeshPath, pMesh ? *pMesh->GetName() : TEXT("NULL"));
 
 	FDazToUnrealUtils::AddCompatibleSkeleton(pMeshSkeleton, pUESkeleton);
