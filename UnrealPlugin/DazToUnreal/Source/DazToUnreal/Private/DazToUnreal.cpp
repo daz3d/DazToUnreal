@@ -1408,7 +1408,9 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 }
 
 	FString SkeletalMeshPackagePath = NewObject->GetOutermost()->GetPathName() + TEXT(".") + NewObject->GetName();
-	FixForFab(DAZImportFolder, SkeletalMeshPackagePath);
+	if (BatchConversionMode != 0) {
+		FixForFab(DAZImportFolder, SkeletalMeshPackagePath);
+	}
 
 	return NewObject;
 }
