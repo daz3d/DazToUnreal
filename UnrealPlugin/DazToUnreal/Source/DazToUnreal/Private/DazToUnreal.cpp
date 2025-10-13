@@ -1,3 +1,5 @@
+#define VODSVERSION 0
+
 #include "DazToUnreal.h"
 #include "DazToUnrealSettings.h"
 #include "DazToUnrealStyle.h"
@@ -574,27 +576,24 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportDirectory)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportCharacterFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(ImportCharacterTexturesFolder)) return nullptr;
-#if PLATFORM_MAC
-	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZImportFolder)) return nullptr;
-	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterFolder)) return nullptr;
-	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterTexturesFolder)) return nullptr;
-	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterMaterialFolder)) return nullptr;
-#else
+#if VODSVERSION
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DAZImportFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterTexturesFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(CharacterMaterialFolder)) return nullptr;
-#endif
-	// Make asset type specific folders.  If any of these fail, don't continue
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DAZAnimationImportFolder)) return nullptr;
+	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DazMLDeformerImportFolder)) return nullptr;
+#else
+	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZImportFolder)) return nullptr;
+	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterFolder)) return nullptr;
+	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterTexturesFolder)) return nullptr;
+	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterMaterialFolder)) return nullptr;
 	if (AssetType != DazAssetType::R2x) {
-#if PLATFORM_MAC
 		if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZAnimationImportFolder)) return nullptr;
 		if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZMLDeformerImportFolder)) return nullptr;
-#else
-		if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DAZAnimationImportFolder)) return nullptr;
-		if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DazMLDeformerImportFolder)) return nullptr;
-#endif
 	}
+#endif
+	// Make asset type specific folders.  If any of these fail, don't continue
 
 	bool placeholder_cachesetting_installcommon = true;
 	if (AssetType == DazAssetType::R2x || placeholder_cachesetting_installcommon) {
@@ -1698,6 +1697,8 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImpo
 #else
 					 Skeleton = SkeletalMesh->Skeleton;
 #endif
+
+#if VODSVERSION
 					 // Update skeleton retargeting options
 					 int32 HipBoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("hip")));
 					 if (HipBoneIndex != -1)
@@ -1729,6 +1730,13 @@ UObject* FDazToUnrealModule::ImportFBXAsset(const DazToUnrealImportData& DazImpo
 						 Skeleton->SetBoneTranslationRetargetingMode(HeadBoneIndex, EBoneTranslationRetargetingMode::AnimationRelative, true);
 						 Skeleton->SetBoneTranslationRetargetingMode(HeadBoneIndex, EBoneTranslationRetargetingMode::Skeleton, false);
 					 }
+#else
+					 int32 PelvisBoneIndex = Skeleton->GetReferenceSkeleton().FindBoneIndex(FName(TEXT("pelvis")));
+					 if (PelvisBoneIndex != -1)
+					 {
+						 Skeleton->SetBoneTranslationRetargetingMode(PelvisBoneIndex, EBoneTranslationRetargetingMode::AnimationRelative, true);
+					 }
+#endif
 
 					 // Some character types share a skeleton.  Get the mapped name.
 					 FString MappedSkeletonName = DazImportData.CharacterTypeName;
