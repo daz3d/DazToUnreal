@@ -18,9 +18,13 @@
 		<file alias="g8_to_unity.json">Scripts/g8_to_unity.json</file>
 		<file alias="g2_to_unreal.json">Scripts/g2_to_unreal.json</file>
 
-		<file alias="g9_unreal_apose_fixed.fbx">g9_unreal_apose_fixed.fbx</file>
-		<file alias="g1_unreal_apose_fixed.fbx">g1_unreal_apose_fixed.fbx</file>
 		<file alias="ue5_apose.fbx">ue5_apose.fbx</file>
+		<file alias="g9_ue5_apose.fbx">g9_ue5_apose.fbx</file>
+		<file alias="g8_ue5_apose.fbx">g8_ue5_apose.fbx</file>
+		<file alias="g3_ue5_apose.fbx">g3_ue5_apose.fbx</file>
+		<file alias="g2_ue5_apose.fbx">g2_ue5_apose.fbx</file>
+		<file alias="g1_ue5_apose.fbx">g1_ue5_apose.fbx</file>
+
 		<file alias="writePolylineIndexes.dsa">Scripts/writePolylineIndexes.dsa</file>
       
 	</qresource>
