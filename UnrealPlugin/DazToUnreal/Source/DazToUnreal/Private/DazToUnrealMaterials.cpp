@@ -294,6 +294,7 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 	{
 		Seperator = "_";
 	}
+
 	if (AssetType == TEXT("Follower/Attachment/Head/Face/Eyelashes") ||
 		AssetType == TEXT("Follower/Attachment/Head/Face/Eyes") ||
 		AssetType == TEXT("Follower/Attachment/Head/Face/Eyes/Tear") ||
@@ -369,17 +370,17 @@ UMaterialInstanceConstant* FDazToUnrealMaterials::CreateMaterial(const FString C
 			// Set Double Sided
 			bTwoSided = true;
 		}
-		else if (MaterialName.EndsWith(Seperator + TEXT("cornea")))
+		else if (MaterialName.EndsWith(Seperator + TEXT("cornea")) || MaterialName.EndsWith(Seperator + TEXT("Cornea")))
 		{
 			SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Opacity Strength"), TEXT("Double"), FString::SanitizeFloat(CachedSettings->DefaultEyeMoistureOpacity), MaterialProperties);
 			SetMaterialProperty(MaterialName, TEXT("Index of Refraction"), TEXT("Double"), TEXT("1.0"), MaterialProperties);
 		}
-		else if (MaterialName.EndsWith(Seperator + TEXT("irises")))
+		else if (MaterialName.EndsWith(Seperator + TEXT("irises")) || MaterialName.EndsWith(Seperator + TEXT("Irises")))
 		{
 			SetMaterialProperty(MaterialName, TEXT("Pixel Depth Offset"), TEXT("Double"), TEXT("0.1"), MaterialProperties);
 		}
-		else if (MaterialName.EndsWith(Seperator + TEXT("pupils")))
+		else if (MaterialName.EndsWith(Seperator + TEXT("pupils")) || MaterialName.EndsWith(Seperator + TEXT("Pupils")))
 		{
 			SetMaterialProperty(MaterialName, TEXT("Pixel Depth Offset"), TEXT("Double"), TEXT("0.1"), MaterialProperties);
 		}
@@ -603,6 +604,15 @@ void FDazToUnrealMaterials::CorrectDazShaders(FString MaterialName, TMap<FString
 			//UE_LOG(LogTemp, Warning, TEXT("Iray Uber shader detected and fixed for material %s"), *MaterialName);
 		}
 
+		for (FDUFTextureProperty Property : MaterialProperties[MaterialName])
+		{
+			// UE_LOG(LogTemp, Warning, TEXT("M: %s P: %s"), *MaterialName, *Property.Name);
+			if (Property.Name == TEXT("Subsurface Strength Texture")) {
+				if (Property.Value != TEXT("")) {
+					SetMaterialProperty(MaterialName, TEXT("Subsurface Alpha Texture"), TEXT("Texture"), Property.Value, MaterialProperties);
+				}
+			}
+		}		
 	}
 	else if (ShaderName == TEXT("OOT Hairblending Hair"))
 	{
@@ -633,6 +643,24 @@ void FDazToUnrealMaterials::CorrectDazShaders(FString MaterialName, TMap<FString
 			}
 		}
 
+	}
+	else if (ShaderName == TEXT("DAZ Studio Default"))
+	{
+		for (FDUFTextureProperty Property : MaterialProperties[MaterialName])
+		{
+			// UE_LOG(LogTemp, Warning, TEXT("M: %s P: %s"), *MaterialName, *Property.Name);
+			if (Property.Name == TEXT("Lighting Model")) {
+				int nLightingModel = FCString::Atoi(*Property.Value);
+				if (nLightingModel == 5) { // 5 == Glossy (Metallic)
+					SetMaterialProperty(MaterialName, TEXT("Metallic Weight"), TEXT("Double"), TEXT("1"), MaterialProperties);
+				}
+			}
+			if (Property.Name == TEXT("Reflection Strength")) {
+				double fReflectionStrength = FCString::Atod(*Property.Value);
+				FString sRoughness = FString::SanitizeFloat(1.0 - fReflectionStrength);
+				SetMaterialProperty(MaterialName, TEXT("Glossy Roughness"), TEXT("Double"), sRoughness, MaterialProperties);
+			}
+		}
 	}
 
 	////////////////////////////////////////////////////////
