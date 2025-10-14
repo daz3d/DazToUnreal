@@ -26,6 +26,7 @@ public class DazToUnreal : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
+				"MaterialEditor",
 				"AnimGraph",
 				"BlueprintGraph",
 				"Projects",

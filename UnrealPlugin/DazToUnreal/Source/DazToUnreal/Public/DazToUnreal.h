@@ -89,7 +89,7 @@ public:
 	bool ImportGroom(FString sGroomFilename, FString sImportLocation, TSharedPtr<FJsonObject> JsonObject);
 
 	void FixForFab(FString sTargetPath, FString sSkeletalMeshPath);
-	bool ImportFbxForFab(FString sFbxPath, FString sDestinationGamePath, FString sAssetName);
+	bool ImportFbxForFab(FString sFbxPath, FString sDestinationGamePath);
 
 private:
 	

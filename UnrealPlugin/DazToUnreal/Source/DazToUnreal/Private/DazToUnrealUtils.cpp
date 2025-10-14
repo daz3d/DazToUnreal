@@ -549,7 +549,8 @@ bool FDazToUnrealUtils::MoveSingleAsset(const FString& SourcePath, const FString
 	IAssetTools& AssetTools = AssetToolsModule.Get();
 
 	// Load the asset
-	UObject* Asset = LoadObject<UObject>(nullptr, *SourcePath);
+//	UObject* Asset = LoadObject<UObject>(nullptr, *SourcePath);
+	UObject* Asset = FSoftObjectPath(SourcePath).TryLoad();
 	if (!Asset)
 	{
 		UE_LOG(LogDazToUnreal, Error, TEXT("MoveSingleAsset: Failed to load asset: %s"), *SourcePath);
@@ -615,7 +616,7 @@ bool FDazToUnrealUtils::MoveSingleAsset(const FString& SourcePath, const FString
 	if (Redirectors.Num() > 0)
 	{
 #if UE_VERSION_NEWER_THAN(5,0,99)
-		AssetTools.FixupReferencers(Redirectors, /*bCheckoutDialogPrompt*/ false, ERedirectFixupMode::Redirectors);
+		AssetTools.FixupReferencers(Redirectors, /*bCheckoutDialogPrompt*/ false, ERedirectFixupMode::DeleteFixedUpRedirectors);
 #elif UE_VERSION_NEWER_THAN(4,26,99)
 		AssetTools.FixupReferencers(Redirectors, /*bCheckoutDialogPrompt*/ false);
 #else
@@ -769,8 +770,10 @@ bool FDazToUnrealUtils::AddCompatibleSkeleton(USkeleton* pTarget, USkeleton* pCo
 
 #if UE_VERSION_NEWER_THAN(4, 27, 99)
 	const TArray<TSoftObjectPtr<USkeleton>>& aExisting = pTarget->GetCompatibleSkeletons();
-	if (aExisting.Contains(pCompatible))
-		return false;
+	if (aExisting.Contains(pCompatible)) {
+		UE_LOG(LogDazToUnreal, Warning, TEXT("Skeleton %s is already compatible with %s"), *pCompatible->GetName(), *pTarget->GetName());
+		// return false;
+	}
 
 	pTarget->Modify();
 	pTarget->AddCompatibleSkeleton(pCompatible);
@@ -781,5 +784,202 @@ bool FDazToUnrealUtils::AddCompatibleSkeleton(USkeleton* pTarget, USkeleton* pCo
 	return false;
 #endif
 
+}
+
+#if UE_VERSION_NEWER_THAN(5,0,99)
+#include "Editor/MaterialEditor/Public/MaterialEditingLibrary.h"
+#endif
+bool FDazToUnrealUtils::ModifyMaterial_TranslucentToMasked(UMaterial* pMaterial, bool bSaveChanges)
+{
+	if (!pMaterial)
+		return false;
+
+	// Switch from Translucent to Masked
+	pMaterial->BlendMode = BLEND_Masked;
+	pMaterial->SetShadingModel(MSM_DefaultLit);
+	pMaterial->bUseMaterialAttributes = false;
+
+	// Find existing opacity input connection
+#if UE_VERSION_NEWER_THAN(5,0,99)
+	UMaterialExpression* opacityExpression = pMaterial->GetExpressionInputForProperty(MP_Opacity)
+		? pMaterial->GetExpressionInputForProperty(MP_Opacity)->Expression
+		: nullptr;
+#else
+	UMaterialExpression* opacityExpression = pMaterial->Opacity.Expression;
+#endif
+	if (!opacityExpression)
+	{
+		UE_LOG(LogDazToUnreal, Warning, TEXT("Material %s has no connected Opacity expression."), *pMaterial->GetName());
+		return false;
+	}
+
+	// Disconnect Opacity
+#if UE_VERSION_NEWER_THAN(5,0,99)
+	pMaterial->GetExpressionInputForProperty(MP_Opacity)->Expression = nullptr;
+#else
+	pMaterial->Opacity.Expression = nullptr;
+#endif
+
+	// Connect to Opacity Mask
+#if UE_VERSION_NEWER_THAN(5,0,99)
+	FExpressionInput* opacityMaskInput = pMaterial->GetExpressionInputForProperty(MP_OpacityMask);
+	if (opacityMaskInput) {
+		opacityMaskInput->Expression = opacityExpression;
+	}
+#else
+	pMaterial->OpacityMask.Expression = opacityExpression;
+#endif
+
+	// Mark and save
+	if (bSaveChanges)
+	{
+		pMaterial->Modify();
+		pMaterial->PostEditChange();
+		pMaterial->MarkPackageDirty();
+		UE_LOG(LogDazToUnreal, Log, TEXT("Updated material %s: Translucent -> Masked."), *pMaterial->GetName());
+	}
+
+	return true;
+}
+
+#if UE_VERSION_NEWER_THAN(5,3,99)
+#include "Materials/MaterialExpressionOneMinus.h"
+#endif
+bool FDazToUnrealUtils::ModifyMaterial_InvertOpacity(UMaterial* pMaterial, bool bSaveChanges)
+{
+	if (!pMaterial)
+		return false;
+
+	// Find existing opacity input connection
+#if UE_VERSION_NEWER_THAN(5,0,99)
+	UMaterialExpression* opacityExpression = pMaterial->GetExpressionInputForProperty(MP_Opacity)
+		? pMaterial->GetExpressionInputForProperty(MP_Opacity)->Expression
+		: nullptr;
+#else
+	UMaterialExpression* opacityExpression = pMaterial->Opacity.Expression;
+#endif
+	if (!opacityExpression)
+	{
+		UE_LOG(LogDazToUnreal, Warning, TEXT("Material %s has no connected Opacity expression."), *pMaterial->GetName());
+		return false;
+	}
+
+	// Create OneMinus node
+#if UE_VERSION_NEWER_THAN(5,4,99)
+UMaterialExpressionOneMinus* oneMinusNode = Cast<UMaterialExpressionOneMinus>(
+		UMaterialEditingLibrary::CreateMaterialExpression( pMaterial, UMaterialExpressionOneMinus::StaticClass(),
+		opacityExpression->MaterialExpressionEditorX + 400,
+		opacityExpression->MaterialExpressionEditorY));
+#elif UE_VERSION_NEWER_THAN(5,0,99)
+	UMaterialExpressionOneMinus* oneMinusNode = Cast<UMaterialExpressionOneMinus>(
+		UMaterialEditingLibrary::CreateMaterialExpression(pMaterial, UMaterialExpressionOneMinus::StaticClass())
+	);
+#else
+	UMaterialExpressionOneMinus* oneMinusNode = NewObject<UMaterialExpressionOneMinus>(pMaterial);
+	pMaterial->Expressions.Add(oneMinusNode);
+#endif
+	oneMinusNode->MaterialExpressionEditorX = opacityExpression->MaterialExpressionEditorX + 400;
+	oneMinusNode->MaterialExpressionEditorY = opacityExpression->MaterialExpressionEditorY;
+	oneMinusNode->Input.Connect(0, opacityExpression);
+
+	// Connect OneMinus output to Opacity
+#if UE_VERSION_NEWER_THAN(5,0,99)
+	FExpressionInput* opacityMaskInput = pMaterial->GetExpressionInputForProperty(MP_OpacityMask);
+	if (opacityMaskInput) {
+		opacityMaskInput->Expression = oneMinusNode;
+	}
+#else
+	pMaterial->Opacity.Expression = oneMinusNode;
+#endif
+
+	// Mark and save
+	if (bSaveChanges)
+	{
+		pMaterial->Modify();
+		pMaterial->PostEditChange();
+		pMaterial->MarkPackageDirty();
+	}
+	UE_LOG(LogDazToUnreal, Log, TEXT("Updated material %s: Translucent -> Masked and remapped Opacity to OneMinus->Opacity."), *pMaterial->GetName());
+
+	return true;
+}
+
+#if UE_VERSION_NEWER_THAN(5,3,99)
+#include "Engine/StaticMeshActor.h"
+#endif
+bool FDazToUnrealUtils::PlaceAssetInLevel(UObject* pAsset, const FString& sActorLabel, FVector vLocation, FRotator vRotation)
+{
+	// Spawn actor at origin adjusted for bottom offset
+	UWorld* pWorld = GEditor->GetEditorWorldContext().World();
+	if (!pWorld)
+		return false;
+
+	// if static mesh
+	UStaticMesh* pStaticMesh = Cast<UStaticMesh>(pAsset);
+	if (pStaticMesh) {
+		AStaticMeshActor* pActor = pWorld->SpawnActor<AStaticMeshActor>(AStaticMeshActor::StaticClass(), vLocation, vRotation);
+		if (pActor && pActor->GetStaticMeshComponent())
+		{
+			pActor->GetStaticMeshComponent()->SetStaticMesh(pStaticMesh);
+			pActor->SetActorLabel(sActorLabel);
+			UE_LOG(LogDazToUnreal, Log, TEXT("Placed %s at %s"), *sActorLabel, *vLocation.ToString());
+		}
+		else {
+			UE_LOG(LogDazToUnreal, Warning, TEXT("PlaceAssetInLevel: Could not place StaticMeshActor for %s"), *sActorLabel);
+			return false;
+		}
+	}
+	// if skeletal mesh
+	else {
+		USkeletalMesh* pSkeletalMesh = Cast<USkeletalMesh>(pAsset);
+		if (pSkeletalMesh) {
+			ASkeletalMeshActor* pActor = pWorld->SpawnActor<ASkeletalMeshActor>(ASkeletalMeshActor::StaticClass(), vLocation, vRotation);
+			if (pActor && pActor->GetSkeletalMeshComponent())
+			{
+				pActor->GetSkeletalMeshComponent()->SetSkeletalMesh(pSkeletalMesh);
+				pActor->SetActorLabel(sActorLabel);
+				UE_LOG(LogDazToUnreal, Log, TEXT("Placed %s at %s"), *sActorLabel, *vLocation.ToString());
+			}
+			else {
+				UE_LOG(LogDazToUnreal, Warning, TEXT("PlaceAssetInLevel: Could not place SkeletalMeshActor for %s"), *sActorLabel);
+				return false;
+			}
+		}
+		else {
+			UE_LOG(LogDazToUnreal, Warning, TEXT("PlaceAssetInLevel: Unsupported asset type for %s"), *sActorLabel);
+			return false;
+		}
+	}
+
+	return true;
+}
+
+#include "EditorBuildUtils.h"
+bool FDazToUnrealUtils::BakeLightingForCurrentMap()
+{
+	if (GEditor == nullptr)
+	{
+		UE_LOG(LogDazToUnreal, Error, TEXT("GEditor is null. Editor context required."));
+		return false;
+	}
+
+	UWorld* pWorld = GEditor->GetEditorWorldContext().World();
+	if (pWorld == nullptr)
+	{
+		UE_LOG(LogDazToUnreal, Error, TEXT("Editor world not found."));
+		return false;
+	}
+
+	AWorldSettings* pWS = pWorld->GetWorldSettings();
+	if (pWS && pWS->bForceNoPrecomputedLighting)
+	{
+		UE_LOG(LogDazToUnreal, Warning, TEXT("WorldSettings.bForceNoPrecomputedLighting is true. Lighting build will be skipped by the engine."));
+		// TODO: Consider forcing false to bake lighting
+	}
+
+	UE_LOG(LogDazToUnreal, Log, TEXT("Starting lighting build for map: %s"), *pWorld->GetMapName());
+	FEditorBuildUtils::EditorBuild(pWorld, FBuildOptions::BuildLighting, /* Show Dialog */ false);
+
+	return true;
 }
 

@@ -29,6 +29,12 @@ public:
 	static void AssignAnimSequenceToActor(FString sActorLabel, UAnimSequence* pAnim);
 	static bool AddCompatibleSkeleton(USkeleton* pTarget, USkeleton* pCompatible);
 
+	static bool PlaceAssetInLevel(UObject* pAsset, const FString& sActorLabel, FVector vLocation, FRotator vRotation);
+	static bool ModifyMaterial_TranslucentToMasked(UMaterial* pMaterial, bool bSaveChanges=true);
+	static bool ModifyMaterial_InvertOpacity(UMaterial* pMaterial, bool bSaveChanges=true);
+
+	static bool BakeLightingForCurrentMap();
+
 private:
 	static bool IsSkeletonUsed(FSoftObjectPath SkeletonPath);
 };

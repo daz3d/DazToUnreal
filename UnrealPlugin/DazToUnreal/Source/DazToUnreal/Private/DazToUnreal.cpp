@@ -64,6 +64,7 @@
 #include "ToolMenuSection.h"
 #include "ContentBrowserMenuContexts.h"
 #include "Animation/PoseAsset.h"
+#include "ShaderCompiler.h"
 
 // REQUIRED TO USE UE_VERSION_NEWER_THAN
 #include "Misc/EngineVersionComparison.h"
@@ -458,6 +459,16 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 	}
 	else if (BatchConversionMode == 2)
 	{
+		// wait for lighting bake to complete
+		if (GEditor->IsLightingBuildCurrentlyRunning()) {
+			// still baking
+		} else {
+			FDazToUnrealUtils::SaveCurrentLevel();
+			BatchConversionMode = 100;
+		}		
+	}
+	else if (BatchConversionMode == 100)
+	{
 		// Exit when batch conversion complete
 		FEditorFileUtils::SaveDirtyPackages(false,false,true);
 		FGenericPlatformMisc::RequestExit(false);
@@ -485,7 +496,7 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 				FString FbxImportPath = jobPool[i];
 				// do structured import
 				UE_LOG(LogDazToUnreal, Log, TEXT("DazToUnreal: Importing FBX: %s"), *FbxImportPath);
-				ImportFbxForFab(FbxImportPath, TEXT("/Game/") / FPaths::GetBaseFilename(FbxImportPath), FPaths::GetBaseFilename(FbxImportPath));
+				ImportFbxForFab(FbxImportPath, TEXT("/Game/") / FPaths::GetBaseFilename(FbxImportPath));
 			}
 		}
 		BatchConversionMode = 2;
@@ -618,13 +629,16 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DAZAnimationImportFolder)) return nullptr;
 	 if (!FDazToUnrealUtils::MakeDirectoryAndCheck(DazMLDeformerImportFolder)) return nullptr;
 #else
-	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZImportFolder)) return nullptr;
-	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterFolder)) return nullptr;
-	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterTexturesFolder)) return nullptr;
-	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterMaterialFolder)) return nullptr;
-	if (AssetType != DazAssetType::R2x) {
-		if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZAnimationImportFolder)) return nullptr;
-		if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZMLDeformerImportFolder)) return nullptr;
+	if (BatchConversionMode == 0)
+	{
+		if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZImportFolder)) return nullptr;
+		if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterFolder)) return nullptr;
+		if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterTexturesFolder)) return nullptr;
+		if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalCharacterMaterialFolder)) return nullptr;
+		if (AssetType != DazAssetType::R2x) {
+			if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZAnimationImportFolder)) return nullptr;
+			if (!FDazToUnrealUtils::MakeDirectoryAndCheck(LocalDAZMLDeformerImportFolder)) return nullptr;
+		}
 	}
 #endif
 	// Make asset type specific folders.  If any of these fail, don't continue
@@ -2402,20 +2416,20 @@ void FDazToUnrealModule::FixForFab(FString sTargetPath, FString sSkeletalMeshPat
 		return;
 	}
 
+	FDazToUnrealUtils::MoveSingleAsset(TEXT("/Game/SK_Mannequin"), GameDemoFolder);
 	FDazToUnrealUtils::MoveSingleAsset(TEXT("/Game/MM_Idle"), GameDemoFolder);
 	FDazToUnrealUtils::MoveSingleAsset(TEXT("/Game/MM_Walk_Fwd"), GameDemoFolder);
 	FDazToUnrealUtils::MoveSingleAsset(TEXT("/Game/MM_Run_Fwd"), GameDemoFolder);
 	FDazToUnrealUtils::MoveSingleAsset(TEXT("/Game/MM_Jump"), GameDemoFolder);
 	FDazToUnrealUtils::MoveSingleAsset(TEXT("/Game/MM_Fall_Loop"), GameDemoFolder);
 	FDazToUnrealUtils::MoveSingleAsset(TEXT("/Game/MM_Land"), GameDemoFolder);
-	FDazToUnrealUtils::MoveSingleAsset(TEXT("/Game/SK_Mannequin"), GameDemoFolder);
 
-	FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Idle"), GameDemoFolder / TEXT("SK_Mannequin"));
-	FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Walk_Fwd"), GameDemoFolder / TEXT("SK_Mannequin"));
-	FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Run_Fwd"), GameDemoFolder / TEXT("SK_Mannequin"));
-	FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Jump"), GameDemoFolder / TEXT("SK_Mannequin"));
-	FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Fall_Loop"), GameDemoFolder / TEXT("SK_Mannequin"));
-	FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Land"), GameDemoFolder / TEXT("SK_Mannequin"));
+	// FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Idle"), GameDemoFolder / TEXT("SK_Mannequin"));
+	// FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Walk_Fwd"), GameDemoFolder / TEXT("SK_Mannequin"));
+	// FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Run_Fwd"), GameDemoFolder / TEXT("SK_Mannequin"));
+	// FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Jump"), GameDemoFolder / TEXT("SK_Mannequin"));
+	// FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Fall_Loop"), GameDemoFolder / TEXT("SK_Mannequin"));
+	// FDazToUnrealUtils::ReplaceSkeleton(GameDemoFolder / TEXT("MM_Land"), GameDemoFolder / TEXT("SK_Mannequin"));
 
 	FDazToUnrealUtils::MakeNewFabLevel(GameMapFolder / TEXT("Overview"));
 
@@ -2469,12 +2483,24 @@ void FDazToUnrealModule::FixForFab(FString sTargetPath, FString sSkeletalMeshPat
 	FDazToUnrealUtils::AssignAnimSequenceToActor("Fall", FallAnim);
 	FDazToUnrealUtils::AssignAnimSequenceToActor("Land", LandAnim);
 
+	if (FDazToUnrealUtils::BakeLightingForCurrentMap()) {
+		UE_LOG(LogDazToUnreal, Log, TEXT("Lighting bake started successfully."));
+	} else {
+		UE_LOG(LogDazToUnreal, Error, TEXT("Lighting bake failed."));
+	}
+
 	FDazToUnrealUtils::SaveCurrentLevel();
 
 }
 
+#if UE_VERSION_NEWER_THAN(5,2,99)
+#include "AssetRegistry/AssetRegistryModule.h"
+#else
 #include "AssetRegistryModule.h"
-bool FDazToUnrealModule::ImportFbxForFab(FString sFbxPath, FString sDestinationGamePath, FString sAssetName)
+#endif
+#include "Materials/MaterialExpressionOneMinus.h"
+#include "Engine/StaticMeshActor.h"
+bool FDazToUnrealModule::ImportFbxForFab(FString sFbxPath, FString sDestinationGamePath)
 {
 	 static FAssetToolsModule& AssetToolsModule = FModuleManager::GetModuleChecked<FAssetToolsModule>("AssetTools");
 
@@ -2482,15 +2508,19 @@ bool FDazToUnrealModule::ImportFbxForFab(FString sFbxPath, FString sDestinationG
 	const FString sMeshPath = sDestinationGamePath / TEXT("Mesh");
 	const FString sMaterialPath = sDestinationGamePath / TEXT("Materials");
 	const FString sTexturePath = sDestinationGamePath / TEXT("Textures");
+	const FString sMapPath = sDestinationGamePath / TEXT("Map");
 
 	UEditorAssetLibrary::MakeDirectory(sMeshPath);
 	UEditorAssetLibrary::MakeDirectory(sMaterialPath);
 	UEditorAssetLibrary::MakeDirectory(sTexturePath);
+	UEditorAssetLibrary::MakeDirectory(sMapPath);
 
 	FString sProjectContentDir = FPaths::ProjectContentDir();
 	FString sFullMeshPath = sMeshPath.Replace(TEXT("/Game/"), *sProjectContentDir);
 	FString sFullTexturePath = sTexturePath.Replace(TEXT("/Game/"), *sProjectContentDir);
 	FString sFullMaterialPath = sMaterialPath.Replace(TEXT("/Game/"), *sProjectContentDir);
+
+	FDazToUnrealUtils::MakeNewFabLevel(sMapPath / TEXT("Overview"));
 
 	 TArray<FString> FileNames;
 	 FileNames.Add(sFbxPath);
@@ -2508,6 +2538,7 @@ bool FDazToUnrealModule::ImportFbxForFab(FString sFbxPath, FString sDestinationG
 	FbxFactory->ImportUI->StaticMeshImportData->bForceFrontXAxis = false;
 	FbxFactory->ImportUI->StaticMeshImportData->bCombineMeshes = true;
 	FbxFactory->ImportUI->StaticMeshImportData->bAutoGenerateCollision = true;
+	FbxFactory->ImportUI->StaticMeshImportData->bConvertSceneUnit = true;
 
 	FbxFactory->ImportUI->MeshTypeToImport = FBXIT_StaticMesh;
 
@@ -2592,58 +2623,94 @@ bool FDazToUnrealModule::ImportFbxForFab(FString sFbxPath, FString sDestinationG
 	// 5. move new assets
 	for (const FAssetData& a : newTextureAssets)
 	{
-		FString sAssetPath;
 		FString sPackagePath = a.PackagePath.ToString();   // e.g. /Game/MyFolder
-		FString sAssetName   = a.AssetName.ToString();     // e.g. MyMesh
-		sAssetPath = sPackagePath + TEXT("/") + sAssetName;        // e.g. /Game/MyFolder/MyMesh
+		FString sAssetName = a.AssetName.ToString();     // e.g. MyMaterial
+		FString sOldAssetPath = sPackagePath + TEXT("/") + sAssetName;  // e.g. /Game/MyFolder/MyMaterial
 
-		FString oldPath = sAssetPath;
-		FString newPath = sTexturePath;
-
-		if (FDazToUnrealUtils::MoveSingleAsset(oldPath, newPath)) {
-			UE_LOG(LogDazToUnreal, Log, TEXT("Moved %s -> %s"), *oldPath, *newPath);
+		if (FDazToUnrealUtils::MoveSingleAsset(sOldAssetPath, sTexturePath)) {
+			UE_LOG(LogDazToUnreal, Log, TEXT("Moved %s -> %s"), *sOldAssetPath, *sTexturePath);
 		}
 		else {
-			UE_LOG(LogDazToUnreal, Error, TEXT("Failed to move %s -> %s"), *oldPath, *newPath);
+			UE_LOG(LogDazToUnreal, Error, TEXT("Failed to move %s -> %s"), *sOldAssetPath, *sTexturePath);
 		}
 	}
 
 	for (const FAssetData& a : newMaterialAssets)
 	{
-		FString sAssetPath;
 		FString sPackagePath = a.PackagePath.ToString();   // e.g. /Game/MyFolder
-		FString sAssetName   = a.AssetName.ToString();     // e.g. MyMaterial
-		sAssetPath = sPackagePath + TEXT("/") + sAssetName;        // e.g. /Game/MyFolder/MyMaterial
+		FString sAssetName = a.AssetName.ToString();     // e.g. MyMaterial
+		FString sOldAssetPath = sPackagePath + TEXT("/") + sAssetName;  // e.g. /Game/MyFolder/MyMaterial
+		FString sNewAssetPath = sMaterialPath / sAssetName;
 
-		FString oldPath = sAssetPath;
-		FString newPath = sMaterialPath;
+		if (FDazToUnrealUtils::MoveSingleAsset(sOldAssetPath, sMaterialPath)) {
+			UE_LOG(LogDazToUnreal, Log, TEXT("Moved %s -> %s"), *sOldAssetPath, *sMaterialPath);
 
-		if (FDazToUnrealUtils::MoveSingleAsset(oldPath, newPath)) {
-			UE_LOG(LogDazToUnreal, Log, TEXT("Moved %s -> %s"), *oldPath, *newPath);
+			// Load material after move
+			UMaterial* pMaterial = Cast<UMaterial>(a.GetAsset());
+			if (!pMaterial)
+			{
+				pMaterial = LoadObject<UMaterial>(nullptr, *sNewAssetPath);
+			}
+			if (!pMaterial)
+			{
+				UE_LOG(LogDazToUnreal, Error, TEXT("Failed to load material asset: %s"), *sNewAssetPath);
+				continue;
+			}
+
+			FDazToUnrealUtils::ModifyMaterial_InvertOpacity(pMaterial, /* bSaveChanges */ false);
+			FDazToUnrealUtils::ModifyMaterial_TranslucentToMasked(pMaterial, /* bSaveChanges */ false);
+			// save changes only when done modifying
+			pMaterial->Modify();
+			pMaterial->PostEditChange();
+			pMaterial->MarkPackageDirty();
+
 		}
 		else {
-			UE_LOG(LogDazToUnreal, Error, TEXT("Failed to move %s -> %s"), *oldPath, *newPath);
+			UE_LOG(LogDazToUnreal, Error, TEXT("Failed to move %s -> %s"), *sOldAssetPath, *sMaterialPath);
 		}
 	}
 
 	for (const FAssetData& a : newMeshAssets)
 	{
-		FString sAssetPath;
 		FString sPackagePath = a.PackagePath.ToString();   // e.g. /Game/MyFolder
-		FString sAssetName   = a.AssetName.ToString();     // e.g. MyMesh
-		sAssetPath = sPackagePath + TEXT("/") + sAssetName;        // e.g. /Game/MyFolder/MyMesh
+		FString sAssetName = a.AssetName.ToString();     // e.g. MyMaterial
+		FString sOldAssetPath = sPackagePath + TEXT("/") + sAssetName;  // e.g. /Game/MyFolder/MyMaterial
+		FString sNewAssetPath = sMeshPath / sAssetName;
 
-		FString oldPath = sAssetPath;
-		FString newPath = sMeshPath;
+		if (FDazToUnrealUtils::MoveSingleAsset(sOldAssetPath, sMeshPath)) {
+			UE_LOG(LogDazToUnreal, Log, TEXT("Moved %s -> %s"), *sOldAssetPath, *sMeshPath);
 
-		if (FDazToUnrealUtils::MoveSingleAsset(oldPath, newPath)) {
-			UE_LOG(LogDazToUnreal, Log, TEXT("Moved %s -> %s"), *oldPath, *newPath);
+			// Load mesh
+			UStaticMesh* pMesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, *sNewAssetPath));
+			if (!pMesh)
+			{
+				UE_LOG(LogDazToUnreal, Error, TEXT("Failed to load static mesh %s"), *sNewAssetPath);
+				continue;
+			}
+
+			// Compute bottom of mesh
+			const FBoxSphereBounds MeshBounds = pMesh->GetBounds();
+			double fBottomZ = MeshBounds.Origin.Z - MeshBounds.BoxExtent.Z;
+			if (std::abs(fBottomZ) < DBL_EPSILON*2) fBottomZ = 0.0;
+
+			FVector vSpawnLoc(0.0f, 0.0f, -fBottomZ); // move bottom to ground
+			FRotator vSpawnRot(0.0f, 90.0f, 0.0f);
+
+			FDazToUnrealUtils::PlaceAssetInLevel(pMesh, sAssetName, vSpawnLoc, vSpawnRot);
+
 		}
 		else {
-			UE_LOG(LogDazToUnreal, Error, TEXT("Failed to move %s -> %s"), *oldPath, *newPath);
+			UE_LOG(LogDazToUnreal, Error, TEXT("Failed to move %s -> %s"), *sOldAssetPath, *sMeshPath);
 		}
 	}
 
+	if (FDazToUnrealUtils::BakeLightingForCurrentMap()) {
+		UE_LOG(LogDazToUnreal, Log, TEXT("Lighting bake started successfully."));
+	} else {
+		UE_LOG(LogDazToUnreal, Error, TEXT("Lighting bake failed."));
+	}
+
+	FDazToUnrealUtils::SaveCurrentLevel();
 
 	 if (ImportedAssets.Num() > 0)
 	 {
