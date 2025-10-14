@@ -543,7 +543,7 @@ FSoftObjectPath FDazToUnrealUtils::FindMaterial(FString ShaderName, EDazMaterial
 }
 
 #include "AssetToolsModule.h"
-void FDazToUnrealUtils::MoveSingleAsset(const FString& SourcePath, const FString& DestinationFolder)
+bool FDazToUnrealUtils::MoveSingleAsset(const FString& SourcePath, const FString& DestinationFolder)
 {
 	FAssetToolsModule& AssetToolsModule = FAssetToolsModule::GetModule();
 	IAssetTools& AssetTools = AssetToolsModule.Get();
@@ -552,28 +552,80 @@ void FDazToUnrealUtils::MoveSingleAsset(const FString& SourcePath, const FString
 	UObject* Asset = LoadObject<UObject>(nullptr, *SourcePath);
 	if (!Asset)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Could not load asset: %s"), *SourcePath);
-		return;
+		UE_LOG(LogDazToUnreal, Error, TEXT("MoveSingleAsset: Failed to load asset: %s"), *SourcePath);
+		return false;
 	}
 
 	FString AbsoluteDestinationFolder = DestinationFolder.Replace(TEXT("/Game/"), *FPaths::ProjectContentDir());
-	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(AbsoluteDestinationFolder)) {
-		UE_LOG(LogDazToUnreal, Error, TEXT("Could not create directory %s"), *AbsoluteDestinationFolder);
-		return;
+	if (!FDazToUnrealUtils::MakeDirectoryAndCheck(AbsoluteDestinationFolder))
+	{
+		UE_LOG(LogDazToUnreal, Error, TEXT("MoveSingleAsset: Could not create directory %s"), *AbsoluteDestinationFolder);
+		return false;
 	}
 
-	// Example: SourcePath="/Game/DazToUnreal/Common/Materials/BaseMaterial.BaseMaterial"
-	// DestinationFolder="/Game/Raquel/Mesh/Materials"
 	FString AssetName = FPackageName::GetShortName(SourcePath);
-	FString NewPackagePath = DestinationFolder / AssetName;
-
 	TArray<FAssetRenameData> AssetsToRename;
 	AssetsToRename.Emplace(Asset, DestinationFolder, AssetName);
 
-	// Perform move (creates redirectors and updates references)
-	AssetTools.RenameAssets(AssetsToRename);
+	bool bRenameSuccessful = AssetTools.RenameAssets(AssetsToRename);
+	if (!bRenameSuccessful)
+	{
+		UE_LOG(LogDazToUnreal, Error, TEXT("MoveSingleAsset: Failed to rename asset: %s"), *SourcePath);
+		return false;
+	}
 
-	UE_LOG(LogTemp, Log, TEXT("Moved asset %s → %s"), *SourcePath, *NewPackagePath);
+	FString OldObjectPath = SourcePath;
+	FString NewObjectPath = FString::Printf(TEXT("%s/%s.%s"), *DestinationFolder, *AssetName, *AssetName);
+
+	// Fix soft references in all loaded packages
+	TArray<UPackage*> PackagesToCheck;
+	{
+		FAssetRegistryModule& Arm = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+		TArray<FAssetData> AllAssets;
+		Arm.Get().GetAssetsByPath(FName("/Game"), AllAssets, true);
+		for (const FAssetData& Ad : AllAssets)
+		{
+			if (UPackage* Pkg = Ad.GetPackage())
+				PackagesToCheck.AddUnique(Pkg);
+		}
+	}
+
+	TMap<FSoftObjectPath, FSoftObjectPath> RedirectMap;
+	RedirectMap.Add(FSoftObjectPath(OldObjectPath), FSoftObjectPath(NewObjectPath));
+
+	AssetTools.RenameReferencingSoftObjectPaths(PackagesToCheck, RedirectMap);
+
+	// 6. Collect and clean redirectors in destination
+	TArray<UObjectRedirector*> Redirectors;
+	{
+		FAssetRegistryModule& Arm = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+		TArray<FAssetData> Assets;
+		Arm.Get().GetAssetsByPath(*DestinationFolder, Assets, true);
+
+		for (const FAssetData& Ad : Assets)
+		{
+			if (Ad.AssetClass == UObjectRedirector::StaticClass()->GetFName())
+			{
+				if (UObjectRedirector* R = Cast<UObjectRedirector>(Ad.GetAsset()))
+					Redirectors.Add(R);
+			}
+		}
+	}
+
+	if (Redirectors.Num() > 0)
+	{
+#if UE_VERSION_NEWER_THAN(5,0,99)
+		AssetTools.FixupReferencers(Redirectors, /*bCheckoutDialogPrompt*/ false, ERedirectFixupMode::Redirectors);
+#elif UE_VERSION_NEWER_THAN(4,26,99)
+		AssetTools.FixupReferencers(Redirectors, /*bCheckoutDialogPrompt*/ false);
+#else
+		AssetTools.FixupReferencers(Redirectors);  // UE4.25 and earlier
+#endif
+	}
+
+	UE_LOG(LogDazToUnreal, Log, TEXT("MoveSingleAsset: Moved asset %s → %s"), *SourcePath, *NewObjectPath);
+
+	return true;
 }
 
 
@@ -582,11 +634,22 @@ void FDazToUnrealUtils::ReplaceSkeleton(FString AnimPath, FString SkeletonPath)
 	FSoftObjectPath animSoftPath(AnimPath);
 	UAnimSequence* AnimSequence = Cast<UAnimSequence>(animSoftPath.TryLoad());
 
+	if (!AnimSequence) {
+		UE_LOG(LogDazToUnreal, Error, TEXT("DazToUnreal: ReplaceSkeleton: Could not load animation at path: %s"), *AnimPath);
+		return;
+	}
+
 	FSoftObjectPath softPath(SkeletonPath);
 	USkeleton* pSkeleton = Cast<USkeleton>(softPath.TryLoad());
 
+	if (!pSkeleton) {
+		UE_LOG(LogDazToUnreal, Error, TEXT("DazToUnreal: ReplaceSkeleton: Could not load skeleton at path: %s"), *SkeletonPath);
+		return;
+	}
+
 	AnimSequence->SetSkeleton(pSkeleton);
 	AnimSequence->MarkPackageDirty();
+
 }
 
 

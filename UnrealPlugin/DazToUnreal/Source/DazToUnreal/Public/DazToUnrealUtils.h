@@ -21,7 +21,7 @@ public:
 	static FString InstallCommonMaterialFromPlugin(FString PluginMaterialPath);
 
 	static FSoftObjectPath FindMaterial(FString ShaderName, EDazMaterialType MaterialType);
-	static void MoveSingleAsset(const FString& SourcePath, const FString& DestinationFolder);
+	static bool MoveSingleAsset(const FString& SourcePath, const FString& DestinationFolder);
 	static void MakeNewFabLevel(const FString& NewMapPath);
 	static void SaveCurrentLevel();
 	static void ReplaceSkeleton(FString AnimPath, FString SkeletonPath);
