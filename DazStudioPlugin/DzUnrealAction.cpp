@@ -718,7 +718,13 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 	bool bIsG2 = (sGeneration.contains("Genesis2"));
 	bool bIsG1 = (sGeneration == "Genesis");
 	bool bIsSupportedFigure = (m_pSelectedNode->inherits("DzFigure") && (bIsG9 || bIsG8or81 || bIsG3 || bIsG2 || bIsG1) );
-	
+
+#if 1
+	// copy backup raw fbx version
+	QString sRawFbxPath = QString(fbxFilePath).replace(".fbx", "_raw.fbx", Qt::CaseInsensitive);
+	QFile(fbxFilePath).copy(sRawFbxPath);
+#endif
+
 	if ( m_sAssetType == "SkeletalMesh" &&
 		m_bConvertRigEnabled &&
 //		!m_bEnableMorphs && !m_EnableSubdivisions &&
