@@ -624,7 +624,7 @@ bool FDazToUnrealUtils::MoveSingleAsset(const FString& SourcePath, const FString
 #endif
 	}
 
-	UE_LOG(LogDazToUnreal, Log, TEXT("MoveSingleAsset: Moved asset %s → %s"), *SourcePath, *NewObjectPath);
+	UE_LOG(LogDazToUnreal, Log, TEXT("MoveSingleAsset: Moved asset %s -> %s"), *SourcePath, *NewObjectPath);
 
 	return true;
 }

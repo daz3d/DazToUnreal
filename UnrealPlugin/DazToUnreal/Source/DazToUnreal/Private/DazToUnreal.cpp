@@ -496,7 +496,10 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 				FString FbxImportPath = jobPool[i];
 				// do structured import
 				UE_LOG(LogDazToUnreal, Log, TEXT("DazToUnreal: Importing FBX: %s"), *FbxImportPath);
-				ImportFbxForFab(FbxImportPath, TEXT("/Game/") / FPaths::GetBaseFilename(FbxImportPath));
+				FString sBaseFilename = FPaths::GetBaseFilename(FbxImportPath);
+				FString sSafeAssetName = FDazToUnrealUtils::SanitizeName(sBaseFilename);
+				FString sAssetFolder = TEXT("/Game/") / sSafeAssetName;
+				ImportFbxForFab(FbxImportPath, sAssetFolder);
 			}
 		}
 		BatchConversionMode = 2;
