@@ -1259,6 +1259,13 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 	 ImportData.bSetPostProcessAnimation = bSetPostProcessAnimation;
 	 UObject* NewObject = ImportFBXAsset(ImportData);
 
+	// Crash Prevention
+	if (!NewObject)
+	{
+		UE_LOG(LogDazToUnreal, Error, TEXT("Failed to import FBX asset."));
+		return nullptr;
+	}
+
 	 // If this is a Pose transfer, an AnimSequence was created.  Make a PoseAsset from it.
 	 if (AssetType == DazAssetType::Pose)
 	 {

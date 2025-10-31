@@ -1,4 +1,5 @@
 // DAZ Studio version 4.22.0.16 filetype DAZ Script
+// BakeRfn Version 1.8, 2025-10-30, DB: bugfix for "newFigure is null" when import fails
 // BakeRfn Version 1.7, 2025-07-14, DB: bugfix for rigged Rfn children support (skip them)
 // BakeRfn Version 1.6, 2025-07-14, DB: bugfix crash when primary selection does not have geometry / dzobject
 // BakeRfn Version 1.5, 2025-07-14, DB: bugfix incorrect Obj file export/import due to unfinalized nodes when viewport not visible
@@ -198,7 +199,10 @@
                 newFigure = findUnselectedNode();
                 if (newFigure==null) {
                     print("ERROR: bake_rfn: newFigure is null");
-                    return;
+                    if (oNewStaticNode) {
+                        Scene.removeNode(oNewStaticNode);
+                    }
+                    continue;
                 }
             }
             correctPosition(newFigure, oChildNode);
