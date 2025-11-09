@@ -1,4 +1,5 @@
 // DAZ Studio version 4.22.0.16 filetype DAZ Script
+// BakeRfn Version 2.0, 2025-11-08, DB: switched to using TransferUtility for better rig transfer
 // BakeRfn Version 1.8, 2025-10-30, DB: bugfix for "newFigure is null" when import fails
 // BakeRfn Version 1.7, 2025-07-14, DB: bugfix for rigged Rfn children support (skip them)
 // BakeRfn Version 1.6, 2025-07-14, DB: bugfix crash when primary selection does not have geometry / dzobject
@@ -10,6 +11,8 @@
 
 (function(){
 
+	var oTransferTool = new DzTransferUtility();
+	
     var aNodesToDelete = [];
     var oNewNameMapping = {};
     var oRfnToFigure = {};
@@ -209,8 +212,11 @@
             oNewNameMapping[newFigure.name] = [oChildNode.name, oChildNode.getLabel()];
             oRfnToFigure[oChildNode] = newFigure;
 //            print("DEBUG: newFigure = " + newFigure.name + " (" + oChildNode.getLabel() + "), setting follow target to: " + oRfnFollowTarget.name);
-            oRfnFollowTarget.addNodeChild(newFigure, true);
-            newFigure.setFollowTarget(oRfnFollowTarget.getSkeleton());
+			oTransferTool.setSource(oRfnFollowTarget);
+			oTransferTool.setTarget(newFigure);
+			oTransferTool.setParentToFigure(true);
+			oTransferTool.setFitToFigure(true);
+			oTransferTool.doTransfer();
 
             var skinBinding = newFigure.getSkinBinding();
             if (skinBinding == null) {
