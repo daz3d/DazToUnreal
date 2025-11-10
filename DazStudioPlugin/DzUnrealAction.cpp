@@ -35,6 +35,7 @@
 #include "FbxTools.h"
 #include "OpenFBXInterface.h"
 #include "BridgeTools.h"
+#include "ImageTools.h"
 
 DzUnrealAction::DzUnrealAction() :
 	 DzBridgeAction(tr("Send to &Unreal..."), tr("Send the selected node to Unreal."))
@@ -63,6 +64,8 @@ DzUnrealAction::DzUnrealAction() :
 
 	m_sEmbeddedFolderPath = ":/DazBridgeUnreal";
 	m_bDetachGeometry = true;
+
+//	m_bDeferProcessingImageToolsJobs = true;
 }
 
 void DzUnrealAction::executeAction()
@@ -304,6 +307,8 @@ void DzUnrealAction::writeConfiguration()
 			 }
 		 }
 		 writeAllMaterials(m_pSelectedNode, writer, pCSVStream);
+//		 m_ImageToolsJobsManager->processJobs();
+
 		 writeAllMorphs(writer);
 
 		 // DB, 2022-July-5: Daz To Unified Bridge Format support
