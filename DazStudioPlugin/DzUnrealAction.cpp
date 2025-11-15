@@ -727,6 +727,8 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 #if 1
 	// copy backup raw fbx version
 	QString sRawFbxPath = QString(fbxFilePath).replace(".fbx", "_raw.fbx", Qt::CaseInsensitive);
+	QFile oRawFbx(sRawFbxPath);
+	if (oRawFbx.exists()) oRawFbx.remove();
 	QFile(fbxFilePath).copy(sRawFbxPath);
 #endif
 
