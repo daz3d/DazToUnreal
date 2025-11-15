@@ -1,11 +1,12 @@
 // DAZ Studio version 4.22.0.16 filetype DAZ Script
 //
+// DB: 2025-11-13: Added Genesis 9 bone skip when unlocking node transforms
 // DB: 2025-11-08: Skip nodes parented to RigidFollowNode when baking pivots
 // DB: 2025-09-30: Compatibility fix to skip Eye and Pectoral bone when unlocking nodes
 // DB: 2025-07-13: Bugfix nodes with locked or clamped transform properties
 // DB: 2024-12-24: Added support to bake pivot for instances.
 // DB: 2024-09-30: This script bakes the pivot point of the selected node into the geometry of the node.
-// Version 8
+// Version 9
 //
 
 (function(){	
@@ -160,12 +161,42 @@
 	        }
 	    }
 	}
-	
+
+	function isGenesis9Bone(node) {
+		if (!node) {
+			return false;
+		}
+		var sNodeName = node.getName();
+		if (node.inherits("DzBone") == false) {
+			print("DEBUG: not a bone: " + sNodeName);
+			return false;
+		}
+		var oSkeleton = node.getSkeleton();
+		if (!oSkeleton) {
+			print("DEBUG: bone has no skeleton: " + sNodeName);
+			return false;
+		}
+		if (oSkeleton.inherits("DzFigure") == false) {
+			print("DEBUG: bone's skeleton is not a figure: " + sNodeName);
+			return false;
+		}
+		var sSkeletonName = oSkeleton.getName();
+		if (sSkeletonName.indexOf("Genesis9") >= 0) {
+			print("DEBUG: skipping Genesis 9 bone: " + sNodeName);
+			return true;
+		}
+		print("DEBUG: not a Genesis 9 bone: " + sNodeName + ", class: " + node.className() + ", skeleton: " + sSkeletonName);
+		return false;
+	}
+
 	function bakeAllPivots() {
 	    var allNodes = Scene.getNodeList();
 
 	    for (var i = 0; i < allNodes.length; i++) {
 	        var node = allNodes[i];
+			if (isGenesis9Bone(node)) {
+				continue;
+			}
             unlockNodeTransforms(node);
 	    }
 
