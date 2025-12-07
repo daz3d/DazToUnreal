@@ -227,6 +227,7 @@ void DzUnrealAction::writeDTUHeader(DzJsonWriter& writer)
 
 	writer.addMember("DTU Version", 4);
 	writer.addMember("Asset Name", m_sAssetName);
+//	writer.addMember("Asset Name", m_sExportFilename);
 	writer.addMember("Import Name", sImportName); // Blender Compatibility
 
 	if (m_bConvertRigEnabled &&
@@ -373,7 +374,7 @@ void DzUnrealAction::writeConfiguration()
 // Setup custom FBX export options
 void DzUnrealAction::setExportOptions(DzFileIOSettings& ExportOptions)
 {
-
+//	ExportOptions.setBoolValue("doMergeClothing", false);
 }
 
 // Overrides baseclass implementation with Unreal specific resets
@@ -656,6 +657,7 @@ QList<DzMaterial*> GetAllMaterials(DzNode* pNode)
 	return aMaterialsList;
 }
 
+
 void BetterRigConverter(QString sFbxFilename, QString m_sExportRigMode, bool bIsG9, bool bIsG2, bool bIsG1, FbxTools::ModifyBindPoseCallback* pCustomJointFixer)
 {
 	QString sUnrealMannyRigFile = "g9_to_unreal_manny.json";
@@ -707,8 +709,8 @@ void BetterRigConverter(QString sFbxFilename, QString m_sExportRigMode, bool bIs
 		}
 	}
 
-	FbxTools::ProxyMeshBoneRenamer(sFbxFilename, sConfigFile, pCustomJointFixer);
-	//FbxTools::ProxyMeshBoneAdder(sFbxFilename, sConfigFile, pCustomJointFixer);
+	//FbxTools::MergeFollowerSkeletons(sFbxFilename);
+	FbxTools::RigConversionBoneRenamer(sFbxFilename, sConfigFile, pCustomJointFixer);
 
 }
 
@@ -1083,9 +1085,9 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 			QString sMorphName = QString(sMorphRigFile).replace(sFileBasePath + "_", "").replace(".fbx", "");
 			QString sMorphLabel = sMorphName;
 			if (sMorphName != "base") sMorphLabel = m_AvailableMorphsTable[sMorphName].Label;
-			FbxTools::ProxyMeshBoneRenamer(sMorphRigFile, sConfigFile);
+			FbxTools::RigConversionBoneRenamer(sMorphRigFile, sConfigFile);
 			FbxTools::UnrealJointFixCallback2 oUnrealJointFixer;
-			postProcessRigConversion(sMorphRigFile, "", "", "", &oUnrealJointFixer, sTempPoseFilePath, "", "", "", "", false);
+			postProcessRigConversion_Stage2(sMorphRigFile, "", "", "", &oUnrealJointFixer, sTempPoseFilePath, "", "", "", "", false);
 			OpenFBXInterface* openFBX = OpenFBXInterface::GetInterface();
 			FbxScene* pScene = openFBX->CreateScene("Base Mesh Scene");
 			if (exLoadFbxScene(pScene, sMorphRigFile) == false) {

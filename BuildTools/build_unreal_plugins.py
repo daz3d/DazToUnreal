@@ -148,7 +148,7 @@ def main(argv):
         target_version = argv[0]
 
     if target_version.lower() == "all":
-        ue_version_list = ["UE425", "UE426", "UE427", "UE50", "UE51", "UE52", "UE53", "UE54", "UE55", "UE56"]
+        ue_version_list = ["UE425", "UE426", "UE427", "UE50", "UE51", "UE52", "UE53", "UE54", "UE55", "UE56", "UE57"]
     elif target_version not in engine_path_map:
         print_usage()
         return 1

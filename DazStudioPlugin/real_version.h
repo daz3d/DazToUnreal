@@ -3,8 +3,8 @@
 #define PRODUCT_VERSION_STRING "2025 version 4.44 alpha"
 #define VER_MAJOR	2025
 #define VER_MINOR	4
-#define VER_REV		44
-#define VER_BUILD	255
+#define VER_REV		45
+#define VER_BUILD	256
 
 #define TOSTRING(x) #x
 #define VERSION_STRING	TOSTRING(VER_MAJOR) "." TOSTRING(VER_MINOR) "." TOSTRING(VER_REV) "." TOSTRING(VER_BUILD)
