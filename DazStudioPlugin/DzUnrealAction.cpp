@@ -66,6 +66,8 @@ DzUnrealAction::DzUnrealAction() :
 	m_bDetachGeometry = true;
 
 //	m_bDeferProcessingImageToolsJobs = true;
+
+	m_bUseNativeRigPoseConversion = true;
 }
 
 void DzUnrealAction::executeAction()
@@ -1154,7 +1156,37 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 	}
 
 	bool bRigConversionResult = DzBridgeAction::preProcessRigConversion(parentNode);
-	
+
+	// 2025-12-07, DB - New Native Rig Pose
+	if (m_bUseNativeRigPoseConversion)
+	{
+		QString sNativeRigPoseFile = "";
+		if (bIsG9)
+		{
+			sNativeRigPoseFile = "g9_to_ue5_apose_nofeet.duf";
+		}
+
+		bool bPoseResult = false;
+		if (sNativeRigPoseFile != "")
+		{
+			QString sEmbeddedPoseFilepath = m_sEmbeddedFolderPath + "/" + sNativeRigPoseFile;
+			QFile srcPoseFile(sEmbeddedPoseFilepath);
+			QString tempPoseFilepath = dzApp->getTempPath() + "/" + sNativeRigPoseFile;
+			DZ_BRIDGE_NAMESPACE::DzBridgeAction::copyFile(&srcPoseFile, &tempPoseFilepath, true /* replace */);
+			srcPoseFile.close();
+			dzScene->selectAllNodes(false);
+			dzScene->setPrimarySelection(parentNode);
+			bPoseResult = dzApp->getContentMgr()->openFile(tempPoseFilepath, true /* merge */);
+		}
+
+		if (bPoseResult == false)
+		{
+			dzApp->warning("DazToUnreal: Unable to load native pose for NativePoseRigConversion pathway, reverting to external pose rig conversion.");
+			m_bUseNativeRigPoseConversion = false;
+		}
+
+	}
+
 	pProgress->finish();
 
 
