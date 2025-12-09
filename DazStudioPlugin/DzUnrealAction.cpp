@@ -800,7 +800,20 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 	if (exLoadFbxScene(pScene, fbxFilePath) == false) {
 		pScene->Destroy();
 		return false;
-	}	
+	}
+
+	// 2025-12-08, DB: AddMetahumanCorrectiveBones for better interactive/game skinning
+	if (m_sExportRigMode == "unreal" || m_sExportRigMode == "metahuman") {
+		FbxNode* pRootBone = FbxTools::GetRootBone(pScene);
+		QString sCorrectiveFbx = m_sEmbeddedFolderPath + "/g9_metahuman_correctives.fbx";
+		QFile srcFile(sCorrectiveFbx);
+		QString tempPathArchive = dzApp->getTempPath() + "g9_metahuman_correctives.fbx";
+		bool replace = true;
+		DzBridgeNameSpace::DzBridgeAction::copyFile(&srcFile, &tempPathArchive, replace);
+		srcFile.close();
+//		FbxTools::AddMetahumanCorrectiveBones(pScene, pRootBone, tempPathArchive);
+	}
+
 	// Rename Morphs to Morph Labels
 	FbxTools::RenameMorphs(pScene, m_AvailableMorphsTable, true);	
 	if (openFBX->SaveScene(pScene, fbxFilePath, -1, m_bEmbedTexturesInOutputFile) == false)
