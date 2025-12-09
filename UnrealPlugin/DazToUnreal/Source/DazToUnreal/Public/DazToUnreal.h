@@ -23,6 +23,8 @@ struct TextureLookupInfo
 {
 	FString sSourceFullPath;
 	bool bIsCutOut;
+	bool bIsDiffuse;
+	bool bIsNormal;
 };
 
 
@@ -34,6 +36,7 @@ public:
 	static FString BatchConversionDestPath;
 	static TMap<FString, FString> AssetIDLookup;
 	static TArray<UObject*> TextureListToDisableSRGB;
+	static TArray<UObject*> TextureListToForceDiffuse;
 	TMap<FString, TextureLookupInfo> m_sourceTextureLookupTable;
 	TMap<FString, TextureLookupInfo> m_targetTextureLookupTable;
 

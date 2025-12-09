@@ -157,6 +157,7 @@ int FDazToUnrealModule::BatchConversionMode;
 FString FDazToUnrealModule::BatchConversionDestPath;
 TMap<FString, FString> FDazToUnrealModule::AssetIDLookup;
 TArray<UObject*> FDazToUnrealModule::TextureListToDisableSRGB;
+TArray<UObject*> FDazToUnrealModule::TextureListToForceDiffuse;
 
 void FDazToUnrealModule::StartupModule()
 {
@@ -339,7 +340,40 @@ void FDazToUnrealModule::ShutdownUDPListener()
 
 bool FDazToUnrealModule::Tick(float DeltaTime)
 {
-
+	// DB 2225-12-08: Moved to outside of BatchConversionMode checks
+	// DB 2023-May-23: Disable SRGB in a delayed step after importing textures is done to avoid engine crash
+	if (FDazToUnrealModule::TextureListToDisableSRGB.Num() > 0)
+	{
+		for (int i = 0; i < FDazToUnrealModule::TextureListToDisableSRGB.Num(); i++)
+		{
+			// cast element to UTexture
+			UTexture* Texture = Cast<UTexture>(FDazToUnrealModule::TextureListToDisableSRGB[i]);
+			if (Texture)
+			{
+				Texture->PreEditChange(nullptr);
+				Texture->SRGB = false;
+				Texture->PostEditChange();
+			}
+		}
+		FDazToUnrealModule::TextureListToDisableSRGB.Empty();
+	}
+	if (FDazToUnrealModule::TextureListToForceDiffuse.Num() > 0)
+	{
+		for (int i = 0; i < FDazToUnrealModule::TextureListToForceDiffuse.Num(); i++)
+		{
+			// cast element to UTexture
+			UTexture* Texture = Cast<UTexture>(FDazToUnrealModule::TextureListToForceDiffuse[i]);
+			if (Texture)
+			{
+				Texture->PreEditChange(nullptr);
+				Texture->CompressionSettings = TC_Default;
+				Texture->SRGB = true;
+				Texture->PostEditChange();
+			}
+		}
+		FDazToUnrealModule::TextureListToForceDiffuse.Empty();
+	}
+	
 	if (BatchConversionMode == 1)
 	{
 		BatchConversionMode = -1;
@@ -396,23 +430,6 @@ bool FDazToUnrealModule::Tick(float DeltaTime)
 	}
 	else if (BatchConversionMode == 0)
 	{
-		// DB 2023-May-23: Disable SRGB in a delayed step after importing textures is done to avoid engine crash
-		if (FDazToUnrealModule::TextureListToDisableSRGB.Num() > 0)
-		{
-			for (int i = 0; i < FDazToUnrealModule::TextureListToDisableSRGB.Num(); i++)
-			{
-				// cast element to UTexture
-				UTexture* Texture = Cast<UTexture>(FDazToUnrealModule::TextureListToDisableSRGB[i]);
-				if (Texture)
-				{
-					Texture->PreEditChange(nullptr);
-					Texture->SRGB = false;
-					Texture->PostEditChange();
-				}
-			}
-			FDazToUnrealModule::TextureListToDisableSRGB.Empty();
-		}
-
 		// Check from messages from the Daz Studio plugin
 		uint32 BytesPending = 0;
 		if (ServerSocket->HasPendingData(BytesPending))
@@ -1065,17 +1082,38 @@ UObject* FDazToUnrealModule::ImportFromDaz(TSharedPtr<FJsonObject> JsonObject, c
 					Property.bHasDForceInfo = bHasDForceInfo;
 					Property.bIsStrandAsset = bIsStrandAsset;
 
-					if (Property.Type == TEXT("Texture"))
-					{
-						Property.Type = TEXT("Color");
-					}
-                    if (Property.Name == TEXT("Cutout Opacity") )
+                    if (Property.Name == TEXT("Cutout Opacity") && !TexturePath.IsEmpty())
 					{
 						TextureLookupInfo lookupInfo;
 						lookupInfo.sSourceFullPath = TexturePath;
 						lookupInfo.bIsCutOut = true;
+						lookupInfo.bIsNormal = false;
+						lookupInfo.bIsDiffuse = false;
 						m_sourceTextureLookupTable.Add(TextureName, lookupInfo);
                     }
+					else if ( (Property.Name == TEXT("Normal Map") || Property.Name == TEXT("Detail Normal Map"))
+					 && !TexturePath.IsEmpty())
+					{
+						TextureLookupInfo lookupInfo;
+						lookupInfo.sSourceFullPath = TexturePath;
+						lookupInfo.bIsNormal = true;
+						lookupInfo.bIsCutOut = false;
+						lookupInfo.bIsDiffuse = false;
+						m_sourceTextureLookupTable.Add(TextureName, lookupInfo);
+					} else if (!TexturePath.IsEmpty())
+					{
+						TextureLookupInfo lookupInfo;
+						lookupInfo.sSourceFullPath = TexturePath;
+						lookupInfo.bIsDiffuse = true;
+						lookupInfo.bIsCutOut = false;
+						lookupInfo.bIsNormal = false;
+						m_sourceTextureLookupTable.Add(TextureName, lookupInfo);
+					}
+
+					if (Property.Type == TEXT("Texture"))
+					{
+						Property.Type = TEXT("Color");
+					}
 
 					// Properties that end with Enabled are switches for functionality
 					if (Property.Name.EndsWith(TEXT(" Enable")))
@@ -1547,6 +1585,7 @@ bool FDazToUnrealModule::ImportTextureAssets(TArray<FString>& SourcePaths, FStri
 	// on source path as retrieved from the
 	// Texture->AssetImportData->GetFirstFilename() function.
 	FDazToUnrealModule::TextureListToDisableSRGB.Empty();
+	FDazToUnrealModule::TextureListToForceDiffuse.Empty();
 	for (auto ImportedAsset : ImportedAssets)
 	{
 		if (ImportedAsset->IsA(UTexture::StaticClass()))
@@ -1562,6 +1601,12 @@ bool FDazToUnrealModule::ImportTextureAssets(TArray<FString>& SourcePaths, FStri
 					// DB 2023-May-23: Disable SRGB in a delayed step after importing textures is done to avoid engine crash (please see Tick() )
 					//UE_LOG(LogTemp, Display, TEXT("DazToUnreal: ImportTextureAssets() Texture %s is a cutout texture. Setting sRGB to false."), *TextureName);
 					FDazToUnrealModule::TextureListToDisableSRGB.Add(Texture);
+				}
+				if (lookupData.bIsDiffuse == true)
+				{
+					// DB 2023-May-23: Force Diffuse Compression in a delayed step after importing textures is done to avoid engine crash (please see Tick() )
+					//UE_LOG(LogTemp, Display, TEXT("DazToUnreal: ImportTextureAssets() Texture %s is a diffuse texture. Forcing Diffuse Compression."), *TextureName);
+					FDazToUnrealModule::TextureListToForceDiffuse.Add(Texture);
 				}
 			}
 		}
