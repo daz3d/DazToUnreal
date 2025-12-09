@@ -990,8 +990,6 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 	DzBridgeAction::preProcessScene(parentNode);
 	m_bConvertRigEnabled = bConvertRigBackup;
 
-//	BridgeTools::ExpandClothingFit(parentNode);
-
 	if (m_bConvertRigEnabled && m_bEnableMorphs) 
 	{		
 		// ARKit_facs_ctrl_ARKitEnable
@@ -1199,6 +1197,9 @@ bool DzUnrealAction::preProcessScene(DzNode* parentNode)
 		}
 
 	}
+
+	//BridgeTools::ExpandClothingFit(parentNode);
+	BridgeTools::BakeClothingFits(parentNode);
 
 	pProgress->finish();
 
