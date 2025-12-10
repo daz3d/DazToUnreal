@@ -811,7 +811,7 @@ bool DzUnrealAction::postProcessFbx(QString fbxFilePath)
 		bool replace = true;
 		DzBridgeNameSpace::DzBridgeAction::copyFile(&srcFile, &tempPathArchive, replace);
 		srcFile.close();
-//		FbxTools::AddMetahumanCorrectiveBones(pScene, pRootBone, tempPathArchive);
+		FbxTools::AddMetahumanCorrectiveBones(pScene, pRootBone, tempPathArchive);
 	}
 
 	// Rename Morphs to Morph Labels
