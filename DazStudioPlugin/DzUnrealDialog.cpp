@@ -128,6 +128,8 @@ DzUnrealDialog::DzUnrealDialog(QWidget *parent) :
 	combineMaterialMethodComboBox->addItem("Combine All", 2);
 	combineMaterialMethodComboBox->setCurrentIndex(0);
 	commonSettingsLayout->addRow("Material Combine Method", combineMaterialMethodComboBox);
+	combineMaterialMethodComboBox->setDisabled(true);
+	combineMaterialMethodComboBox->setToolTip("INTERNAL-DEV-BUILD: DISABLED!");
 
 	commonSettingsGroupBox->setVisible(true);
 

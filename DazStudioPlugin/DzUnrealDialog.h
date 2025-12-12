@@ -60,11 +60,15 @@ public:
 	}
 
 	QString getMaterialCombineMethod() {
-		return combineMaterialMethodComboBox ? combineMaterialMethodComboBox->currentText() : QString("Combine Identical");
+		// INTERNAL-DEV-BUILD: DISABLED!
+//		return combineMaterialMethodComboBox ? combineMaterialMethodComboBox->currentText() : QString("Combine Identical");
+		return QString("No Combine");
 	}
 
 	int getMaterialCombineMethodAsInt() {
-		return combineMaterialMethodComboBox ? combineMaterialMethodComboBox->itemData(combineMaterialMethodComboBox->currentIndex()).toInt() : 1;
+		// INTERNAL-DEV-BUILD: DISABLED!
+//		return combineMaterialMethodComboBox ? combineMaterialMethodComboBox->itemData(combineMaterialMethodComboBox->currentIndex()).toInt() : 1;
+		return 0;
 	}
 
 	// Settings
