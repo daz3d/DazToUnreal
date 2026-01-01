@@ -23,6 +23,58 @@
 
     var aSafeNodes = [];
 
+	var sShapePreserver = "ShapePreserver";
+	var oShapePreserverCTRL = null;
+	var oSceneHelper = new DzSceneHelper();
+
+    var oCachedMeshTable = {};
+    var oLoader = new DzMorphLoader();
+
+
+	/*********************************************************************/
+	// source: http://docs.daz3d.com/doku.php/public/software/dazstudio/4/referenceguide/scripting/api_reference/samples/modifiers/spawn_morph/start
+	// Boolean : A function for testing whether or not a QObject instance
+	// inherits one of a list of types
+	function inheritsType( oObject, aTypeNames )
+	{
+		// If the object does not define the 'inherits' function
+		if( !oObject || typeof( oObject.inherits ) != "function" ){
+			// We are done... it is not a QObject
+			return false;
+		}
+		
+		// Iterate over the list of type names
+		for( var i = 0, nTypes = aTypeNames.length; i < nTypes; i += 1 ){
+			// If the object does not inherit the 'current' type
+			if( !oObject.inherits( aTypeNames[i] ) ){
+				// Next!!
+				continue;
+			}
+			
+			// Return the result
+			return true;
+		}
+		
+		// Return the result
+		return false;
+	};
+	
+	/*********************************************************************/
+	// source: http://docs.daz3d.com/doku.php/public/software/dazstudio/4/referenceguide/scripting/api_reference/samples/modifiers/spawn_morph/start
+	// DzNode : A function for getting the root of a node
+	function getRootNode( oNode )
+	{
+		// If we have a node and it is a bone
+		if( oNode && inheritsType( oNode, ["DzBone"] ) ){
+			// We want the skeleton
+			return oNode.getSkeleton();
+		}
+		
+		// Return the original node
+		return oNode;
+	};
+
+
     function getWeights(oTarget, aReferenceVertexIndexList)
     {
         var oBoneMap = {};
@@ -176,7 +228,9 @@
             if (shape==null) continue;
             var childGeo = shape.getGeometry();
             if (childGeo==null) continue;
-        
+
+			var oCachedMesh = oCachedMeshTable[oChildNode.name];
+
             var tempFile = exportNodeAsObj(oChildNode);
             var oNewStaticNode = importObj(tempFile);
 
@@ -187,7 +241,7 @@
 //            print("DEBUG: newNode = " + oNewStaticNode.name + ", moving to: " + oBoneParent.name);
             oBoneParent.addNodeChild(oNewStaticNode, true);
             var rootBoneName = oRfnSkeleton.getNodeChild(0).name;
-            
+
 			beginNodeSelectionHold();
 			Scene.selectAllNodes( false );
 			oNewStaticNode.select();
@@ -204,6 +258,7 @@
 			oTransferTool.setTarget(oNewStaticNode);
 			oTransferTool.setParentToFigure(true);
 			oTransferTool.setFitToFigure(true);
+
 //			oTransferTool.setFitToFigure( true );
 			oTransferTool.setTransferBinding( true );
 			oTransferTool.setRemoveUnusedTargetBones( true );
@@ -211,6 +266,7 @@
 			oTransferTool.setTransferFaceGroups( true );
 			oTransferTool.setTransferSelectionMap( true );
 			oTransferTool.setRemoveUnusedTargetBones( false );
+
 			oTransferTool.doTransfer();
 			var aNodesAfter = Scene.getNodeList();
 			var newFigure = findNewNode( aNodesBefore, aNodesAfter );
@@ -381,6 +437,42 @@
 
             skinBinding.finishEdit();
 
+            oCachedMeshTable[newFigure.name] = oCachedMesh;
+
+			// oShapePreserverCTRL.setValue( 1 );
+
+			// // Finalize
+			// Scene.update();
+			// oRfnFollowTarget.update();
+			// oRfnFollowTarget.finalize();
+			
+			// beginNodeSelectionHold();
+			// Scene.selectAllNodes( false );
+			// newFigure.select();
+
+			// newFigure.update();
+			// newFigure.finalize();
+			// processEvents();
+			// while( backgroundProgressIsActive() ) {
+			// 	processEvents();
+			// }
+			// sleep( 1000 );
+
+			// var oLoader = new DzMorphLoader();
+			// var sMorphName = newFigure.name + "_morph";
+			// oLoader.setMorphName( sMorphName );
+			// oLoader.setReverseDeformations( true );
+			// oLoader.setOverwriteExisting( DzMorphLoader.DeltasOnly );
+			// oLoader.setCleanUpOrphans( true );
+			// oLoader.setPropertyGroupPath( "Morphs/Morph Loader" );
+			// oLoader.createMorphFromMesh( oCachedMesh, newFigure );
+
+			// restoreNodeSelectionHold();
+
+			// var oMorph = oSceneHelper.findPropertyOnNodeByInternalName( sMorphName, newFigure );
+			// if( oMorph && oMorph.getValue() != 1 ){
+			// 	oMorph.setValue( 1 );
+			// }
         }        
 
         aNodesToDelete.push(oRfnNode);
@@ -575,6 +667,7 @@
     
     }
 
+
 	/******************************************************************/
 	// DzNode : A function to find the newest node
 	function findNewNode( aNodesBefore, aNodesAfter ){
@@ -593,6 +686,7 @@
 				continue;
 			}
 		}
+		
 		// Iterates through the nodes after the asset load to find new one
 		var aNewNodes = [];
 		for( var i = 0; i < aNodesAfter.length; i++ ){
@@ -603,6 +697,7 @@
 		}
 		return;
 	};
+
 	/*********************************************************************/
 	// Boolean : A function to check if a node's parent is a DzRigidFollowNode
 	function isChildOfDzRigidFollowNode( oNode ){
@@ -612,10 +707,50 @@
 		}
 		return false;
 	};
+
+	/*********************************************************************/
+	// Function to find the highest DzRigidFollowNode ancestor in the hierarchy
+	function reparentToNearestRFNAncestor( oNode ){
+		var oCurrentParent = oNode.getNodeParent(); // Start with the immediate parent
+
+		// Traverse up the hierarchy
+		while( oCurrentParent ){
+			if( oCurrentParent.inherits( "DzRigidFollowNode" ) ){
+				// Found the nearest DzRigidFollowNode ancestor
+				// Reparent the original node to this ancestor
+				oCurrentParent.addNodeChild( oNode, true );
+				oNode.update();
+				oNode.finalize();
+
+				print( oNode.getLabel(), "parented to", oCurrentParent.getLabel() );
+
+				return oCurrentParent; // Return the ancestor node that oNode was reparented to
+			}
+			oCurrentParent = oCurrentParent.getNodeParent(); // Move to the next parent
+		}
+		return null; // No DzRigidFollowNode ancestor found in the hierarchy
+	};
+
     function main()
     {
         // get RigidFollowNode
         oPrimarySelection = Scene.getPrimarySelection();
+
+		var aRootNodes = getSceneRootNodesList();
+		// oShapePreserverCTRL = createControlProperty( oPrimarySelection, sShapePreserver, aRootNodes );
+		// if( !oShapePreserverCTRL ){
+		// 	print( "##FR## " + "Error creating ShapePreserver for", oPrimarySelection.getLabel() );
+		// 	print( "##FR## " + "Script finished." );
+		// 	return;
+		// }
+		// // Pre-process all nodes to update morphs if they have smoothing modifiers
+		// for( var i = 0; i < aRootNodes.length; i++ ){
+		// 	var oNode = aRootNodes[ i ];
+		// 	// Skip oRootFigure for the morph baking, as it's handled differently or doesn't need this specific pre-processing
+		// 	if( oNode !== oPrimarySelection ){
+		// 		updateMorphsOnNode( oNode );
+		// 	}
+		// }
 
         Scene.update();
         oPrimarySelection.finalize();
@@ -623,15 +758,44 @@
             oPrimarySelection.getObject().forceCacheUpdate(oPrimarySelection, true);
         }
     
+        var children = oPrimarySelection.getNodeChildren(true);
+        for (var i=0; i < children.length; i++)
+		{
+			var child = children[i];
+			if (child.getObject() && isChildOfDzRigidFollowNode( child ) ){
+				reparentToNearestRFNAncestor( child );
+			}
+		}
+
+        oPrimarySelection.getYRotControl().setValue(0.0);
+        Scene.update();
+        oPrimarySelection.finalize();
+        // cache geometry
+		for (var i=0; i < children.length; i++)
+		{
+			var child = children[i];
+			if (child.getObject() && isChildOfDzRigidFollowNode( child ) ){
+                var object = child.getObject()
+                if (object==null) continue;
+                var shape = object.getCurrentShape();
+                if (shape==null) continue;
+                var childGeo = shape.getGeometry();
+                if (childGeo==null) continue;
+
+                var oCachedMesh = object.getCachedGeom();
+                oCachedMeshTable[child.name] = oCachedMesh;
+			}
+		}
 
         resetMorphs(oPrimarySelection);
-        var oScaleControl = oPrimarySelection.getScaleControl();
+		var oScaleControl = oPrimarySelection.getScaleControl();
 		oScaleControl.setRawValue(1.0);
 		var correction = oScaleControl.getValue();
 		oScaleControl.setValue(1/correction);
-		// oPrimarySelection.getYRotControl().setValue(0.0);
+		oPrimarySelection.getYRotControl().setValue(0.0);
 
-        var children = oPrimarySelection.getNodeChildren(true);
+
+        // var children = oPrimarySelection.getNodeChildren(true);
         for (var i=0; i < children.length; i++)
         {
             var child = children[i];
@@ -706,12 +870,366 @@
             oProperty.setDoubleValue(oMorphValues[sPath]);
         }
 
+        // Morph Correction
+        var children = oPrimarySelection.getNodeChildren(true);
+        for (var i=0; i < children.length; i++)
+        {
+            var child = children[i];
+            if (child.getObject()==null) continue;
+            if (! (child.name in oCachedMeshTable) ) continue;
+            var oCachedMesh = oCachedMeshTable[child.name];
+            if (!oCachedMesh) continue;
+            print("DEBUG: Applying corrective morph  to " + child.name);
+            var sMorphName = child.name + "_morph_correction";
+            oLoader.setMorphName( sMorphName );
+            oLoader.setReverseDeformations( true );
+            oLoader.setOverwriteExisting( DzMorphLoader.DeltasOnly );
+            oLoader.setCleanUpOrphans( true );
+            oLoader.setPropertyGroupPath( "Morphs/Morph Loader" );
+            oLoader.createMorphFromMesh( oCachedMesh, child );
+
+            // var oMorph = oSceneHelper.findPropertyOnNodeByInternalName( sMorphName, child );
+            // if( oMorph && oMorph.getValue() != 1 ){
+            //     oMorph.setValue( 1 );
+            // }
+        }
+
         // restore selection
         Scene.selectAllNodes(false);
         Scene.setPrimarySelection(oPrimarySelection);
 
-//        MessageBox.information("Rigid Follow Nodes have been converted to DzFigure followers.", "Script Completed", "OK");
+        MessageBox.information("Rigid Follow Nodes have been converted to DzFigure followers.", "Script Completed", "OK");
     }
+
+	/*********************************************************************/
+	// DzProperty : A function to create a property, ERC Freeze current state to it
+	function createControlProperty( oRootNode, sName, aNodes )
+	{
+		// Check for property before creating
+		var oControllerProperty = oSceneHelper.findPropertyOnNodeByInternalName( sName, oRootNode );
+		if( oControllerProperty ){
+			return oControllerProperty;
+		}
+
+		// Declare a property group path
+		var sPropertyGroup = "Morphs/Morph Loader";
+	
+		// Create and setup a controller property
+		var oControllerProperty = new DzFloatProperty( sName, true, true );
+		//oControllerProperty.setLabel( "ERC Freeze Controller" );
+		oControllerProperty.setPath( sPropertyGroup );
+		oControllerProperty.setMinMax( 0, 1 );
+		oControllerProperty.setIsClamped( true );
+		oRootNode.addProperty( oControllerProperty );
+
+		// Create the ERC Freeze utility
+		var oFreezer = new DzERCFreeze();
+		
+		// Set the controller node
+		oFreezer.setControllerNode( oRootNode );
+		// Set the controller property
+		oFreezer.setControllerProperty( oControllerProperty );
+		
+		beginNodeSelectionHold();
+		Scene.selectAllNodes( false );
+
+		// Add all nodes
+		var oNode;
+		for( var i = 0; i < aNodes.length; i++ ){
+			oNode = aNodes[ i ];
+			if( !oNode ){
+				continue;
+			}
+			
+			if( oNode !== oRootNode && oNode.inherits( "DzSkeleton") && !oNode.getFollowTarget() ){
+				oNode.select( true );
+
+				print( "Memorizing Rigging on", oNode.getLabel() );
+
+				// Memorize Figure Rigging
+				triggerAction( "DzJEMemorizeFigureRiggingPropertiesAction", false, null );
+				
+				oNode.select( false );
+			}
+			
+			// Add the node's properties
+			print( "Adding Freeze Properties", oFreezer.addPropertiesToFreeze( oNode ) );
+		}
+
+		restoreNodeSelectionHold();
+	
+		// We're not using animated links
+		oFreezer.setKeyed( false );
+		
+		// Restore the figure when the freeze is complete
+		oFreezer.setRestoreFigure( true );
+		// Restore the rigging when the freeze is complete
+		oFreezer.setRestoreRigging( true );
+		// Apply the controller property when the freeze is complete
+		oFreezer.setApplyController( true );
+		// Don't restore selected item
+		oFreezer.setRestoreSelectedItems( false );
+	
+		// Begin collecting undo-able operations
+		UndoStack.beginHold();
+		// If the freeze is successful
+		if( oFreezer.doFreeze() ){
+			// Create the undo item
+			UndoStack.accept( "ERC Freeze" );
+
+			// Find Property
+			var oProperty = oSceneHelper.findPropertyOnNodeByInternalName( sName, oRootNode );
+			if( !oProperty ){
+				// Cancel the undo item
+				UndoStack.cancel();
+				return null;
+			}
+			return oProperty;
+		// If the freeze fails
+		} else {
+			// Cancel the undo item
+			UndoStack.cancel();
+			return null;
+		}
+
+	};
+
+	/*********************************************************************/
+	// Optimized: Uses a plain object as a hash map for faster existence checks
+	function getSceneRootNodesList(){
+		var aTemp = [];
+		var aDelete = []; // Objects that need to be removed, such as geometry shells
+		var aNodeList = Scene.getNodeList();
+		var oNode, oShape, oLODProperty;
+		for( var i = 0; i < aNodeList.length; i++ ){
+			oNode = Scene.getNode( i );
+			// Skip non-objects
+			if( !oNode.getObject() ){
+				continue;
+			}
+			// Skip bones
+			if( oNode.inherits( "DzBone" ) ){
+				continue;
+			}
+			// Skip geometry shells if outline
+			if( oNode.inherits( "DzGeometryShellNode" ) && oNode.getLabel().endsWith( " Outline" ) ){
+				aDelete.push( oNode );
+				continue;
+			}
+			
+			// Disable SubD
+			oShape = oNode.getObject().getCurrentShape();
+			if( oShape ){
+				// If subdivision is active
+				if( oShape.isSubDivisionActive() ){
+					// Get the 'Resolution Level' property
+					oLODProperty = oShape.getLODControl();
+					// Set the value to 'Base'
+					oLODProperty.setValueFromString( "Base" );
+				}
+			}
+
+			// Enable realtime smoothing
+			/*oObject = getObjectForNode( oNode, true );
+			if( oObject ){
+				oSmoother = oObject.findModifier( "DzMeshSmoothModifier" );
+				if( oSmoother ){
+					oSmoothProperty = oSmoother.getInteractiveUpdateControl();
+					if( oSmoothProperty ){
+						oSmoothProperty.setBoolValue( true );
+					}
+				}
+			}*/
+			
+			aTemp.push( oNode );
+		}
+
+		// Delete
+		for( var i = aDelete.length - 1; i >= 0; i-- ){
+			Scene.removeNode( aDelete[ i ] );
+		}
+
+		return aTemp;
+	};
+
+	/*********************************************************************/
+	// String : A function for triggering an action
+	function triggerAction( sClassName, bGetDefaultOptions, oSettings )
+	{
+		// Get the action manager
+		var oActionMgr = MainWindow.getActionMgr();
+		// If we do not have an action manager
+		if( !oActionMgr ){
+			// We are done...
+			return;
+		}
+		
+		// Find the action we want
+		var oAction = oActionMgr.findAction( sClassName );
+		// If the action was not found
+		if( !oAction ){
+			// Inform the user...
+			showAlert(
+				text( "The \"%1\" action could not be found." ).arg( sClassName ),
+				text( "Resource Error" ), text( "&OK" ), "warning" );
+			// We are done...
+			return;
+		}
+		
+		// If the action is disabled
+		if( !oAction.enabled ){
+			// Inform the user...
+			showAlert(
+				text( "The \"%1\" action is currently disabled." ).arg( oAction.text ),
+				text( "Resource Error" ), text( "&OK" ), "warning" );
+			// We are done...
+			return;
+		}
+
+		// Print default options
+		if( bGetDefaultOptions ){
+			var oDefaultSettings = oAction.defaultSettings;
+
+			print( "----- Default Settings -----" );
+			
+			print( JSON.stringify( oAction.defaultSettings, null, "\t" ) );
+			
+			print( "----------------------------" );
+			
+			return;
+		}
+		
+		// If we have the necessary function (4.16.1.18) and we have settings
+		if( typeof( oAction.triggerWithSettings ) == "function" && oSettings ){
+			// Trigger execution of the action with the settings
+			oAction.triggerWithSettings( oSettings );
+		} else {
+			// Trigger execution of the action
+			oAction.trigger();
+		}
+	};
+
+	/*********************************************************************/
+	// void : A function to bake current state of item to morph
+	function updateMorphsOnNode( oNode )
+	{
+		// Enable Interactive Update on smoothing modifier
+		var oObject = oNode.getObject();
+		if( !oObject ){
+			print( "##FR## " + "Unable to get object of node " + oNode.getLabel() );
+			return;
+		}
+		var oSmoother = oObject.findModifier( "DzMeshSmoothModifier" );
+		if( !oSmoother ){
+			// print( "Smoothing not enabled, skipping node " + oNode.getLabel() );
+			return;
+		}
+		var oSmoothEnable = oSmoother.getEnableSmoothingControl();
+		if( !oSmoothEnable ){
+			print( "##FR## " + "Unable to get Smoothing Enable property on node " + oNode.getLabel() );
+			return;
+		}
+		var oSmoothInteractiveEnable = oSmoother.getInteractiveUpdateControl();
+		if( !oSmoothInteractiveEnable ){
+			print( "##FR## " + "Unable to get Interactive Update property on node " + oNode.getLabel() );
+			return;
+		}
+
+		// Skip if smoothing not enabled
+		if( !oSmoothEnable.getBoolValue() ){
+			// print( "Smoothing not enabled, skipping node " + oNode.getLabel() );
+			return;
+		}
+
+		print( "Updating morphs on : " + oNode.name );
+
+		// Set interactive update
+		oSmoothInteractiveEnable.setBoolValue( true );
+
+		oNode.update();
+		oNode.finalize();
+		processEvents();
+		while( backgroundProgressIsActive() ){
+			processEvents();
+		}
+		sleep( 1000 );
+
+		// Retrieve duplicated mesh from map
+		var oNodeCopy = g_oDuplicatedNodesMap[ oNode.elementID ];
+		if( !oNodeCopy ){
+			print( "##FR## " + "Error: Duplicated mesh not found for " + oNode.getLabel() );
+			return;
+		}
+		oNodeCopy.setVisible( true ); // Make the duplicated node visible
+
+		// Bake current mesh state to new morph and set active
+		// Store current mesh
+		var oCurrentMesh = getFacetMeshForNode( oNodeCopy, true, false );
+		if( !oCurrentMesh ){
+			print( "##FR## " + "Error getting cached mesh for", oNode.getLabel() );
+			Scene.removeNode( oNodeCopy );
+			return;
+		}
+
+		print( "Baking morph for " + oNode.getLabel() );
+
+		// Disable smoothing
+		oSmoothEnable.setBoolValue( false );
+
+		// Remove all unknown modifiers
+		var nModifiers = oObject.getNumModifiers();
+		var aKnownModifiers = [ "DzMorph", "DzSkinBinding", "DzBoneBinding" ];
+		for( var i = nModifiers - 1; i >= 0; i-- ){
+			var oModifier = oObject.getModifier( i );
+			if( aKnownModifiers.indexOf( oModifier.className() ) > -1 ){
+				continue;
+			}
+			print( "##FR## " + oModifier.className() + " found. Removing" );
+			oObject.removeModifier( oModifier );
+		}
+
+		// Disable DzGeometrySculptModifier
+		// var oGeometrySculptModifier = oObject.findModifier( "DzGeometrySculptModifier" );
+		// if( oGeometrySculptModifier ){
+		// 	oObject.removeModifier( oGeometrySculptModifier );
+		// }
+
+		oNode.update();
+		oNode.finalize();
+		processEvents();
+		while( backgroundProgressIsActive() ){
+			processEvents();
+		}
+		sleep( 1000 );
+
+		// Load oCurrentMesh as morph
+		// Create a morph loader instance
+		oLoader = new DzMorphLoader();
+		var sMorphName = sShapePreserver + "_Morph";
+		// Configure morph loader
+		oLoader.setMorphName( sMorphName );
+		oLoader.setReverseDeformations( true );
+		oLoader.setOverwriteExisting( DzMorphLoader.DeltasOnly );
+		oLoader.setCleanUpOrphans( true );
+		oLoader.setPropertyGroupPath( "Morphs/Morph Loader" );
+		
+		// Create the morph and capture the log - 4.15.0.6+
+		var sLog = oLoader.createMorphFromMesh( oCurrentMesh, oNode );
+		// If the log is not empty
+		if( !sLog.isEmpty() ){
+			// Provide feedback
+			print( "##FR## " + "Morph Loader:", sLog );
+		}
+
+		// Find and activate morph (if has no value)
+		var oMorph = oSceneHelper.findPropertyOnNodeByInternalName( sMorphName, oNode );
+		if( oMorph && oMorph.getValue() != 1 ){
+			oMorph.setValue( 1 );
+		}
+
+		Scene.removeNode( oNodeCopy );
+	};
+
 
 
     main();
